@@ -1,0 +1,35 @@
+{
+  "name": "financial-passport",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "bun@1.4.2",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "format": "prettier --write . --ignore-path .gitignore",
+    "format:check": "prettier --check . --ignore-path .gitignore",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "convex": "^1.46.0",
+    "lucide-react": "latest",
+    "motion": "^13.4.5",
+    "react": "latest",
+    "react-dom": "latest",
+    "recharts": "^3.10.1",
+    "typescript": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "prettier": "^3.6.2",
+    "vitest": "latest"
+  }
+}
