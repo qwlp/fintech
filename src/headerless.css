@@ -1,0 +1,149 @@
+/* Global application controls belong to the sidebar, leaving content headerless. */
+.sidebar .sidebar-bottom {
+  display: grid;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.sidebar-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.sidebar-tools .tour-trigger,
+.sidebar-tools .theme-toggle,
+.sidebar-tools .notification-wrap > button {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100% !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  padding: 0 !important;
+  color: var(--color-ink) !important;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-line) !important;
+  border-radius: 10px !important;
+}
+
+.sidebar-tools .tour-trigger:hover,
+.sidebar-tools .theme-toggle:hover,
+.sidebar-tools .notification-wrap > button:hover {
+  color: var(--color-primary) !important;
+  background: var(--color-primary-soft) !important;
+  transform: none;
+}
+
+.sidebar-tools button > span {
+  display: block !important;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sidebar-tools .notification-wrap {
+  position: relative;
+}
+
+.sidebar-tools .notification-wrap > button > b {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  color: var(--color-alabaster-grey-50);
+  background: var(--color-dusk-blue-700);
+  border-radius: 999px;
+  font-size: 7px;
+}
+
+.sidebar-tools .notification-popover {
+  position: fixed;
+  left: 260px;
+  right: auto;
+  top: auto;
+  bottom: 86px;
+  width: 330px;
+}
+
+.app-shell > main {
+  min-height: 100vh;
+}
+
+.content:has(.agent-layout) {
+  height: 100vh;
+}
+
+.agent-layout,
+.chat {
+  min-height: 100vh;
+}
+
+.app-shell > .menu {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .app-shell {
+    padding-left: 0;
+  }
+
+  .sidebar {
+    width: min(290px, 86vw);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar .mobile-close {
+    display: grid;
+    place-items: center;
+    color: var(--color-ink);
+  }
+
+  .app-shell > .menu {
+    position: fixed;
+    left: 8px;
+    top: 50%;
+    z-index: 14;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 46px;
+    margin: 0;
+    color: var(--color-alabaster-grey-50);
+    background: var(--color-ink-black-800);
+    border: 1px solid var(--color-ink-black-700);
+    border-radius: 0 12px 12px 0;
+    box-shadow: 0 8px 24px
+      color-mix(in srgb, var(--color-ink-black-950) 20%, transparent);
+    transform: translateY(-50%);
+  }
+
+  .sidebar.open ~ .menu {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sidebar-tools .notification-popover {
+    left: 12px;
+    right: 12px;
+    bottom: 86px;
+    width: auto;
+  }
+
+  .content:has(.agent-layout) {
+    height: 100vh;
+  }
+}
