@@ -1,0 +1,61 @@
+/* Utilities only: keep the existing app's base styles intact. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+@source "../../";
+
+@theme inline {
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-ink);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-ink);
+  --color-primary: var(--ui-primary);
+  --color-primary-foreground: #fff;
+  --color-secondary: var(--color-surface-soft);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted-foreground: var(--ui-muted);
+  --color-accent: var(--color-primary-soft);
+  --color-accent-foreground: var(--color-ink);
+  --color-destructive: #bd3434;
+  --color-destructive-foreground: #fff;
+  --color-border: var(--color-line);
+  --color-input: var(--color-line);
+  --color-ring: var(--ui-primary);
+}
+:root { --ui-primary: var(--color-dusty-denim-700); --ui-muted: var(--color-dusty-denim-600); }
+.ui-popover { width: auto; padding: 0; background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-line); border-radius: 14px; box-shadow: 0 16px 48px #08121b20; z-index: 100; }
+.ui-calendar { padding: 18px; --cell-size: 2.25rem; }
+.ui-calendar button { cursor: pointer; border: 0; font-family: inherit; }
+.ui-calendar .rdp-day_button { border-radius: 8px; font-size: 13px; }
+.ui-calendar .rdp-day_button[data-selected-single=true] { background: var(--ui-primary); color: white; }
+.ui-calendar .rdp-button_previous, .ui-calendar .rdp-button_next { width: 32px; height: 32px; padding: 0; background: transparent; border-radius: 8px; }
+.ui-calendar button:hover { background: var(--color-primary-soft); color: var(--color-ink); }
+.ui-calendar button:focus-visible { outline: 2px solid var(--ui-primary); outline-offset: 2px; }
+.ui-calendar table { margin: 0; }
+.ui-calendar th, .ui-calendar td { border: 0; }
+.ui-calendar .rdp-month_grid { table-layout: fixed; }
+.ui-calendar .rdp-month_caption { height: 36px; }
+.ui-calendar .rdp-outside { opacity: .45; }
+.ui-calendar svg { width: 16px; height: 16px; }
+.ui-select-content { background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-line); border-radius: 10px; z-index: 100; }
+.ui-select-content [role=option] { cursor: pointer; padding-top: 9px; padding-bottom: 9px; }
+.ui-select-content [role=option][data-highlighted] { background: var(--color-primary-soft); outline: none; }
+.ui-date-trigger { display: flex; gap: 14px; justify-content: flex-start; height: auto; padding: 14px 18px; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-surface); color: var(--color-ink); cursor: pointer; text-align: left; box-shadow: none; }
+.ui-date-trigger svg { width: 22px; height: 22px; color: var(--ui-primary); }
+.ui-date-trigger small { display: block; color: var(--ui-muted); font-size: 13px; font-weight: 400; }
+.ui-date-trigger strong { display: block; margin-top: 5px; font-size: 16px; }
+.ui-date-trigger:hover { background: var(--color-primary-soft); }
+.move-board .planner-date-picker { min-width: 220px; }
+.move-board .cost-list .ui-cost-checkbox { width: 21px; height: 21px; padding: 0; border: 1px solid var(--color-line); border-radius: 6px; background: var(--color-surface); color: white; cursor: pointer; }
+.move-board .cost-list .ui-cost-checkbox[data-state=checked] { border-color: var(--ui-primary); background: var(--ui-primary); }
+.move-board .cost-list .ui-cost-checkbox svg { width: 14px; height: 14px; }
+.ui-duration-trigger { width: 145px; flex-shrink: 0; background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-line); border-radius: 8px; cursor: pointer; }
+.ui-calendar { width: 288px; box-sizing: border-box; }
+.ui-calendar .rdp-month { width: 252px; }
+.ui-calendar .rdp-week, .ui-calendar .rdp-weekdays { display: flex; }
+.ui-calendar .rdp-day, .ui-calendar .rdp-weekday { width: 36px; height: 36px; flex: 0 0 36px; box-sizing: border-box; }
+.ui-calendar .rdp-day_button { width: 36px; height: 36px; min-width: 36px; padding: 0; }
+.ui-calendar { border-radius: inherit; }
+.ui-calendar button { background: transparent; font-weight: 400; }
+.ui-calendar .rdp-day_button[data-selected-single=true] { font-weight: 600; }

@@ -34,14 +34,14 @@
 .sidebar-tools .tour-trigger:hover,
 .sidebar-tools .theme-toggle:hover,
 .sidebar-tools .notification-wrap > button:hover {
-  color: var(--color-primary) !important;
+  color: var(--color-accent) !important;
   background: var(--color-primary-soft) !important;
   transform: none;
 }
 
 .sidebar-tools button > span {
   display: block !important;
-  font-size: 8px;
+  font-size: var(--text-caption);
   font-weight: 700;
   line-height: 1;
 }
@@ -62,7 +62,7 @@
   color: var(--color-alabaster-grey-50);
   background: var(--color-dusk-blue-700);
   border-radius: 999px;
-  font-size: 7px;
+  font-size: var(--text-caption);
 }
 
 .sidebar-tools .notification-popover {

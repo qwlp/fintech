@@ -38,7 +38,7 @@
 }
 
 .consumer-dashboard .consumer-card-head button:hover {
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-primary-soft);
   border-color: var(--color-line);
 }
@@ -72,7 +72,7 @@
   width: 28px;
   height: 28px;
   padding: 6px;
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-primary-soft);
   border-radius: 8px;
 }
@@ -80,7 +80,7 @@
 .consumer-dashboard .category-title strong,
 .consumer-dashboard .category-row > b,
 .consumer-dashboard .category-row > span {
-  font-size: 12px;
+  font-size: var(--text-body);
 }
 
 .consumer-dashboard .category-row > b {
@@ -145,7 +145,7 @@
 .consumer-dashboard .allocation-legend span {
   min-width: 0;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: var(--text-caption);
 }
 
 .consumer-dashboard .allocation-legend i {
@@ -157,7 +157,7 @@
 .consumer-dashboard .allocation-legend b {
   margin-left: auto;
   color: var(--color-ink);
-  font-size: 11px;
+  font-size: var(--text-caption);
 }
 
 @media (max-width: 980px) {

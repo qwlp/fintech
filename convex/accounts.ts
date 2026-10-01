@@ -445,6 +445,7 @@ export const updateProfile = mutation({
     courseStart: v.string(),
     financialStatus: v.string(),
     sponsorSupport: v.string(),
+    fundingAmount: v.number(),
   },
   handler: async (ctx, args) => {
     const {
@@ -452,8 +453,10 @@ export const updateProfile = mutation({
       courseStart,
       financialStatus,
       sponsorSupport,
+      fundingAmount,
       ...account
     } = args;
+    if (!Number.isFinite(fundingAmount) || fundingAmount < 0) throw new Error("Invalid confirmed funding amount");
     const initials = account.name
       .split(/\s+/)
       .filter(Boolean)
@@ -472,6 +475,7 @@ export const updateProfile = mutation({
       courseStart,
       financialStatus,
       sponsorSupport,
+      fundingAmount,
     };
     if (row) await ctx.db.patch(row._id, { value });
     else await ctx.db.insert("appConfig", { accountId, key: "profile", value });
@@ -660,9 +664,17 @@ export const ensureConfig = mutation({
         ],
       },
     };
-    for (const [key, value] of Object.entries(rows))
-      if (!existing.some((row) => row.key === key))
-        await ctx.db.insert("appConfig", { accountId, key, value });
+    for (const [key, defaults] of Object.entries(rows)) {
+      const row = existing.find((item) => item.key === key);
+      if (!row) {
+        await ctx.db.insert("appConfig", { accountId, key, value: defaults });
+      } else {
+        // Older demo accounts may contain a config section with missing fields.
+        const value = { ...defaults, ...row.value };
+        if (Object.keys(defaults).some((field) => row.value?.[field] === undefined))
+          await ctx.db.patch(row._id, { value });
+      }
+    }
   },
 });
 
@@ -692,6 +704,8 @@ export const transitionPayment = mutation({
         .collect()
     ).find((item) => item.key === account.selectedRoute);
     const amount = Number(banking.paymentAmount ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0 || !route || route.fxRate <= 0)
+      throw new Error("Payment details unavailable");
     const allowed: Record<string, string> = {
       not_started: "prepared",
       prepared: "approved",
@@ -783,7 +797,7 @@ export const sendMessage = mutation({
     const q = value.toLowerCase();
     const reply = q.includes("rent")
       ? `Your current confirmed funding gap is ${gap.toLocaleString("en-GB", { style: "currency", currency: "GBP" })}. Compare any rent change against the recurring housing cost in your plan before committing.`
-      : q.includes("payment") || q.includes("tuition")
+      : q.includes("pay") || q.includes("tuition")
         ? `Your ${Number(banking.paymentAmount ?? 0).toLocaleString("en-GB", { style: "currency", currency: "GBP" })} instalment is ready for review. ${bestRoute?.provider ?? "The selected provider"} currently has the lowest stored total cost. Execution still requires your explicit approval.`
         : `Your plan is ${Math.round(coverage)}% funded with a ${gap.toLocaleString("en-GB", { style: "currency", currency: "GBP" })} gap. Review the next unpaid obligation and any pending sponsor request.`;
     await ctx.db.insert("messages", {
@@ -792,5 +806,37 @@ export const sendMessage = mutation({
       text: reply,
       timestamp: Date.now() + 1,
     });
+  },
+});
+
+export const addCountryAccount = mutation({
+  args: { accountId: v.id("accounts"), country: v.string(), label: v.string() },
+  handler: async (ctx, { accountId, country, label }) => {
+    if (!country.trim() || !label.trim()) throw new Error("Country and account name are required");
+    if (!(await ctx.db.get(accountId))) throw new Error("Account not found");
+    const rows = await ctx.db.query("appConfig").withIndex("by_account", (q) => q.eq("accountId", accountId)).collect();
+    const row = rows.find((item) => item.key === "profile");
+    const value = { ...(row?.value ?? {}), countryAccounts: [...(row?.value?.countryAccounts ?? []), { country: country.trim(), label: label.trim() }] };
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("appConfig", { accountId, key: "profile", value });
+  },
+});
+
+export const resetPayment = mutation({
+  args: { accountId: v.id("accounts") },
+  handler: async (ctx, { accountId }) => {
+    const account = await ctx.db.get(accountId);
+    if (!account) throw new Error("Account not found");
+    await ctx.db.patch(accountId, { paymentStatus: "not_started" });
+    await ctx.db.insert("auditEvents", { accountId, type: "PAYMENT_RESET", detail: "Sandbox payment reset; fresh approval required", actor: account.name, timestamp: Date.now() });
+  },
+});
+
+export const clearChat = mutation({
+  args: { accountId: v.id("accounts") },
+  handler: async (ctx, { accountId }) => {
+    if (!await ctx.db.get(accountId)) throw new Error("Account not found");
+    const messages = await ctx.db.query("messages").withIndex("by_account", (q) => q.eq("accountId", accountId)).collect();
+    for (const message of messages) await ctx.db.delete(message._id);
   },
 });

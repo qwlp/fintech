@@ -1,0 +1,141 @@
+/* Text accents and filled controls need different contrast in dark mode. */
+:root[data-theme="dark"] {
+  --color-canvas: var(--color-dusty-denim-950);
+  --color-accent: var(--color-ink-black-300);
+  --color-primary: var(--color-ink-black-600);
+  --color-primary-hover: var(--color-ink-black-700);
+  --ui-primary: var(--color-primary);
+  --ui-muted: var(--color-muted);
+  --ui-bg: var(--color-canvas);
+  --ui-surface: var(--color-surface);
+  --ui-surface-2: var(--color-surface-soft);
+  --ui-text: var(--color-ink);
+  --ui-line: var(--color-line);
+  --ui-accent: var(--color-accent);
+  color: var(--color-ink);
+}
+
+:root[data-theme="dark"] .consumer-welcome span,
+:root[data-theme="dark"] .consumer-welcome p,
+:root[data-theme="dark"] .smart-insights p,
+:root[data-theme="dark"] .smart-insights article > span,
+:root[data-theme="dark"] .exchange-form label,
+:root[data-theme="dark"] .exchange-form label span,
+:root[data-theme="dark"] .exchange-form small,
+:root[data-theme="dark"] .wallet-redesign-intro .total-balance span {
+  color: var(--color-muted);
+}
+
+:root[data-theme="dark"] .consumer-card-head > div > span,
+:root[data-theme="dark"] .smart-insights button,
+:root[data-theme="dark"] .profile-summary > span {
+  color: var(--color-accent);
+}
+
+:root[data-theme="dark"] .money-hero {
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+:root[data-theme="dark"] .money-hero strong,
+:root[data-theme="dark"] .money-hero span,
+:root[data-theme="dark"] .money-hero footer b {
+  color: var(--color-ink);
+}
+:root[data-theme="dark"] .money-hero p {
+  color: var(--color-muted);
+}
+:root[data-theme="dark"] .money-hero footer {
+  background: var(--color-surface-soft);
+}
+:root[data-theme="dark"] .hero-progress {
+  background: var(--color-line);
+}
+:root[data-theme="dark"] .hero-progress i {
+  background: var(--color-accent);
+}
+
+/* Agent styles are shared with light mode; all surfaces follow the theme. */
+:root[data-theme="dark"] .agent-layout,
+:root[data-theme="dark"] .agent-chat-workspace,
+:root[data-theme="dark"] .agent-workspace-topbar,
+:root[data-theme="dark"] .agent-workspace-topbar strong,
+:root[data-theme="dark"] .agent-welcome-state h2 {
+  color: var(--color-ink);
+}
+:root[data-theme="dark"] .agent-workspace-topbar,
+:root[data-theme="dark"] .agent-starters button,
+:root[data-theme="dark"] .agent-chat-workspace .agent-composer-wrap form {
+  background: var(--color-surface);
+  border-color: var(--color-line);
+}
+:root[data-theme="dark"] .agent-welcome-state > p,
+:root[data-theme="dark"] .agent-workspace-topbar small,
+:root[data-theme="dark"] .agent-composer-meta,
+:root[data-theme="dark"] .agent-composer-wrap .disclaimer,
+:root[data-theme="dark"]
+  .agent-chat-workspace
+  .agent-composer-wrap
+  input::placeholder {
+  color: var(--color-muted);
+}
+:root[data-theme="dark"] .agent-starters button:hover {
+  color: var(--color-ink);
+  background: var(--color-primary-soft);
+  border-color: var(--color-accent);
+}
+:root[data-theme="dark"] .agent-capabilities span,
+:root[data-theme="dark"] .agent-chat-workspace .message p {
+  color: var(--color-ink);
+  background: var(--color-surface-soft);
+  border-color: var(--color-line);
+}
+:root[data-theme="dark"] .agent-capabilities svg,
+:root[data-theme="dark"] .agent-starters svg,
+:root[data-theme="dark"] .agent-composer-meta svg,
+:root[data-theme="dark"] .ui-date-trigger svg {
+  color: var(--color-accent);
+}
+:root[data-theme="dark"] .agent-chat-workspace .message.user p {
+  color: var(--color-ink);
+  background: var(--color-primary-soft);
+}
+:root[data-theme="dark"] .ui-calendar .rdp-weekday {
+  color: var(--color-muted);
+}
+:root[data-theme="dark"] .ui-calendar .rdp-button_previous,
+:root[data-theme="dark"] .ui-calendar .rdp-button_next {
+  color: var(--color-ink);
+}
+:root[data-theme="dark"]
+  .ui-calendar
+  .rdp-day_button[data-selected-single="true"]:hover {
+  color: white;
+  background: var(--color-primary-hover);
+}
+
+:root[data-theme="dark"] .exchange-form dt,
+:root[data-theme="dark"] .wallet-redesign-intro .total-balance strong {
+  color: var(--color-ink);
+}
+
+/* Override legacy dark-specific gradients and fixed workspace heights. */
+:root[data-theme="dark"] .agent-chat-workspace {
+  height: 100%;
+  min-height: 0;
+  background: var(--color-surface) !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .status.success {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+/* One continuous canvas for navigation and every page. */
+:root[data-theme="dark"] .sidebar,
+:root[data-theme="dark"] .content,
+:root[data-theme="dark"] .agent-chat-workspace {
+  background: var(--color-canvas) !important;
+}

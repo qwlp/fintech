@@ -1,3 +1,25 @@
+import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
+import { Button } from "./components/ui/button";
+import { Checkbox } from "./components/ui/checkbox";
+import { Input } from "./components/ui/input";
+import { DatePicker } from "./components/ui/date-picker";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "./components/ui/select";
+import {
+  AirplaneTilt,
+  CalendarBlank,
+  Timer,
+  Wallet as PlannerWallet,
+  Path,
+  Sparkle,
+  PencilSimple,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -30,6 +52,7 @@ import {
   Plus,
   QrCode,
   ReceiptText,
+  RotateCcw,
   Route,
   Send,
   Settings,
@@ -69,9 +92,6 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -216,6 +236,8 @@ function App() {
   const [executingPayment, setExecutingPayment] = useState(false);
   const [toast, setToast] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const initial = document.documentElement.dataset.theme;
+    if (initial === "light" || initial === "dark") return initial;
     const saved = localStorage.getItem("financial-passport-theme");
     if (saved === "light" || saved === "dark") return saved;
     return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -239,8 +261,12 @@ function App() {
     document.documentElement.style.colorScheme = theme;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", theme === "dark" ? "#08121b" : "#f3f3f1");
-    localStorage.setItem("financial-passport-theme", theme);
+      ?.setAttribute("content", theme === "dark" ? "#0e1116" : "#f3f3f1");
+    try {
+      localStorage.setItem("financial-passport-theme", theme);
+    } catch {
+      // Keep the toggle usable when browser storage is unavailable.
+    }
   }, [theme]);
 
   useEffect(() => {
@@ -283,7 +309,9 @@ function App() {
   const visibleFunding =
     database?.funding.map((item) => ({ ...item, id: item.key })) ?? funding;
   const planTotal = sumCosts(visibleCosts as any);
-  const planFunded = confirmedFunding(visibleFunding as any);
+  const planFunded =
+    database?.config?.profile?.fundingAmount ??
+    confirmedFunding(visibleFunding as any);
   const planGap = fundingGap(planTotal, planFunded);
   const planCoverage = fundingCoverage(planTotal, planFunded);
   const paymentStatus = executingPayment
@@ -349,8 +377,9 @@ function App() {
       ? mutate(convexApi.transitionPayment, { accountId: account._id, next })
       : false;
   const prepare = async () => {
-    if (account) await transition("prepared");
-    else {
+    if (account) {
+      if (!(await transition("prepared"))) return false;
+    } else {
       setLocalPaymentStatus("prepared");
       addAudit(
         "PAYMENT_PREPARED",
@@ -359,10 +388,12 @@ function App() {
       );
     }
     announce("Payment prepared — approval is still required");
+    return true;
   };
   const approve = async () => {
-    if (account) await transition("approved");
-    else {
+    if (account) {
+      if (!(await transition("approved"))) return false;
+    } else {
       setLocalPaymentStatus("approved");
       addAudit(
         "PAYMENT_APPROVED",
@@ -370,29 +401,51 @@ function App() {
       );
     }
     announce("Approval recorded securely");
+    return true;
   };
-  const execute = () => {
-    if (paymentStatus !== "approved") return;
+  const execute = async () => {
+    if (paymentStatus !== "approved" || executingPayment) return false;
     setExecutingPayment(true);
-    if (!account) setLocalPaymentStatus("processing");
-    window.setTimeout(async () => {
-      if (account) await transition("completed");
-      else {
-        setLocalPaymentStatus("completed");
-        addAudit(
-          "PAYMENT_EXECUTED",
-          "Sandbox transaction TX-DEMO-842913 completed",
-          "Sandbox Provider A",
-        );
-      }
-      setExecutingPayment(false);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      if (account) {
+        const success = await Promise.race([
+          transition("completed"),
+          new Promise<boolean>((_, reject) => {
+            timeout = setTimeout(
+              () => reject(new Error("Send timed out")),
+              15000,
+            );
+          }),
+        ]);
+        if (!success) return false;
+      } else setLocalPaymentStatus("completed");
       announce("Sandbox payment completed");
-    }, 900);
+      return true;
+    } catch {
+      announce("Send not confirmed. Check status or reset the sandbox.");
+      return false;
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      setExecutingPayment(false);
+    }
   };
+  const resetPayment = async () => {
+    if (!account || executingPayment) return false;
+    const success = await mutate(convexApi.resetPayment, {
+      accountId: account._id,
+    });
+    if (success) announce("Payment reset");
+    return success;
+  };
+  const clearChat = () =>
+    account
+      ? mutate(convexApi.clearChat, { accountId: account._id })
+      : Promise.resolve(false);
   const selectRoute = (route: string) =>
     account
-      ? void mutate(convexApi.setRoute, { accountId: account._id, route })
-      : undefined;
+      ? mutate(convexApi.setRoute, { accountId: account._id, route })
+      : Promise.resolve(false);
   const toggleChecklist = (key: string) =>
     account
       ? void mutate(convexApi.toggleChecklist, { accountId: account._id, key })
@@ -403,8 +456,8 @@ function App() {
       : announce("Demo contribution request sent");
   const sendMessage = (text: string) =>
     account
-      ? void mutate(convexApi.sendMessage, { accountId: account._id, text })
-      : undefined;
+      ? mutate(convexApi.sendMessage, { accountId: account._id, text })
+      : Promise.resolve(false);
   const saveProfile = (profile: Record<string, string>) =>
     account
       ? mutate(convexApi.updateProfile, {
@@ -417,6 +470,7 @@ function App() {
           courseStart: profile.start,
           financialStatus: profile.status,
           sponsorSupport: profile.income,
+          fundingAmount: Number(profile.funding),
         })
       : Promise.resolve(false);
   const createSponsorRequest = (request: {
@@ -500,7 +554,7 @@ function App() {
 
   return (
     <div className={`app-shell variation-${variation}`}>
-      <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
+      <aside className={`sidebar sidebar-clean ${mobileNav ? "open" : ""}`}>
         <button
           className="mobile-close"
           aria-label="Close menu"
@@ -518,23 +572,29 @@ function App() {
           </div>
         </div>
         <nav aria-label="Main navigation">
-          {nav.map(({ page: item, icon: Icon }) => (
-            <button
-              key={item}
-              className={page === item ? "active" : ""}
-              onClick={() => go(item)}
-            >
-              <Icon size={19} />
-              <span>{item}</span>
-              {item === "Payments" && <i>1</i>}
-            </button>
-          ))}
+          {nav
+            .filter(({ page: item }) => item !== "Profile")
+            .map(({ page: item, icon: Icon }) => (
+              <button
+                key={item}
+                className={page === item ? "active" : ""}
+                aria-current={page === item ? "page" : undefined}
+                onClick={() => go(item)}
+              >
+                <Icon size={19} />
+                <span>{item}</span>
+              </button>
+            ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-tools" aria-label="Application controls">
-            <button className="tour-trigger" onClick={() => setTourOpen(true)}>
+            <button
+              className="tour-trigger"
+              aria-label="Take a tour"
+              title="Take a tour"
+              onClick={() => setTourOpen(true)}
+            >
               <HelpCircle size={17} />
-              <span>Tour</span>
             </button>
             <button
               className="theme-toggle"
@@ -545,12 +605,15 @@ function App() {
               title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             >
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-              <span>{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
             <div className="notification-wrap">
-              <button aria-label="Notifications" onClick={readNotifications}>
+              <button
+                aria-label="Notifications"
+                title="Notifications"
+                aria-expanded={notificationsOpen}
+                onClick={readNotifications}
+              >
                 <Bell size={19} />
-                <span>Alerts</span>
                 {(database?.notifications.filter((n) => !n.read).length ?? 2) >
                   0 && (
                   <b>
@@ -580,13 +643,16 @@ function App() {
               )}
             </div>
           </div>
-          <button className="profile" onClick={() => go("Profile")}>
+          <button
+            className={`profile ${page === "Profile" ? "active" : ""}`}
+            aria-label="Open your profile"
+            aria-current={page === "Profile" ? "page" : undefined}
+            onClick={() => go("Profile")}
+          >
             <span>{account?.initials ?? "DC"}</span>
             <div>
               <strong>{account?.name ?? "Dara Chan"}</strong>
-              <small>
-                {account?.role ?? "Student"} · {account?.planName ?? "UK Study Plan"}
-              </small>
+              <small>{account?.role ?? "Student"}</small>
             </div>
             <ChevronRight size={17} />
           </button>
@@ -641,6 +707,15 @@ function App() {
                     coverage: planCoverage,
                   }}
                   onSave={saveProfile}
+                  onAddCountry={(country, label) =>
+                    account
+                      ? mutate(convexApi.addCountryAccount, {
+                          accountId: account._id,
+                          country,
+                          label,
+                        })
+                      : Promise.resolve(false)
+                  }
                 />
               )}
               {page === "Move Planner" && (
@@ -650,6 +725,7 @@ function App() {
                 <Agent
                   storedMessages={database?.messages}
                   onSend={sendMessage}
+                  onClear={clearChat}
                 />
               )}
               {page === "Payments" && (
@@ -659,6 +735,7 @@ function App() {
                   prepare={prepare}
                   approve={approve}
                   execute={execute}
+                  reset={resetPayment}
                   storedRoute={account?.selectedRoute}
                   onSelectRoute={selectRoute}
                   storedRoutes={database?.paymentRoutes}
@@ -723,71 +800,42 @@ function Tour({
   chooseVariation: (value: Variation) => void;
   close: () => void;
 }) {
-  const steps: Array<{
-    page: Page;
-    variation?: Variation;
-    target?: string;
-    eyebrow: string;
-    title: string;
-    body: string;
-    tip?: string;
-  }> = [
+  const steps = [
     {
-      page: "Dashboard",
-      eyebrow: "Quick tour",
-      title: "Your financial command centre",
-      body:
-        "See your funding, upcoming commitments, and safest next action without hunting through the app.",
-      tip: "Seven focused stops. Use Next or your arrow keys to move through them.",
-    },
-    {
-      page: "Dashboard",
+      page: "Dashboard" as Page,
       target: '[data-tour="readiness"]',
-      eyebrow: "Funding",
-      title: "Know exactly where you stand",
-      body:
-        "Coverage, remaining gap, and runway update together whenever your plan changes.",
+      title: "Your funding",
+      body: "See your balance and funding gap.",
     },
     {
-      page: "Dashboard",
+      page: "Dashboard" as Page,
       target: '[data-tour="next-action"]',
-      eyebrow: "Next up",
-      title: "One clear next action",
-      body:
-        "Upcoming cash flow and deadlines are translated into the most useful thing to do next.",
+      title: "Next up",
+      body: "Your next deadline, at a glance.",
     },
     {
-      page: "Move Planner",
-      target: ".timeline-card",
-      eyebrow: "Plan",
-      title: "Plan the whole move",
-      body:
-        "Compare travel options and keep tuition, arrival costs, and monthly spending in one place.",
+      page: "Move Planner" as Page,
+      target: ".move-board",
+      title: "Plan your move",
+      body: "Compare travel and living costs.",
     },
     {
-      page: "AI Agent",
-      target: ".chat",
-      eyebrow: "Ask",
-      title: "Ask using your real plan",
-      body:
-        "Explore your funding gap, rent scenarios, runway, or next payment in plain language.",
+      page: "AI Agent" as Page,
+      target: ".agent-layout",
+      title: "Ask your agent",
+      body: "Ask a question about your plan.",
     },
     {
-      page: "Payments",
-      target: ".payment-route-card.selected",
-      eyebrow: "Pay",
-      title: "Compare the real cost",
-      body:
-        "Review total cost, delivery time, and the verified recipient before you approve anything.",
+      page: "Payments" as Page,
+      target: ".pay-options",
+      title: "Compare providers",
+      body: "Choose a route, then approve the total.",
     },
     {
-      page: "Security",
+      page: "Security" as Page,
       target: ".security-grid",
-      eyebrow: "Stay in control",
-      title: "Approval always stays with you",
-      body:
-        "Security controls, payment limits, and a complete activity history remain visible at every step.",
-      tip: "You’re ready. Reopen this tour anytime from the sidebar.",
+      title: "Stay in control",
+      body: "Manage limits and review activity.",
     },
   ];
   const [step, setStep] = useState(0);
@@ -795,6 +843,10 @@ function Tour({
   const startingPage = useRef(page);
   const startingVariation = useRef(variation);
   const current = steps[step];
+  useEffect(() => {
+    if (page !== "Dashboard") go("Dashboard");
+    if (variation !== 1) chooseVariation(1);
+  }, []);
   const TourIcon = {
     Dashboard: LayoutDashboard,
     Profile: UserRound,
@@ -824,11 +876,11 @@ function Tour({
       if (element && window.innerWidth <= 760) window.scrollBy(0, -88);
       requestAnimationFrame(update);
     }, 60);
-    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("scroll", update, { passive: true, capture: true });
     window.addEventListener("resize", update);
     return () => {
       window.clearTimeout(timer);
-      window.removeEventListener("scroll", update);
+      window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
   }, [step, page, variation, current.target]);
@@ -836,8 +888,7 @@ function Tour({
     if (next < 0 || next >= steps.length) return;
     setRect(null);
     const item = steps[next];
-    const desiredVariation =
-      item.page === "Dashboard" ? (item.variation ?? 1) : variation;
+    const desiredVariation = item.page === "Dashboard" ? 1 : variation;
     if (item.page === "Dashboard" && variation !== desiredVariation)
       chooseVariation(desiredVariation);
     if (item.page !== page) go(item.page);
@@ -853,7 +904,13 @@ function Tour({
   };
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") exitTour(true);
+      if (event.key === "Escape") exitTour(false);
+      if (
+        event.target instanceof HTMLElement &&
+        (event.target.matches("input, textarea, select") ||
+          event.target.isContentEditable)
+      )
+        return;
       if (event.key === "ArrowRight")
         step === steps.length - 1 ? exitTour(false) : move(step + 1);
       if (event.key === "ArrowLeft" && step > 0) move(step - 1);
@@ -861,17 +918,11 @@ function Tour({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
-  const cardSide =
-    rect && rect.left + rect.width / 2 > window.innerWidth / 2
-      ? "left"
-      : "right";
-  const cardVertical =
-    rect && rect.top > window.innerHeight - rect.bottom ? "top" : "bottom";
   const tourCardStyle = (() => {
     if (!rect || window.innerWidth <= 760) return undefined;
     const gap = 20;
-    const width = Math.min(430, window.innerWidth - gap * 2);
-    const height = current.tip ? 500 : 450;
+    const width = Math.min(320, window.innerWidth - gap * 2);
+    const height = 190;
     const candidates = [
       { left: gap, top: gap },
       { left: window.innerWidth - width - gap, top: gap },
@@ -909,84 +960,82 @@ function Tour({
     };
   })();
   return (
-    <div
-      className="tour-layer"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="tour-title"
-    >
-      <div className={`tour-shade ${rect ? "has-focus" : ""}`} />
+    <div className="guide-layer">
       {rect && (
         <div
-          className="tour-focus"
+          className="guide-focus"
+          aria-hidden="true"
           style={{
-            left: rect.left - 8,
-            top: rect.top - 8,
-            width: rect.width + 16,
-            height: rect.height + 16,
+            left: rect.left - 4,
+            top: rect.top - 4,
+            width: rect.width + 8,
+            height: rect.height + 8,
           }}
         />
       )}
-      <section
-        className={`tour-card tour-card-${cardSide} tour-card-${cardVertical}`}
+      <Card
+        className="guide-card"
         style={tourCardStyle}
+        role="dialog"
+        aria-label="Quick tour"
+        aria-describedby="guide-description"
       >
-        <button
-          className="tour-close"
-          onClick={() => exitTour(true)}
-          aria-label="Close tour and return"
-        >
-          <X />
-        </button>
-        <div className="tour-card-heading">
-          <span className="tour-step-icon">
-            <TourIcon />
+        <div className="guide-header">
+          <span className="guide-icon">
+            <TourIcon size={18} />
           </span>
-          <div className="tour-meta">
-            <span>{current.eyebrow}</span>
-            <b>
-              Step {step + 1} of {steps.length}
-            </b>
-          </div>
+          <strong>{current.title}</strong>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close tour"
+            title="Close tour"
+            onClick={() => exitTour(false)}
+          >
+            <X size={16} />
+          </Button>
         </div>
-        <h2 id="tour-title">{current.title}</h2>
-        <p>{current.body}</p>
-        {current.tip && (
-          <div className="tour-tip">
-            <Sparkles /> <span>{current.tip}</span>
+        <p id="guide-description">{current.body}</p>
+        <div className="guide-footer">
+          <div className="guide-dots" aria-label="Tour steps">
+            {steps.map((item, i) => (
+              <button
+                key={item.title}
+                aria-label={item.title}
+                aria-current={i === step ? "step" : undefined}
+                onClick={() => move(i)}
+                title={item.title}
+              />
+            ))}
           </div>
-        )}
-        <div className="tour-progress">
-          {steps.map((item, i) => (
-            <button
-              aria-label={`Go to step ${i + 1}`}
-              aria-current={i === step ? "step" : undefined}
-              className={i <= step ? "done" : ""}
-              onClick={() => move(i)}
-              key={i}
-              title={item.title}
-            >
-              <span>{i + 1}</span>
-            </button>
-          ))}
-        </div>
-        <div className="tour-actions">
-          {step > 0 ? (
-            <button onClick={() => move(step - 1)}>← Back</button>
-          ) : (
-            <button onClick={() => exitTour(true)}>Skip tour</button>
-          )}
-          <button
-            className="tour-next"
+          <span className="guide-count">
+            {step + 1}/{steps.length}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={step === 0}
+            aria-label="Previous step"
+            title="Previous step"
+            onClick={() => move(step - 1)}
+          >
+            <ArrowRight size={16} style={{ transform: "rotate(180deg)" }} />
+          </Button>
+          <Button
+            size="sm"
             onClick={() =>
               step === steps.length - 1 ? exitTour(false) : move(step + 1)
             }
           >
-            {step === steps.length - 1 ? "Done" : "Next"} <ArrowRight />
-          </button>
+            {step === steps.length - 1 ? "Done" : "Next"}
+            {step === steps.length - 1 ? (
+              <Check size={14} />
+            ) : (
+              <ArrowRight size={14} />
+            )}
+          </Button>
         </div>
-        <small className="tour-keys">Use ← → to navigate</small>
-      </section>
+      </Card>
     </div>
   );
 }
@@ -1060,83 +1109,45 @@ function OverviewDashboard({
   go: (page: Page) => void;
   database: DatabaseState | null;
 }) {
-  const fallbackCategories = [
-    {
-      name: "Tuition",
-      icon: GraduationCap,
-      spend: 4000,
-      budget: 6000,
-      color: "var(--color-ink-black-600)",
-    },
-    {
-      name: "Housing",
-      icon: Home,
-      spend: 5200,
-      budget: 7800,
-      color: "var(--color-dusty-denim-600)",
-    },
-    {
-      name: "Living costs",
-      icon: ReceiptText,
-      spend: 3150,
-      budget: 5100,
-      color: "var(--color-prussian-blue-600)",
-    },
-    {
-      name: "Visa & health",
-      icon: ShieldCheck,
-      spend: 1600,
-      budget: 1600,
-      color: "var(--color-alabaster-grey-600)",
-    },
-    {
-      name: "Flight & arrival",
-      icon: Plane,
-      spend: 610,
-      budget: 2100,
-      color: "var(--color-dusk-blue-600)",
-    },
-  ];
-  const dbCosts = database?.costs ?? [];
-  const dbFunding = database?.funding ?? [];
-  const dbTotal = dbCosts.length
-    ? dbCosts.reduce((sum, item) => sum + item.amount, 0)
-    : total;
-  const dbFunded = dbFunding.length
-    ? dbFunding
-        .filter((item) => item.status === "confirmed")
-        .reduce((sum, item) => sum + item.amount, 0)
-    : funded;
-  const dbGap = fundingGap(dbTotal, dbFunded);
-  const dbCoverage = fundingCoverage(dbTotal, dbFunded);
-  const categories = dbCosts.length
-    ? dbCosts.map((item, index) => ({
-        name: item.name,
-        icon: [GraduationCap, Home, ReceiptText, ShieldCheck, Plane][index % 5],
-        spend: item.paid ? item.amount : 0,
-        budget: item.amount,
-        color: ["var(--color-ink-black-600)", "var(--color-dusty-denim-600)", "var(--color-prussian-blue-600)", "var(--color-alabaster-grey-600)", "var(--color-dusk-blue-600)"][
-          index % 5
-        ],
-      }))
-    : fallbackCategories;
-  const allocation = dbFunding.length
-    ? [
-        ...dbFunding.map((item, index) => ({
-          name: item.name,
-          value: item.amount,
-          color: ["var(--color-ink-black-600)", "var(--color-dusty-denim-600)", "var(--color-prussian-blue-600)"][index % 3],
-        })),
-        ...(dbGap ? [{ name: "Gap", value: dbGap, color: "var(--color-dusk-blue-600)" }] : []),
-      ]
-    : [
-        { name: "Savings", value: 8900, color: "var(--color-ink-black-600)" },
-        { name: "Sponsor", value: 9000, color: "var(--color-dusty-denim-600)" },
-        { name: "Scholarship", value: 4000, color: "var(--color-prussian-blue-600)" },
-        { name: "Gap", value: 2700, color: "var(--color-dusk-blue-600)" },
-      ];
+  const categoryIcon = (name: string) => {
+    const label = name.toLowerCase();
+    if (label.includes("tuition")) return GraduationCap;
+    if (label.includes("visa")) return ShieldCheck;
+    if (label.includes("flight")) return Plane;
+    if (label.includes("rent") || label.includes("housing")) return Home;
+    if (label.includes("emergency")) return ShieldCheck;
+    return ReceiptText;
+  };
+  const planCosts = database?.costs ?? costs;
+  const planFunding = database?.funding ?? funding;
+  const planTotal = planCosts.reduce((sum, item) => sum + item.amount, 0);
+  const confirmed = planFunding.filter((item) => item.status === "confirmed");
+  const fundedTotal = confirmed.reduce((sum, item) => sum + item.amount, 0);
+  const gap = fundingGap(planTotal, fundedTotal);
+  const coverage = fundingCoverage(planTotal, fundedTotal);
+  const monthlyEssentials =
+    planCosts
+      .filter(
+        (item) =>
+          item.category === "Recurring" &&
+          !item.name.toLowerCase().includes("tuition"),
+      )
+      .reduce((sum, item) => sum + item.amount, 0) / 12;
+  const liquidSavings = confirmed
+    .filter((item) => item.type.toLowerCase() === "savings")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const tuition = planCosts.find((item) =>
+    item.name.toLowerCase().includes("tuition"),
+  );
+  const tuitionPaid = paid || tuition?.paid;
+  const greeting =
+    new Date().getHours() < 12
+      ? "Good morning"
+      : new Date().getHours() < 18
+        ? "Good afternoon"
+        : "Good evening";
   return (
-    <div className="consumer-dashboard">
+    <div className="consumer-dashboard visual-dashboard">
       <section className="consumer-welcome">
         <div>
           <span>
@@ -1147,157 +1158,205 @@ function OverviewDashboard({
             }).format(new Date())}
           </span>
           <h2>
-            Good morning, {database?.account.name.split(" ")[0] ?? "there"}
+            {greeting}, {database?.account.name.split(" ")[0] ?? "there"}
           </h2>
-          <p>Your UK study plan, at a glance.</p>
         </div>
         <button onClick={() => go("AI Agent")}>
           <Sparkles size={16} /> Ask your agent
         </button>
       </section>
-      <section className="money-hero" data-tour="readiness">
-        <div>
-          <span>READY TO FUND</span>
-          <strong>{formatGBP(dbFunded)}</strong>
-          <p>of {formatGBP(dbTotal)} planned</p>
-        </div>
-        <div className="hero-score">
-          <strong>{Math.round(dbCoverage)}%</strong>
-          <span>ready</span>
-        </div>
-        <div className="hero-progress">
-          <i style={{ width: `${dbCoverage}%` }} />
-        </div>
-        <footer>
-          <span>
-            <b>{baseRunway.toFixed(1)}</b> months runway
-          </span>
-          <span>
-            <b>{formatGBP(dbGap)}</b> still to cover
-          </span>
-          <button onClick={() => go("Move Planner")}>
-            View plan <ArrowRight size={15} />
-          </button>
-        </footer>
-      </section>
-      <div className="insights-layout">
-        <section className="spending-card">
-          <div className="consumer-card-head">
+
+      <div className="overview-top">
+        <section
+          className="funding-overview"
+          data-tour="readiness"
+          aria-labelledby="funding-heading"
+        >
+          <h3 id="funding-heading">Study plan funding</h3>
+          <div className="funding-amount">
+            <strong>{formatGBP(fundedTotal)}</strong>
+            <span>of {formatGBP(planTotal)}</span>
+          </div>
+          <div className="funding-progress-label">
+            <span>{Math.round(coverage)}% funded</span>
+            <span>
+              {gap > 0
+                ? `${formatGBP(gap)} left to fund`
+                : "Funding goal reached"}
+            </span>
+          </div>
+          <div
+            className="funding-progress"
+            role="progressbar"
+            aria-label="Study plan funded"
+            aria-valuenow={Math.round(coverage)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <i style={{ width: `${coverage}%` }} />
+          </div>
+          <dl className="plan-facts">
             <div>
-              <span>PLAN CATEGORIES</span>
-              <h3>Planned spending</h3>
+              <dt>
+                <Clock3 size={15} /> Savings runway
+              </dt>
+              <dd>
+                {monthlyEssentials > 0
+                  ? runway(liquidSavings, monthlyEssentials).toFixed(1)
+                  : "—"}
+                <span> months</span>
+              </dd>
             </div>
-            <button onClick={() => go("Move Planner")}>Show all</button>
-          </div>
-          <div className="category-labels">
-            <span>Category</span>
-            <span>Planned</span>
-            <span>Budget</span>
-          </div>
-          {categories.map(({ name, icon: Icon, spend, budget, color }) => (
-            <div className="category-row" key={name}>
-              <div className="category-title">
-                <Icon />
-                <strong>{name}</strong>
-              </div>
-              <b>{formatGBP(spend)}</b>
-              <span>{formatGBP(budget)}</span>
-              <div className="category-track">
-                <i
-                  style={{
-                    width: `${Math.min(100, (spend / budget) * 100)}%`,
-                    background: color,
-                  }}
-                />
-              </div>
+            <div>
+              <dt>
+                <WalletCards size={15} /> Monthly essentials
+              </dt>
+              <dd>{formatGBP(monthlyEssentials)}</dd>
             </div>
-          ))}
+          </dl>
         </section>
-        <section className="allocation-card">
-          <div className="consumer-card-head">
-            <div>
-              <span>FUNDING MIX</span>
-              <h3>Funding mix</h3>
+        {tuition && (
+          <section
+            className="payment-summary"
+            data-tour="next-action"
+            aria-labelledby="tuition-heading"
+          >
+            <h3 id="tuition-heading">
+              <GraduationCap size={19} />{" "}
+              {tuitionPaid ? "Tuition paid" : "Tuition payment"}
+            </h3>
+            <strong>{formatGBP(tuition.amount)}</strong>
+            <span className="payment-schedule">
+              {tuitionPaid ? (
+                <CheckCircle2 size={15} />
+              ) : (
+                <CalendarDays size={15} />
+              )}
+              {tuitionPaid ? "Receipt available" : tuition.due}
+            </span>
+            <button
+              className="dashboard-primary"
+              onClick={() => go("Payments")}
+            >
+              {tuitionPaid ? "View receipt" : "Review payment"}
+              <ArrowRight size={16} />
+            </button>
+          </section>
+        )}
+      </div>
+
+      <div className="budget-funding-grid">
+        <section className="visual-budget" aria-labelledby="budget-heading">
+          <div className="visual-card-head">
+            <h3 id="budget-heading">Planned spending</h3>
+            <button onClick={() => go("Move Planner")}>
+              Edit plan <ArrowRight size={15} />
+            </button>
+          </div>
+          <div
+            className="budget-table"
+            role="table"
+            aria-label="Planned spending by category"
+          >
+            <div className="budget-table-head" role="row">
+              <span role="columnheader">Category</span>
+              <span role="columnheader">Share of plan</span>
+              <span role="columnheader">Budget</span>
+            </div>
+            {planCosts.map((item) => {
+              const Icon = categoryIcon(item.name);
+              const share = planTotal > 0 ? (item.amount / planTotal) * 100 : 0;
+              const isPaid = item.paid || (paid && item === tuition);
+              return (
+                <div className="budget-table-row" role="row" key={item.name}>
+                  <span className="budget-category" role="cell">
+                    <Icon size={18} />
+                    <span>{item.name}</span>
+                    {isPaid && (
+                      <Check
+                        size={14}
+                        aria-label="Paid"
+                        className="budget-paid"
+                      />
+                    )}
+                  </span>
+                  <span className="budget-distribution" role="cell">
+                    <span className="budget-share-track" aria-hidden="true">
+                      <i style={{ width: `${share}%` }} />
+                    </span>
+                    <span>{Math.round(share)}%</span>
+                  </span>
+                  <strong role="cell">{formatGBP(item.amount)}</strong>
+                </div>
+              );
+            })}
+            <div className="budget-table-total" role="row">
+              <span role="rowheader">Total</span>
+              <strong role="cell">{formatGBP(planTotal)}</strong>
             </div>
           </div>
-          <div className="allocation-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={allocation}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius="58%"
-                  outerRadius="88%"
-                  paddingAngle={4}
-                  cornerRadius={7}
-                >
-                  {allocation.map((item) => (
-                    <Cell key={item.name} fill={item.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => formatGBP(Number(value))}
-                  contentStyle={{
-                    border: 0,
-                    borderRadius: 12,
-                    boxShadow: "0 12px 30px color-mix(in srgb, var(--color-dusty-denim-950) 13.3%, transparent)",
-                    fontSize: 11,
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div>
-              <span>Funded</span>
-              <strong>{formatGBP(dbFunded)}</strong>
-              <small>of {formatGBP(dbTotal)}</small>
-            </div>
+        </section>
+        <section className="visual-funding" aria-labelledby="sources-heading">
+          <div className="visual-card-head">
+            <h3 id="sources-heading">Funding sources</h3>
+            <button onClick={() => go("Sponsors")}>
+              Manage <ArrowRight size={15} />
+            </button>
           </div>
-          <div className="allocation-legend">
-            {allocation.map((item) => (
-              <span key={item.name}>
-                <i style={{ background: item.color }} />
-                {item.name}
-                <b>{Math.round((item.value / dbTotal) * 100)}%</b>
-              </span>
+          <div className="funding-source-list">
+            {planFunding.map((item) => (
+              <div className="funding-source" key={item.name}>
+                <div>
+                  <span>{item.name}</span>
+                  <strong>{formatGBP(item.amount)}</strong>
+                </div>
+                <div className="source-track" aria-hidden="true">
+                  <i
+                    style={{
+                      width: `${planTotal > 0 ? Math.min(100, (item.amount / planTotal) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+                <span className="source-availability">
+                  {item.status === "confirmed"
+                    ? item.available
+                    : "Not yet confirmed"}
+                </span>
+              </div>
             ))}
           </div>
+          {planFunding.length === 0 && (
+            <p className="funding-empty">
+              Add a funding source to start your plan.
+            </p>
+          )}
+          {gap > 0 && (
+            <div className="funding-gap">
+              <div>
+                <span>Still to fund</span>
+                <strong>{formatGBP(gap)}</strong>
+              </div>
+              <button onClick={() => go("AI Agent")}>
+                Explore funding options <ArrowRight size={15} />
+              </button>
+            </div>
+          )}
         </section>
       </div>
-      <section className="smart-insights" data-tour="next-action">
-        <article className="cash-insight">
-          <span>Cash flow this term</span>
-          <strong>+£1,000</strong>
-          <p>Sponsor funding on 15 November keeps you positive.</p>
-          <button onClick={() => go("Dashboard")}>
-            Open runway <ChevronRight />
-          </button>
-        </article>
-        <article className="action-insight">
-          <div className="insight-dot orange" />
-          <div>
-            <strong>
-              {paid ? "Tuition payment complete" : "Tuition is due in 12 days"}
-            </strong>
-            <p>
-              {paid
-                ? "Your plan and audit trail are up to date."
-                : "Save about $58 and arrive before the deadline."}
-            </p>
-          </div>
-          <button onClick={() => go("Payments")}>
-            {paid ? "View receipt" : "Review"} <ArrowRight />
-          </button>
-        </article>
-        <article className="positive-insight">
-          <div className="insight-dot green" />
-          <div>
-            <strong>Your runway is up 0.8 months</strong>
-            <p>Lower arrival costs moved you ahead.</p>
-          </div>
-          <button onClick={() => go("AI Agent")}>Why?</button>
-        </article>
-      </section>
+      <nav className="dashboard-shortcuts" aria-label="Dashboard actions">
+        <button onClick={() => go("Payments")}>
+          <Send size={17} />
+          Send money
+        </button>
+        <button onClick={() => go("Sponsors")}>
+          <UsersRound size={17} />
+          Invite a sponsor
+        </button>
+        <button onClick={() => go("Exchange")}>
+          <Route size={17} />
+          Compare transfer routes
+        </button>
+      </nav>
     </div>
   );
 }
@@ -1754,21 +1813,27 @@ function SponsorWorkspace({
           </label>
           <label>
             Purpose
-            <select
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-            >
-              <option>Living expenses</option>
-              <option>Tuition</option>
-              <option>Emergency funding</option>
-            </select>
+            <Select value={purpose} onValueChange={setPurpose}>
+              <SelectTrigger aria-label="Request purpose">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="ui-select-content">
+                {["Living expenses", "Tuition", "Emergency funding"].map(
+                  (item) => (
+                    <SelectItem value={item} key={item}>
+                      {item}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
           </label>
           <label>
             Needed by
-            <input
-              type="date"
+            <DatePicker
+              label="Needed by"
               value={neededBy}
-              onChange={(e) => setNeededBy(e.target.value)}
+              onChange={setNeededBy}
             />
           </label>
           <button
@@ -1846,150 +1911,327 @@ function ExchangeWorkspace({
   database: DatabaseState | null;
   onRateAlert: (targetRate: number) => Promise<boolean>;
 }) {
-  const [tab, setTab] = useState("Convert"),
-    [amount, setAmount] = useState(2500),
-    [targetRate, setTargetRate] = useState(0.79);
+  const [tab, setTab] = useState("convert");
+  const [amount, setAmount] = useState("2500");
+  const [targetRate, setTargetRate] = useState("0.79");
+  const [saving, setSaving] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
   const bestRoute =
     database?.paymentRoutes.find((route) => route.recommended) ??
     database?.paymentRoutes[0];
   const rate = bestRoute?.fxRate ?? 0;
   const fee = bestRoute?.fee ?? 0;
-  const received = amount * rate - fee;
+  const numericAmount = Number(amount);
+  const validAmount =
+    amount.trim() !== "" && Number.isFinite(numericAmount) && numericAmount > 0;
+  // Route fees are charged in USD in addition to the source amount.
+  const received = validAmount ? numericAmount * rate : 0;
+  const validTarget =
+    targetRate.trim() !== "" &&
+    Number.isFinite(Number(targetRate)) &&
+    Number(targetRate) > 0;
   const alert = database?.rateAlerts.find(
     (item) => item.active && item.pair === "USD/GBP",
   );
   const visibleWallets = database?.wallets ?? [];
+  const gbp = (value: number) =>
+    new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  const saveAlert = async () => {
+    if (!validTarget || saving) return;
+    setSaving(true);
+    setAlertMessage("");
+    try {
+      const success = await onRateAlert(Number(targetRate));
+      setAlertMessage(success ? "Alert saved." : "Could not save. Try again.");
+    } catch {
+      setAlertMessage("Could not save. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
-    <div className="workspace">
-      <WorkspaceHeader
-        number={4}
-        title="Exchange desk"
-        description="Manage currency exposure and compare the true cost of moving money."
-        tabs={["Convert", "Balances", "Rate alerts"]}
-        active={tab}
-        setActive={setTab}
-      />
-      {tab === "Convert" && (
-        <div className="exchange-workspace">
-          <section className="exchange-form">
-            <label>
-              You send
-              <span>
-                <b>$</b>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
-                />
-                <em>USD</em>
-              </span>
-            </label>
-            <ArrowRight />
-            <label>
-              University receives
-              <span>
-                <b>£</b>
-                <strong>
-                  {received.toLocaleString("en-GB", {
-                    maximumFractionDigits: 2,
-                  })}
-                </strong>
-                <em>GBP</em>
-              </span>
-            </label>
-            <dl>
-              <div>
-                <dt>Rate</dt>
-                <dd>{rate} GBP</dd>
-              </div>
-              <div>
-                <dt>Fee</dt>
-                <dd>{formatUSD(fee)}</dd>
-              </div>
-              <div>
-                <dt>Arrival</dt>
-                <dd>{bestRoute?.delivery}</dd>
-              </div>
-            </dl>
-            <button onClick={() => go("Payments")}>
-              Review {bestRoute?.provider} <ArrowRight />
-            </button>
-          </section>
-          <aside className="rate-context">
-            <span>USD / GBP</span>
-            <strong>{rate}</strong>
-            <small>Demo rate · 29 Sep 2026</small>
-            <div className="sparkline">
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-            </div>
-            <p>
-              A 5% weaker dollar would reduce this conversion by{" "}
-              <b>£{(amount * rate * 0.05).toFixed(0)}</b>.
-            </p>
-          </aside>
-        </div>
-      )}
-      {tab === "Balances" && (
-        <div className="balance-ledger">
-          {visibleWallets.map((w) => (
-            <div key={w.currency}>
-              <span>{w.currency}</span>
-              <strong>
-                {w.symbol}
-                {w.amount.toLocaleString()}
-              </strong>
-              <small>{w.label}</small>
-              <b>{formatGBP(w.gbpValue)}</b>
-            </div>
-          ))}
-          <footer>
-            <span>Total in GBP</span>
-            <strong>
-              {formatGBP(visibleWallets.reduce((s, w) => s + w.gbpValue, 0))}
-            </strong>
-          </footer>
-        </div>
-      )}
-      {tab === "Rate alerts" && (
-        <section className="alert-builder">
-          <div>
-            <Bell />
-            <div>
-              <h3>Notify me when USD strengthens</h3>
-              <p>We will compare the demo mid-market rate with your target.</p>
+    <div className="workspace fx-desk">
+      <header className="fx-heading">
+        <h2>Exchange desk</h2>
+      </header>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList aria-label="Exchange desk views" className="fx-tabs">
+          <TabsTrigger value="convert">
+            <CircleDollarSign size={16} />
+            Convert
+          </TabsTrigger>
+          <TabsTrigger value="balances">
+            <WalletCards size={16} />
+            Balances
+          </TabsTrigger>
+          <TabsTrigger value="alerts">
+            <Bell size={16} />
+            Rate alerts
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="convert">
+          <div className="fx-grid">
+            <Card className="fx-card">
+              <CardHeader>
+                <div className="fx-card-heading">
+                  <CardTitle>
+                    <CircleDollarSign size={18} />
+                    Convert
+                  </CardTitle>
+                  <span className="fx-badge">USD → GBP</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <label className="fx-label" htmlFor="fx-amount">
+                  You send
+                </label>
+                <div className="fx-money-field">
+                  <span aria-hidden="true">$</span>
+                  <Input
+                    className="fx-amount-input"
+                    id="fx-amount"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.01"
+                    step="0.01"
+                    value={amount}
+                    aria-invalid={!validAmount}
+                    aria-describedby={
+                      !validAmount ? "fx-amount-help" : undefined
+                    }
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                  <span className="fx-currency">USD</span>
+                </div>
+                <div className="fx-between">
+                  <span />
+                  <ArrowRight size={18} />
+                  <span />
+                </div>
+                <div className="fx-receive">
+                  <span className="fx-label">Recipient gets</span>
+                  <div>
+                    <output aria-live="polite">
+                      {bestRoute ? gbp(received) : "—"}
+                    </output>
+                    <span className="fx-currency">GBP</span>
+                  </div>
+                </div>
+                {!validAmount && (
+                  <p id="fx-amount-help" className="fx-error">
+                    Enter an amount above zero.
+                  </p>
+                )}
+                <dl className="fx-breakdown">
+                  <div>
+                    <dt>
+                      <Activity size={14} />
+                      Rate
+                    </dt>
+                    <dd>
+                      {bestRoute
+                        ? `1 USD = ${rate.toFixed(4)} GBP`
+                        : "Unavailable"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>
+                      <ReceiptText size={14} />
+                      Fee
+                    </dt>
+                    <dd>{bestRoute ? formatUSD(fee) : "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>
+                      <Clock3 size={14} />
+                      Arrival
+                    </dt>
+                    <dd>{bestRoute?.delivery ?? "Unavailable"}</dd>
+                  </div>
+                  <div className="fx-total">
+                    <dt>Total</dt>
+                    <dd>
+                      {bestRoute && validAmount
+                        ? formatUSD(numericAmount + fee)
+                        : "—"}
+                    </dd>
+                  </div>
+                </dl>
+                <Button
+                  className="fx-primary"
+                  disabled={!validAmount || !bestRoute}
+                  onClick={() => go("Payments")}
+                >
+                  Review transfer
+                  <ArrowRight size={18} />
+                </Button>
+              </CardContent>
+            </Card>
+            <div className="fx-side">
+              <Card className="fx-card">
+                <CardHeader>
+                  <div className="fx-card-heading">
+                    <CardTitle>
+                      <Activity size={18} />
+                      USD / GBP
+                    </CardTitle>
+                    <span
+                      className="fx-badge fx-demo"
+                      title="Demo quote, not a live market rate"
+                    >
+                      Demo
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="fx-rate">
+                    {bestRoute ? rate.toFixed(4) : "—"}
+                  </div>
+                  <p className="fx-hint">29 Sep 2026</p>
+                  <Button
+                    variant="outline"
+                    className="fx-secondary"
+                    onClick={() => go("Payments")}
+                  >
+                    Compare providers
+                    <ArrowRight size={16} />
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card className="fx-card">
+                <CardContent className="fx-risk">
+                  <div>
+                    <span className="fx-label">
+                      <TrendingUp size={16} />
+                      USD −5%
+                    </span>
+                    <strong>−{gbp(received * 0.05)}</strong>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Set a rate alert"
+                    title="Set rate alert"
+                    onClick={() => setTab("alerts")}
+                  >
+                    <Bell size={18} />
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
-          <label>
-            Target rate{" "}
-            <input
-              type="number"
-              step="0.001"
-              min="0.001"
-              value={targetRate}
-              onChange={(e) => setTargetRate(Number(e.target.value))}
-            />
-            <span>GBP per USD</span>
-          </label>
-          <button
-            className={alert ? "sent" : ""}
-            onClick={() => void onRateAlert(targetRate)}
-          >
-            {alert ? (
-              <>
-                <Check /> Alert active at {alert.targetRate}
-              </>
-            ) : (
-              <>Create rate alert</>
-            )}
-          </button>
-        </section>
-      )}
+        </TabsContent>
+        <TabsContent value="balances">
+          <Card className="fx-card">
+            <CardHeader>
+              <CardTitle>
+                <WalletCards size={18} />
+                Balances
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {visibleWallets.length === 0 ? (
+                <p className="fx-hint">No balances yet.</p>
+              ) : (
+                <div className="fx-wallets">
+                  {visibleWallets.map((w) => (
+                    <div className="fx-wallet" key={w.currency}>
+                      <span className="fx-badge">{w.currency}</span>
+                      <div>
+                        <strong>
+                          {w.symbol}
+                          {w.amount.toLocaleString()}
+                        </strong>
+                        <p>{w.label}</p>
+                      </div>
+                      <span>
+                        {gbp(w.gbpValue)}
+                        <small>≈ GBP</small>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="fx-balance-total">
+                <span>Total · GBP</span>
+                <strong>
+                  {gbp(visibleWallets.reduce((sum, w) => sum + w.gbpValue, 0))}
+                </strong>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="alerts">
+          <Card className="fx-card fx-alert-card">
+            <CardHeader>
+              <CardTitle>
+                <Bell size={18} />
+                USD / GBP alert
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {alert && (
+                <p className="fx-active-alert">
+                  <CheckCircle2 size={18} />
+                  Active: {alert.targetRate} GBP
+                </p>
+              )}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveAlert();
+                }}
+              >
+                <label className="fx-label" htmlFor="fx-target">
+                  Target rate
+                </label>
+                <div className="fx-target-field">
+                  <Input
+                    className="fx-target-input"
+                    id="fx-target"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.001"
+                    step="0.001"
+                    value={targetRate}
+                    onChange={(e) => {
+                      setTargetRate(e.target.value);
+                      setAlertMessage("");
+                    }}
+                    aria-invalid={!validTarget}
+                    aria-describedby="fx-target-help"
+                  />
+                  <span>GBP per USD</span>
+                </div>
+                <p
+                  id="fx-target-help"
+                  className={validTarget ? "fx-hint" : "fx-error"}
+                >
+                  {validTarget
+                    ? `Current: ${bestRoute ? rate.toFixed(4) : "unavailable"} GBP per USD`
+                    : "Enter a rate above zero."}
+                </p>
+                <Button
+                  className="fx-primary"
+                  type="submit"
+                  disabled={!validTarget || saving || !database}
+                >
+                  {saving ? "Saving…" : alert ? "Update alert" : "Create alert"}
+                  <Bell size={16} />
+                </Button>
+                <p role="status" className="fx-hint">
+                  {alertMessage}
+                </p>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -2191,34 +2433,46 @@ function Timeline() {
         >
           <defs>
             <linearGradient id="cashFlowFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-dusty-denim-500)" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="var(--color-dusty-denim-500)" stopOpacity={0.02} />
+              <stop
+                offset="0%"
+                stopColor="var(--color-dusty-denim-500)"
+                stopOpacity={0.28}
+              />
+              <stop
+                offset="100%"
+                stopColor="var(--color-dusty-denim-500)"
+                stopOpacity={0.02}
+              />
             </linearGradient>
           </defs>
           <CartesianGrid
             vertical={false}
-            stroke="var(--color-dusty-denim-100)"
+            stroke="var(--color-line)"
             strokeDasharray="3 4"
           />
           <XAxis
             dataKey="m"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "var(--color-dusty-denim-600)", fontSize: 11 }}
+            tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "var(--color-dusty-denim-500)", fontSize: 10 }}
+            tick={{ fill: "var(--color-muted)", fontSize: 10 }}
             tickFormatter={(value) => `£${value / 1000}k`}
           />
           <Tooltip
+            itemStyle={{ color: "var(--color-ink)" }}
             formatter={(value) => [formatGBP(Number(value)), "Planned outflow"]}
             labelFormatter={(_, payload) => payload[0]?.payload?.t ?? ""}
             contentStyle={{
-              border: "1px solid var(--color-dusty-denim-100)",
+              background: "var(--color-surface)",
+              color: "var(--color-ink)",
+              border: "1px solid var(--color-line)",
               borderRadius: 8,
-              boxShadow: "0 12px 30px color-mix(in srgb, var(--color-ink-black-900) 9.4%, transparent)",
+              boxShadow:
+                "0 12px 30px color-mix(in srgb, var(--color-ink-black-900) 9.4%, transparent)",
               fontSize: 11,
             }}
           />
@@ -2369,15 +2623,21 @@ function Profile({
   config,
   totals,
   onSave,
+  onAddCountry,
 }: {
   announce: (message: string) => void;
   account?: any;
   config?: any;
   totals: { funded: number; gap: number; coverage: number };
   onSave: (profile: Record<string, string>) => Promise<boolean>;
+  onAddCountry: (country: string, label: string) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [addingCountry, setAddingCountry] = useState(false);
+  const [country, setCountry] = useState("");
+  const [accountLabel, setAccountLabel] = useState("");
+  const [adding, setAdding] = useState(false);
   const [profile, setProfile] = useState({
     name: account?.name ?? "",
     home: account?.countryFrom ?? "",
@@ -2387,12 +2647,12 @@ function Profile({
     start: config?.courseStart ?? "",
     status: config?.financialStatus ?? "",
     income: config?.sponsorSupport ?? "",
-    funding: config?.confirmedFunding ?? "",
+    funding: String(totals.funded),
   });
   const update = (key: keyof typeof profile, value: string) =>
     setProfile((current) => ({ ...current, [key]: value }));
   useEffect(() => {
-    if (!account) return;
+    if (!account || editing) return;
     setProfile({
       name: account.name,
       home: account.countryFrom,
@@ -2402,84 +2662,96 @@ function Profile({
       start: config?.courseStart ?? "",
       status: config?.financialStatus ?? "",
       income: config?.sponsorSupport ?? "",
-      funding: formatGBP(totals.funded),
+      funding: String(totals.funded),
     });
-  }, [account, config, totals.funded]);
+  }, [account, config, totals.funded, editing]);
   return (
     <div className="page-stack profile-page">
       <section className="page-intro">
         <div>
-          <span className="eyebrow">Student profile</span>
-          <h2>Your financial passport</h2>
-          <p>
-            The details used to tailor costs, routes, banking, and sponsor
-            recommendations.
-          </p>
+          <h2>Profile</h2>
         </div>
-        <button
-          className="primary"
-          onClick={async () => {
-            if (editing) {
-              const saved = await onSave(profile);
-              if (!saved) return;
-              announce("Profile saved to the database");
-            }
-            if (!editing) setDetailsOpen(true);
-            setEditing(!editing);
-          }}
-        >
-          {editing ? (
-            <>
-              <Check /> Save profile
-            </>
-          ) : (
-            <>
-              <Settings /> Edit profile
-            </>
+        <div className="profile-edit-actions">
+          {editing && (
+            <button
+              className="secondary"
+              disabled={saving}
+              onClick={() => setEditing(false)}
+            >
+              Cancel
+            </button>
           )}
-        </button>
+          <button
+            className="primary"
+            disabled={saving}
+            onClick={async () => {
+              if (editing) {
+                if (
+                  !profile.funding.trim() ||
+                  !Number.isFinite(Number(profile.funding)) ||
+                  Number(profile.funding) < 0
+                ) {
+                  announce(
+                    "Enter a valid confirmed funding amount of zero or more",
+                  );
+                  return;
+                }
+                setSaving(true);
+                const saved = await onSave(profile);
+                setSaving(false);
+                if (!saved) return;
+                announce("Profile saved");
+              }
+              setEditing(!editing);
+            }}
+          >
+            {editing ? (
+              <>
+                <Check /> {saving ? "Saving…" : "Save profile"}
+              </>
+            ) : (
+              <>
+                <Settings /> Edit profile
+              </>
+            )}
+          </button>
+        </div>
       </section>
       <section className="profile-hero">
-        <div className="profile-avatar">DC</div>
+        <div className="profile-avatar">{account?.initials ?? "DC"}</div>
         <div>
           <h3>{profile.name}</h3>
-          <p>
-            {profile.course} · {profile.university}
-          </p>
+
           <span>
             <MapPin /> {profile.home} <ArrowRight /> {profile.study}
           </span>
         </div>
         <b>{profile.status}</b>
       </section>
-      <button
-        className="disclosure-button"
-        onClick={() => setDetailsOpen((open) => !open)}
-      >
-        {detailsOpen ? "Hide profile details" : "View profile details"}
-        <ChevronRight />
-      </button>
-      {detailsOpen && (
-        <div className="profile-grid">
-          <section className="profile-section">
-            <div className="section-heading">
-              <div>
-                <span className="eyebrow">Personal & study</span>
-                <h3>Core details</h3>
-              </div>
-              <GraduationCap />
+      <div className="profile-grid">
+        <section className="profile-section">
+          <div className="section-heading">
+            <div>
+              <h3>Study details</h3>
             </div>
-            <div className="field-grid">
-              {(
-                [
-                  ["name", "Full name"],
-                  ["home", "Home country"],
-                  ["study", "Country of study"],
-                  ["university", "University"],
-                  ["course", "Programme"],
-                  ["start", "Course start"],
-                ] as const
-              ).map(([key, label]) => (
+            <GraduationCap />
+          </div>
+          <div className="field-grid">
+            {(
+              [
+                ["name", "Full name"],
+                ["home", "Home country"],
+                ["study", "Country of study"],
+                ["university", "University"],
+                ["course", "Programme"],
+                ["start", "Course start"],
+              ] as const
+            )
+              .filter(
+                ([key]) =>
+                  editing || !["name", "home", "study", "status"].includes(key),
+              )
+              .map(([key, label]) => (
                 <label key={key}>
                   <span>{label}</span>
                   {editing ? (
@@ -2492,79 +2764,305 @@ function Profile({
                   )}
                 </label>
               ))}
+          </div>
+        </section>
+        <section className="profile-section">
+          <div className="section-heading">
+            <div>
+              <h3>Funding</h3>
             </div>
-          </section>
-          <section className="profile-section">
-            <div className="section-heading">
-              <div>
-                <span className="eyebrow">Financial position</span>
-                <h3>Funding snapshot</h3>
-              </div>
-              <WalletCards />
-            </div>
-            <div className="field-grid">
-              {(
-                [
-                  ["status", "Financial status"],
-                  ["income", "Sponsor support"],
-                  ["funding", "Confirmed funding"],
-                ] as const
-              ).map(([key, label]) => (
+            {!editing && (
+              <button
+                className="icon-text"
+                onClick={() => {
+                  setEditing(true);
+                  window.requestAnimationFrame(() =>
+                    document.getElementById("profile-income")?.focus(),
+                  );
+                }}
+              >
+                <Settings size={16} /> Edit funding
+              </button>
+            )}
+          </div>
+          <div className="field-grid">
+            {(
+              [
+                ["status", "Financial status"],
+                ["income", "Sponsor support"],
+                ["funding", "Confirmed funding"],
+              ] as const
+            )
+              .filter(
+                ([key]) =>
+                  editing || !["name", "home", "study", "status"].includes(key),
+              )
+              .map(([key, label]) => (
                 <label key={key}>
-                  <span>{label}</span>
+                  <span>
+                    {key === "funding" && editing
+                      ? "Confirmed funding (£)"
+                      : label}
+                  </span>
                   {editing ? (
                     <input
+                      id={`profile-${key}`}
+                      aria-label={
+                        key === "funding" ? "Confirmed funding in GBP" : label
+                      }
+                      type={key === "funding" ? "number" : "text"}
+                      min={key === "funding" ? 0 : undefined}
+                      step={key === "funding" ? "0.01" : undefined}
                       value={profile[key]}
                       onChange={(e) => update(key, e.target.value)}
                     />
                   ) : (
-                    <strong className="profile-value">{profile[key]}</strong>
+                    <strong className="profile-value">
+                      {key === "funding"
+                        ? formatGBP(Number(profile.funding))
+                        : profile[key]}
+                    </strong>
                   )}
                 </label>
               ))}
+          </div>
+          <div className="profile-summary">
+            <span>
+              <CheckCircle2 /> {Math.round(totals.coverage)}% funded
+            </span>
+            <strong>{formatGBP(totals.gap)} gap</strong>
+            <div
+              className="profile-funding-track"
+              role="progressbar"
+              aria-label="Funding coverage"
+              aria-valuenow={Math.round(totals.coverage)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <span style={{ width: `${totals.coverage}%` }} />
             </div>
-            <div className="profile-summary">
-              <span>
-                <CheckCircle2 /> {Math.round(totals.coverage)}% funded
-              </span>
-              <strong>{formatGBP(totals.gap)} gap</strong>
-              <p>
-                Your move remains viable, but the emergency buffer is not fully
-                funded.
-              </p>
-            </div>
-          </section>
+          </div>
+        </section>
+      </div>
+      <section className="profile-section country-accounts">
+        <div className="section-heading">
+          <div>
+            <h3>Country accounts</h3>
+          </div>
+          <button className="secondary" onClick={() => setAddingCountry(true)}>
+            <Plus size={16} /> Add account
+          </button>
         </div>
-      )}
+        {(config?.countryAccounts ?? []).map(
+          (item: { country: string; label: string }, index: number) => (
+            <div className="line-item" key={`${item.country}-${index}`}>
+              <MapPin size={18} />
+              <div>
+                <strong>{item.country}</strong>
+                <small>{item.label}</small>
+              </div>
+            </div>
+          ),
+        )}
+        {!config?.countryAccounts?.length && !addingCountry && (
+          <p className="country-account-hint">No additional accounts yet.</p>
+        )}
+        {addingCountry && (
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!country.trim() || !accountLabel.trim() || adding) return;
+              setAdding(true);
+              const saved = await onAddCountry(
+                country.trim(),
+                accountLabel.trim(),
+              );
+              setAdding(false);
+              if (saved) {
+                setAddingCountry(false);
+                setCountry("");
+                setAccountLabel("");
+                announce("Country account added");
+              }
+            }}
+          >
+            <div className="field-grid">
+              <label>
+                <span>Country</span>
+                <input
+                  autoFocus
+                  required
+                  value={country}
+                  onChange={(event) => setCountry(event.target.value)}
+                  placeholder="e.g. United States"
+                />
+              </label>
+              <label>
+                <span>Account name</span>
+                <input
+                  required
+                  value={accountLabel}
+                  onChange={(event) => setAccountLabel(event.target.value)}
+                  placeholder="e.g. US study account"
+                />
+              </label>
+            </div>
+            <div className="country-account-actions">
+              <button
+                type="button"
+                className="secondary"
+                disabled={adding}
+                onClick={() => setAddingCountry(false)}
+              >
+                Cancel
+              </button>
+              <button className="primary" disabled={adding}>
+                {adding ? "Adding…" : "Add account"}
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
     </div>
   );
 }
 
-function MovePlanner({ go, config }: { go: (page: Page) => void; config?: any }) {
+function MovePlanner({
+  go,
+  config,
+}: {
+  go: (page: Page) => void;
+  config?: any;
+}) {
   const [months, setMonths] = useState(11);
   const [selectedRoute, setSelectedRoute] = useState(1);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [budgetOpen, setBudgetOpen] = useState(false);
+  const [arrivalDate, setArrivalDate] = useState("");
+  const [excludedCosts, setExcludedCosts] = useState<string[]>([]);
+  const [budgetAmounts, setBudgetAmounts] = useState<Record<string, number>>(
+    {},
+  );
+  const parseAmount = (value: string) =>
+    Number(value.match(/[\d,]+(?:\.\d+)?/)?.[0].replaceAll(",", "") ?? 0);
+  const initialDate = new Date(config?.arrivalDate ?? "14 Sep 2026");
+  const dateValue =
+    arrivalDate ||
+    (Number.isNaN(initialDate.getTime())
+      ? "2026-09-14"
+      : `${initialDate.getFullYear()}-${String(initialDate.getMonth() + 1).padStart(2, "0")}-${String(initialDate.getDate()).padStart(2, "0")}`);
+  const displayDate = new Date(`${dateValue}T12:00:00`).toLocaleDateString(
+    "en-GB",
+    { day: "2-digit", month: "short", year: "numeric" },
+  );
   const fallbackRoutes = [
-    ["Fastest Route", "Phnom Penh → London · 1 stop", "18h 21m"],
-    ["Budget Option", "Phnom Penh → London · 2 stops", "28h 35m"],
-    ["Budget Option", "Phnom Penh → Bangkok · 1 stop", "23h 33m"],
-    ["Balanced Choice", "Phnom Penh → London · 1 stop", "23h 31m"],
+    ["Fastest route", "Phnom Penh → London · 1 stop", "16h 40m", "£610"],
+    [
+      "Budget friendly",
+      "Phnom Penh → Bangkok → London · 2 stops",
+      "22h 10m",
+      "£480",
+    ],
+    ["Balanced", "Phnom Penh → Singapore → London · 1 stop", "18h 25m", "£545"],
   ];
-  const routes = (config?.routes?.length ? config.routes : fallbackRoutes)
-    .map((route: any[], index: number) => ({
-      name: index === 0 ? "Fastest Route" : index === 1 ? "Budget Option" : index === 2 ? "Budget Option" : route[0],
+  const routes = (config?.routes?.length ? config.routes : fallbackRoutes).map(
+    (route: any[], index: number) => ({
+      name:
+        index === 0
+          ? "Fastest route"
+          : index === 1
+            ? "Budget friendly"
+            : index === 2
+              ? "Balanced"
+              : route[0],
       detail: route[1],
       time: route[2],
-    }));
-  if (routes.length === 3) routes.push({ name: "Balanced Choice", detail: "Phnom Penh → London · 1 stop", time: "23h 31m" });
-  const requirements = config?.requirements?.length ? config.requirements : [
-    ["Visa & health surcharge", "Paid", "£1,600"],
-    ["Flight", "Compare", "£480–610"],
-    ["First month rent + deposit", "Reserved", "£1,950"],
-    ["Utilities", "Estimated", "£145 / mo"],
-    ["Daily expenses", "Budgeted", "£425 / mo"],
-  ];
-  const routeIcons = [Clock3, Banknote, Plane, Route];
+      cost: parseAmount(route[3] ?? fallbackRoutes[index]?.[3] ?? "0"),
+    }),
+  );
+  const requirements = config?.requirements?.length
+    ? config.requirements
+    : [
+        ["Visa & health surcharge", "Paid", "£1,600"],
+        ["Flight", "Compare", "£480–610"],
+        ["First month rent + deposit", "Reserved", "£1,950"],
+        ["Utilities", "Estimated", "£145 / mo"],
+        ["Daily expenses", "Budgeted", "£425 / mo"],
+      ];
+  const routeIcons = [Timer, PlannerWallet, AirplaneTilt, Path];
+  const activeRoute = routes[Math.min(selectedRoute, routes.length - 1)];
+  const costs = requirements.map(
+    ([name, status, amount]: string[], index: number) => ({
+      name,
+      status,
+      recurring: amount.includes("mo"),
+      amount:
+        index === 1
+          ? activeRoute.cost
+          : (budgetAmounts[name] ?? parseAmount(amount)),
+    }),
+  );
+  const includedCosts = costs.filter(
+    (cost: any) => !excludedCosts.includes(cost.name),
+  );
+  const upfrontTotal = includedCosts
+    .filter((cost: any) => !cost.recurring)
+    .reduce((sum: number, cost: any) => sum + cost.amount, 0);
+  const monthlyTotal = includedCosts
+    .filter((cost: any) => cost.recurring)
+    .reduce((sum: number, cost: any) => sum + cost.amount, 0);
+  const totalBudget = upfrontTotal + monthlyTotal * months;
+  const toggleCost = (name: string) =>
+    setExcludedCosts((current) =>
+      current.includes(name)
+        ? current.filter((item) => item !== name)
+        : [...current, name],
+    );
+  const renderCost = (cost: any) => (
+    <div
+      className={excludedCosts.includes(cost.name) ? "excluded" : "paid"}
+      key={cost.name}
+    >
+      <Checkbox
+        className="ui-cost-checkbox"
+        aria-label={`Include ${cost.name} in budget`}
+        checked={!excludedCosts.includes(cost.name)}
+        onCheckedChange={() => toggleCost(cost.name)}
+      />
+      <span>
+        <strong>{cost.name}</strong>
+        <small>
+          {cost.name === "Flight"
+            ? `${activeRoute.name} · Estimated`
+            : cost.status}
+        </small>
+      </span>
+      {budgetOpen && cost.name !== "Flight" ? (
+        <label className="cost-amount-edit">
+          <span className="sr-only">{cost.name} in pounds</span>
+          <span>£</span>
+          <Input
+            aria-label={`${cost.name} in pounds`}
+            type="number"
+            min="0"
+            step="0.01"
+            value={cost.amount}
+            onChange={(event) =>
+              setBudgetAmounts((current) => ({
+                ...current,
+                [cost.name]: Math.max(0, Number(event.target.value)),
+              }))
+            }
+          />
+          {cost.recurring && <small>/mo</small>}
+        </label>
+      ) : (
+        <b>
+          {formatGBP(cost.amount)}
+          {cost.recurring && <small>/mo</small>}
+        </b>
+      )}
+    </div>
+  );
 
   return (
     <div className="move-board">
@@ -2572,68 +3070,164 @@ function MovePlanner({ go, config }: { go: (page: Page) => void; config?: any })
         <div>
           <span>Move planning</span>
           <h2>Plan your arrival</h2>
-          <p>Compare routes, prepare essential costs, and keep your arrival plan on track.</p>
+          <p>
+            Compare routes, prepare essential costs, and keep your arrival plan
+            on track.
+          </p>
         </div>
-        <div className="move-arrival-date">
-          <CalendarDays />
-          <span>Planned arrival<strong>{config?.arrivalDate ?? "14 Sep 2026"}</strong></span>
-        </div>
+        <DatePicker
+          className="planner-date-picker"
+          label="Planned arrival"
+          value={dateValue}
+          onChange={setArrivalDate}
+        />
       </section>
-      <section className="timeline-card">
-        <div className="timeline-copy">
-          <h2>Move timeline</h2>
-          <div className="timeline-track">
-            <div className="timeline-point"><b>1</b><span><strong>Transfer Funds</strong><small>{config?.readyBy ?? "07 Sep 2026"}</small></span></div>
-            <i />
-            <div className="timeline-point"><b>3</b><span><strong>Arrival</strong><small>{config?.arrivalDate ?? "14 Sep 2026"}</small></span></div>
+      <section className="arrival-summary">
+        <div>
+          <span>Your estimated budget</span>
+          <strong aria-live="polite">{formatGBP(totalBudget)}</strong>
+          <small>For your arrival and {months} months in London</small>
+        </div>
+        <div className="arrival-summary-breakdown">
+          <div>
+            <small>Upfront</small>
+            <strong>{formatGBP(upfrontTotal)}</strong>
+          </div>
+          <span>+</span>
+          <div>
+            <small>Monthly living costs</small>
+            <strong>
+              {formatGBP(monthlyTotal)} <small>× {months} months</small>
+            </strong>
           </div>
         </div>
-        <div className="timeline-budget"><small>Estimated total budget</small><strong>£23,120</strong></div>
-        <button onClick={() => go("AI Agent")}><Sparkles /> Ask AI to simplify details</button>
+        <Button
+          type="button"
+          variant="outline"
+          className="planner-assist"
+          onClick={() => go("AI Agent")}
+        >
+          <Sparkle weight="duotone" /> Get planning help
+        </Button>
       </section>
 
       <div className="move-board-grid">
         <section className="route-choice-card">
-          <h3><span><Plane /></span>Getting There</h3>
+          <h3>
+            <span>
+              <AirplaneTilt weight="duotone" />
+            </span>
+            Mode
+          </h3>
+          <p className="move-help">
+            Pick a route. We’ll update your flight estimate.
+          </p>
           <div className="route-choices">
             {routes.slice(0, 4).map((route: any, index: number) => {
-              const Icon = routeIcons[index];
-              return <button type="button" aria-pressed={selectedRoute === index} className={selectedRoute === index ? "selected" : ""} onClick={() => setSelectedRoute(index)} key={`${route.name}-${index}`}>
-                <span className="route-kind"><Icon /></span>
-                <span className="route-copy"><strong>{route.name}</strong><small>{route.detail}</small><em><Clock3 /> {route.time}</em></span>
-                <i className="route-radio" />
-              </button>;
+              const Icon = routeIcons[index % routeIcons.length];
+              return (
+                <Button
+                  variant="outline"
+                  type="button"
+                  aria-pressed={selectedRoute === index}
+                  className={selectedRoute === index ? "selected" : ""}
+                  onClick={() => setSelectedRoute(index)}
+                  key={`${route.name}-${index}`}
+                >
+                  <span className="route-kind">
+                    <Icon weight="duotone" />
+                  </span>
+                  <span className="route-copy">
+                    <strong>
+                      {route.name}
+                      <b className="mode-price">{formatGBP(route.cost)}</b>
+                    </strong>
+                    <small>{route.detail}</small>
+                    <em>
+                      <Timer /> {route.time}
+                    </em>
+                  </span>
+                  <i className="route-radio" />
+                </Button>
+              );
             })}
           </div>
         </section>
 
         <div className="move-side-stack">
-          <section className="horizon-card">
-            <div className="horizon-title"><h3><CalendarDays /> Planning horizon</h3><span>4 costs ready</span></div>
-            <div className="horizon-segments">{[1, 3, 6, 9, 12, 15, 18, 24].map((value, i) => <button type="button" aria-label={`${value} month planning horizon`} className={Math.abs(months - value) <= 1 || (months > 18 && i === 7) ? "active" : ""} onClick={() => setMonths(value)} key={value} />)}</div>
-            <input aria-label="Planning horizon" type="range" min="1" max="24" value={months} onChange={(e) => setMonths(Number(e.target.value))} />
-            <div className="horizon-meta"><span>Planning horizon</span><strong>£75/mo <i /></strong><span>{months} months</span></div>
-          </section>
-
           <section className="cost-card">
-            <h3><span><ReceiptText /></span>Upfront Costs</h3>
-            <h4>1. Upfront Costs</h4>
+            <div className="planner-cost-heading">
+              <div>
+                <h3>
+                  <span>
+                    <PlannerWallet weight="duotone" />
+                  </span>
+                  Your costs
+                </h3>
+                <p className="move-help">
+                  Check the items you want to budget for.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="planner-edit"
+                aria-pressed={budgetOpen}
+                onClick={() => setBudgetOpen((open) => !open)}
+              >
+                <PencilSimple />
+                {budgetOpen ? "Done editing" : "Edit amounts"}
+              </Button>
+            </div>
+            <div className="planner-duration">
+              <label htmlFor="arrival-months">
+                How long are you planning for?
+              </label>
+              <Select
+                value={String(months)}
+                onValueChange={(value) => setMonths(Number(value))}
+              >
+                <SelectTrigger
+                  id="arrival-months"
+                  className="ui-duration-trigger"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="ui-select-content">
+                  {Array.from({ length: 24 }, (_, i) => i + 1).map((month) => (
+                    <SelectItem key={month} value={String(month)}>
+                      {month} {month === 1 ? "month" : "months"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <h4>
+              Before you arrive <span>{formatGBP(upfrontTotal)}</span>
+            </h4>
             <div className="cost-list">
-              {requirements.slice(0, 3).map(([name, status, amount]: string[], index: number) => <div className="paid" key={name}><i><Check /></i><span><strong>{index === 2 ? "Deposit" : name}</strong><small>{status}</small></span><em>Paid</em><b>{amount}</b></div>)}
+              {costs.filter((cost: any) => !cost.recurring).map(renderCost)}
             </div>
-            <h4>2. Monthly Recurring Costs</h4>
+            <h4>
+              Each month <span>{formatGBP(monthlyTotal)}/mo</span>
+            </h4>
             <div className="cost-list recurring-costs">
-              {requirements.slice(3, 5).map(([name, status, amount]: string[]) => <div key={name}><i /><span><strong>{name === "Daily expenses" ? "Expenses" : name}</strong><small>{status}</small></span><b>{amount.replace(" / mo", "")}<small>/mo</small></b></div>)}
+              {costs.filter((cost: any) => cost.recurring).map(renderCost)}
             </div>
+
+            <p className="planner-estimate-note">
+              Estimates for planning. Final inclusions to be confirmed.
+            </p>
           </section>
-          <div className="move-actions"><button type="button" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((open) => !open)}>{detailsOpen ? "Hide Details" : "View Details"}</button><button type="button" onClick={() => go("Payments")}>Manage Budget</button></div>
         </div>
       </div>
-      {detailsOpen && <section className="move-detail-drawer">
-        <div><small>Selected route</small><strong>{routes[selectedRoute]?.name}</strong><span>{routes[selectedRoute]?.detail} · {routes[selectedRoute]?.time}</span></div>
-        <div><small>Apartment</small><strong>{config?.apartment ?? "Riverside House, Zone 2"}</strong><span>Balanced for university access and city connections.</span></div>
-        <button type="button" onClick={() => go("Payments")}>Review payment plan <ArrowRight /></button>
-      </section>}
+      <div className="planner-arrival-note">
+        <CalendarBlank weight="duotone" />
+        <span>
+          Arrival <strong>{displayDate}</strong> ·{" "}
+          {config?.apartment ?? "Riverside House, Zone 2"}
+        </span>
+      </div>
     </div>
   );
 }
@@ -2889,9 +3483,11 @@ function LegacyMovePlanner({
 function Agent({
   storedMessages,
   onSend,
+  onClear,
 }: {
   storedMessages?: DatabaseState["messages"];
-  onSend: (text: string) => void;
+  onSend: (text: string) => Promise<boolean>;
+  onClear: () => Promise<boolean>;
 }) {
   const [messages, setMessages] = useState([
     {
@@ -2900,10 +3496,36 @@ function Agent({
     },
   ]);
   const [input, setInput] = useState("");
-  const reply = (question: string) => {
-    if (!question.trim()) return;
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const sendingRef = useRef(false);
+  const [clearing, setClearing] = useState(false);
+  const conversationRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = conversationRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
+  }, [storedMessages?.length, messages.length, sending]);
+  const reply = async (question: string) => {
+    if (!question.trim() || sendingRef.current || clearing) return;
+    setError("");
     if (storedMessages) {
-      onSend(question);
+      sendingRef.current = true;
+      setSending(true);
+      try {
+        const success = await onSend(question.trim());
+        if (success) setInput("");
+        else {
+          setInput(question);
+          setError("Message failed. Try again.");
+        }
+      } catch {
+        setInput(question);
+        setError("Message failed. Try again.");
+      } finally {
+        sendingRef.current = false;
+        setSending(false);
+      }
+      return;
     } else
       setMessages((m) => [
         ...m,
@@ -2928,9 +3550,33 @@ function Agent({
     "How will a £900 rent change my runway?",
   ];
   return (
-    <div className="agent-layout">
+    <div className="agent-layout agent-functional">
+      <div className="agent-chat-toolbar">
+        <span>Plan assistant</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={sending || clearing}
+          onClick={async () => {
+            setClearing(true);
+            setError("");
+            try {
+              if (!(await onClear()))
+                setError("Could not reset chat. Try again.");
+              else setInput("");
+            } catch {
+              setError("Could not reset chat. Try again.");
+            } finally {
+              setClearing(false);
+            }
+          }}
+        >
+          <Plus size={16} />
+          New chat
+        </Button>
+      </div>
       <section className="chat agent-chat-workspace">
-        <div className="agent-conversation">
+        <div className="agent-conversation" ref={conversationRef}>
           {visibleMessages.length <= 1 && (
             <div className="agent-welcome-state">
               <span className="agent-welcome-icon">
@@ -2956,7 +3602,11 @@ function Agent({
               </div>
               <div className="agent-starters">
                 {starters.map((starter) => (
-                  <button key={starter} onClick={() => reply(starter)}>
+                  <button
+                    key={starter}
+                    disabled={sending}
+                    onClick={() => void reply(starter)}
+                  >
                     {starter}
                     <ArrowRight />
                   </button>
@@ -2982,7 +3632,7 @@ function Agent({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              reply(input);
+              void reply(input);
             }}
           >
             <input
@@ -2997,13 +3647,23 @@ function Agent({
               </span>
               <span>Informational guidance</span>
             </div>
-            <button aria-label="Send">
-              <Send />
+            <button
+              aria-label="Send"
+              disabled={sending || clearing || !input.trim()}
+            >
+              {sending ? <span className="spinner" /> : <Send />}
             </button>
           </form>
-          <small className="disclaimer">
-            Financial actions always require your approval.
-          </small>
+          {sending && (
+            <small role="status" className="agent-send-status">
+              Replying…
+            </small>
+          )}
+          {error && (
+            <small role="alert" className="fx-error">
+              {error}
+            </small>
+          )}
         </div>
       </section>
     </div>
@@ -3016,6 +3676,7 @@ function Payments({
   prepare,
   approve,
   execute,
+  reset,
   storedRoute,
   onSelectRoute,
   storedRoutes,
@@ -3023,208 +3684,271 @@ function Payments({
 }: {
   status: PaymentStatus;
   paid: boolean;
-  prepare: () => void;
-  approve: () => void;
-  execute: () => void;
+  prepare: () => Promise<boolean>;
+  approve: () => Promise<boolean>;
+  execute: () => Promise<boolean>;
+  reset: () => Promise<boolean>;
   storedRoute?: string;
-  onSelectRoute: (route: string) => void;
+  onSelectRoute: (route: string) => Promise<boolean>;
   storedRoutes?: DatabaseState["paymentRoutes"];
   config?: any;
 }) {
-  const [localSelected, setLocalSelected] = useState("wise");
-  const [consent, setConsent] = useState(false);
-  const selected = storedRoute ?? localSelected;
-  const setSelected = (route: string) => {
-    setLocalSelected(route);
-    onSelectRoute(route);
-  };
   const availableRoutes =
     storedRoutes?.map((r) => ({ ...r, id: r.key })) ?? routes;
+  const [selected, setSelected] = useState(
+    storedRoute ?? availableRoutes.find((r) => r.recommended)?.id ?? "wise",
+  );
+  const [consent, setConsent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const runAction = async (action: () => Promise<boolean>) => {
+    if (busy) return;
+    setBusy(true);
+    setActionError("");
+    try {
+      if (!(await action())) setActionError("Could not save. Try again.");
+    } catch {
+      setActionError("Could not save. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const selectProvider = async (id: string) => {
+    const previous = selected;
+    setSelected(id);
+    setConsent(false);
+    await runAction(async () => {
+      const success = await onSelectRoute(id);
+      if (!success) setSelected(previous);
+      return success;
+    });
+  };
+  useEffect(() => {
+    if (storedRoute) setSelected(storedRoute);
+    setConsent(false);
+  }, [storedRoute, status]);
   const route =
     availableRoutes.find((r) => r.id === selected) ?? availableRoutes[0];
-  const amount = config?.paymentAmount ?? 0;
+  const amount = Number(config?.paymentAmount);
+  const ready =
+    Number.isFinite(amount) && amount > 0 && !!route && route.fxRate > 0;
+  const amountLabel = ready ? formatGBP(amount) : "—";
   const recipient = config?.recipient ?? "Example UK University";
+  const locked = !["not_started", "prepared"].includes(status);
   const currentStep =
     status === "not_started" ? 1 : status === "prepared" ? 2 : 3;
-  const paymentSteps = ["Route", "Confirm", "Send"];
   return (
-    <div className="payments-page payment-checkout">
-      <section className="payment-checkout-header">
-        <div>
-          <span className="eyebrow">Tuition payment</span>
-          <h2>Total: {formatGBP(amount)}</h2>
-          <p>Choose a route and confirm the details.</p>
+    <div className="payments-page payment-checkout pay-simple">
+      <header className="pay-heading">
+        <h2>Tuition payment</h2>
+        <div className="pay-header-actions">
+          <span className="fx-badge">Sandbox</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy || status === "not_started"}
+            onClick={() => void runAction(reset)}
+          >
+            <RotateCcw size={14} />
+            Reset payment
+          </Button>
         </div>
-        <ol className="payment-steps" aria-label="Payment progress">
-          {paymentSteps.map((label, index) => {
-            const step = index + 1;
-            return (
-              <li
-                className={
-                  step === currentStep
-                    ? "active"
-                    : step < currentStep
-                      ? "complete"
-                      : ""
-                }
-                aria-current={step === currentStep ? "step" : undefined}
-                key={label}
-              >
-                <span>{step < currentStep ? <Check /> : step}</span>
-                <b>{label}</b>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-      {paid && (
-        <div className="success-banner payment-success-banner">
-          <CheckCircle2 />
-          <div>
-            <strong>Payment completed</strong>
-            <p>
-              {formatGBP(amount)} delivered to {recipient} · Reference{" "}
-              {config?.transactionReference}
-            </p>
+      </header>
+      <div className="pay-progress" aria-label="Payment progress">
+        {["Choose", "Approve", "Send"].map((label, i) => (
+          <div
+            key={label}
+            className={i + 1 <= currentStep ? "active" : ""}
+            aria-current={i + 1 === currentStep ? "step" : undefined}
+          >
+            <span>{i + 1 < currentStep ? <Check size={12} /> : i + 1}</span>
+            {label}
           </div>
+        ))}
+      </div>
+      {paid && (
+        <div className="pay-success" role="status">
+          <CheckCircle2 size={20} />
+          <strong>{amountLabel} sent</strong>
+          <span>{config?.transactionReference}</span>
         </div>
       )}
-      <div className="payment-checkout-grid">
-        <section className="payment-route-panel">
-          <div className="payment-section-heading">
-            <span>Payment route</span>
-            <h3>How would you like to send?</h3>
-          </div>
-          <div className="payment-route-cards">
-            {availableRoutes.map((r, index) => {
-              const RouteIcon =
-                r.id.includes("swift") || r.provider.toLowerCase().includes("bank")
-                  ? Landmark
-                  : r.id.includes("card") ||
-                      r.provider.toLowerCase().includes("card")
-                    ? CreditCard
-                    : Send;
-              return (
-                <button
-                  type="button"
-                  className={`payment-route-card ${selected === r.id ? "selected" : ""}`}
-                  aria-pressed={selected === r.id}
-                  onClick={() => setSelected(r.id)}
-                  key={r.id}
-                >
-                  <span className="payment-route-select">
-                    {selected === r.id ? <Check /> : index + 1}
-                  </span>
-                  <span className="payment-route-icon">
-                    <RouteIcon />
-                  </span>
-                  <strong>{r.provider}</strong>
-                  {r.recommended && <em>Best value</em>}
-                  <span className="payment-route-stat">
-                    <small>Total cost</small>
-                    <b>{formatUSD(routeEffectiveCost(r))}</b>
-                  </span>
-                  <span className="payment-route-stat">
-                    <small>Arrives</small>
-                    <b>{r.delivery}</b>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="payment-recipient-card">
-            <div className="payment-recipient-copy">
-              <span>Recipient</span>
-              <strong>{recipient}</strong>
-              <small>
-                Account •••• {config?.recipientAccountLast4 ?? "1842"} ·{" "}
-                {config?.swift ?? "EXUKGB2L"}
-              </small>
+      <div className="pay-grid">
+        <Card className="pay-card">
+          <CardHeader>
+            <CardTitle>Choose a provider</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="pay-options"
+              role="group"
+              aria-label="Payment providers"
+            >
+              {availableRoutes.map((r) => {
+                const RouteIcon =
+                  r.id.includes("swift") ||
+                  r.provider.toLowerCase().includes("bank")
+                    ? Landmark
+                    : r.id.includes("card") ||
+                        r.provider.toLowerCase().includes("card")
+                      ? CreditCard
+                      : Send;
+                return (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    key={r.id}
+                    disabled={locked || busy}
+                    className={`pay-option ${route?.id === r.id ? "selected" : ""}`}
+                    aria-pressed={route?.id === r.id}
+                    onClick={() => void selectProvider(r.id)}
+                  >
+                    <span className="pay-provider-icon">
+                      <RouteIcon size={20} />
+                    </span>
+                    <span className="pay-provider">
+                      <strong>{r.provider}</strong>
+                      <span>
+                        <Clock3 size={13} />
+                        {r.delivery}
+                        {r.recommended && <em>Best value</em>}
+                      </span>
+                    </span>
+                    <strong
+                      className="pay-price"
+                      aria-label="Total cost in USD"
+                    >
+                      {formatUSD(routeEffectiveCost(r))}
+                    </strong>
+                    <span className="pay-radio" aria-hidden="true">
+                      {route?.id === r.id && <Check size={12} />}
+                    </span>
+                  </Button>
+                );
+              })}
+              {!availableRoutes.length && (
+                <p className="fx-hint">No providers available.</p>
+              )}
             </div>
-            <span className="payment-recipient-verified">
-              <ShieldCheck /> Verified
-            </span>
-            <div className="payment-recipient-icon">
-              <Landmark />
+            <div className="pay-recipient">
+              <Landmark size={20} />
+              <div>
+                <strong>{recipient}</strong>
+                <small>•••• {config?.recipientAccountLast4 ?? "1842"}</small>
+              </div>
+              <ShieldCheck size={20} aria-label="Verified recipient" role="img">
+                <title>Verified recipient</title>
+              </ShieldCheck>
             </div>
-          </div>
-        </section>
-        <aside className="payment-checkout-review">
-          <span className="eyebrow">Review</span>
-          <h3>Payment details</h3>
-          <div className="payment-total-row">
-            <span>University receives</span>
-            <strong>{formatGBP(amount)}</strong>
-          </div>
-          <dl className="payment-summary-list">
-            <div>
-              <dt>You send</dt>
-              <dd>{formatUSD(route.sourceAmount)}</dd>
+          </CardContent>
+        </Card>
+        <Card className="pay-card pay-review">
+          <CardHeader>
+            <CardTitle>Review</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="pay-amount">
+              <span>Recipient gets</span>
+              <strong>{amountLabel}</strong>
             </div>
-            <div>
-              <dt>Provider fee</dt>
-              <dd>{formatUSD(route.fee)}</dd>
-            </div>
-            <div>
-              <dt>Exchange rate</dt>
-              <dd>{route.fxRate} GBP / USD</dd>
-            </div>
-          </dl>
-          <div className="payment-arrival-card">
-            <span>
-              <small>Expected arrival</small>
-              <strong>{config?.sendBy ?? route.delivery}</strong>
-            </span>
-            <CalendarDays />
-          </div>
-          <div className="payment-control-note">
-            <ShieldCheck />
-            <div>
-              <strong>You stay in control</strong>
-              <p>Nothing moves until you approve.</p>
-            </div>
-          </div>
-          {status === "not_started" && (
-            <button className="payment-action" onClick={prepare}>
-              Prepare payment <ArrowRight />
-            </button>
-          )}
-          {status === "prepared" && (
-            <>
-              <label className="payment-consent">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                />
-                <span>I checked the recipient and total.</span>
-              </label>
-              <button
-                className="payment-action"
-                disabled={!consent}
-                onClick={approve}
+            {!ready && (
+              <p className="fx-error" role="status">
+                Payment details unavailable.
+              </p>
+            )}
+            <dl className="pay-details">
+              <div>
+                <dt>
+                  <WalletCards size={16} />
+                  You pay
+                </dt>
+                <dd>{route ? formatUSD(routeEffectiveCost(route)) : "—"}</dd>
+              </div>
+              <div>
+                <dt>
+                  <ReceiptText size={16} />
+                  Fee included
+                </dt>
+                <dd>{route ? formatUSD(route.fee) : "—"}</dd>
+              </div>
+              <div>
+                <dt>
+                  <Activity size={16} />
+                  Rate
+                </dt>
+                <dd>{route ? `${route.fxRate} GBP / USD` : "—"}</dd>
+              </div>
+              <div>
+                <dt>
+                  <Clock3 size={16} />
+                  Arrival
+                </dt>
+                <dd>{route?.delivery ?? "—"}</dd>
+              </div>
+            </dl>
+            {status === "not_started" && (
+              <Button
+                className="pay-action"
+                disabled={!ready || busy}
+                onClick={() => void runAction(prepare)}
               >
-                Approve payment <LockKeyhole />
-              </button>
-            </>
-          )}
-          {status === "approved" && (
-            <button className="payment-action" onClick={execute}>
-              Send payment <ArrowRight />
-            </button>
-          )}
-          {status === "processing" && (
-            <button className="payment-action" disabled>
-              <span className="spinner" /> Processing securely…
-            </button>
-          )}
-          {status === "completed" && (
-            <button className="payment-action complete">
-              <CheckCircle2 /> Payment complete
-            </button>
-          )}
-          <small className="payment-sandbox-note">Sandbox · no real funds</small>
-        </aside>
+                {busy ? "Saving…" : "Continue"}
+                <ArrowRight size={16} />
+              </Button>
+            )}
+            {status === "prepared" && (
+              <>
+                <label className="pay-consent">
+                  <Checkbox
+                    checked={consent}
+                    onCheckedChange={(checked) => setConsent(checked === true)}
+                    disabled={!ready}
+                  />
+                  <span>Recipient and total are correct</span>
+                </label>
+                <Button
+                  className="pay-action"
+                  disabled={!consent || !ready || busy}
+                  onClick={() => void runAction(approve)}
+                >
+                  {busy ? "Saving…" : "Approve"}
+                  <LockKeyhole size={16} />
+                </Button>
+              </>
+            )}
+            {status === "approved" && (
+              <Button
+                className="pay-action"
+                disabled={!ready || busy}
+                onClick={() => void runAction(execute)}
+              >
+                Send {amountLabel}
+                <ArrowRight size={16} />
+              </Button>
+            )}
+            {status === "processing" && (
+              <Button className="pay-action" disabled>
+                <span className="spinner" />
+                Sending…
+              </Button>
+            )}
+            {status === "completed" && (
+              <div className="pay-done">
+                <CheckCircle2 size={18} />
+                Sent
+              </div>
+            )}
+            {actionError && (
+              <p className="fx-error" role="alert">
+                {actionError}
+              </p>
+            )}
+            <small className="pay-sandbox">
+              <ShieldCheck size={13} />
+              No real funds
+            </small>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -3264,8 +3988,8 @@ function Sponsors({
           <span>Sponsor coordination</span>
           <h2>Sponsor workspace</h2>
           <p>
-            Coordinate contributions without exposing private spending or account
-            balances.
+            Coordinate contributions without exposing private spending or
+            account balances.
           </p>
         </div>
         <div className="sponsor-reference-tabs" role="tablist">

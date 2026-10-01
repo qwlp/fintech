@@ -24,11 +24,11 @@
 .move-board-header > div:first-child > span,
 .sponsor-reference-header > div:first-child > span {
   display: block;
-  color: var(--color-primary);
-  font-size: 10px !important;
-  font-weight: 800;
+  color: var(--color-accent);
+  font-size: var(--text-caption) !important;
+  font-weight: 650;
   line-height: 1.2;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -38,7 +38,7 @@
   color: var(--color-ink);
   font-size: clamp(28px, 3vw, 36px);
   line-height: 1.05;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.025em;
 }
 
 .move-board-header p,
@@ -46,7 +46,7 @@
   max-width: 620px;
   margin: 0;
   color: var(--color-muted);
-  font-size: 13px !important;
+  font-size: var(--text-body) !important;
 }
 
 .move-arrival-date {
@@ -65,7 +65,7 @@
 
 .move-arrival-date > svg {
   width: 19px;
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .move-arrival-date span,
@@ -74,13 +74,13 @@
 }
 
 .move-arrival-date span {
-  font-size: 10px;
+  font-size: var(--text-caption);
 }
 
 .move-arrival-date strong {
   margin-top: 2px;
   color: var(--color-ink);
-  font-size: 12px;
+  font-size: var(--text-body);
 }
 
 .move-board .timeline-card {
@@ -100,7 +100,7 @@
   margin: 0 0 14px;
   color: var(--color-ink);
   font-size: 16px;
-  font-weight: 750;
+  font-weight: 650;
 }
 
 .move-board .timeline-track > i {
@@ -120,18 +120,18 @@
   flex-basis: 26px;
   color: var(--color-alabaster-grey-50);
   background: var(--color-primary);
-  font-size: 10px;
+  font-size: var(--text-caption);
 }
 
 .move-board .timeline-point strong {
   color: var(--color-ink);
-  font-size: 11px;
+  font-size: var(--text-caption);
 }
 
 .move-board .timeline-point small {
   margin-top: 3px;
   color: var(--color-muted);
-  font-size: 10px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .move-board .timeline-budget {
@@ -143,8 +143,8 @@
 
 .move-board .timeline-budget small {
   color: var(--color-muted);
-  font-size: 9px !important;
-  font-weight: 750;
+  font-size: var(--text-caption) !important;
+  font-weight: 650;
   letter-spacing: 0.06em;
 }
 
@@ -163,7 +163,7 @@
   background: var(--color-primary);
   border: 1px solid var(--color-primary);
   border-radius: 10px;
-  font-size: 11px !important;
+  font-size: var(--text-caption) !important;
   font-weight: 700;
 }
 
@@ -209,7 +209,7 @@
 .move-board .cost-card h3 > span {
   width: 34px;
   height: 34px;
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-primary-soft);
   border-radius: 9px;
 }
@@ -246,7 +246,7 @@
 .move-board .route-choices > button.selected {
   color: var(--color-ink);
   background: var(--color-primary-soft);
-  border-color: var(--color-primary);
+  border-color: var(--color-accent);
   box-shadow: 0 0 0 2px
     color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
@@ -254,14 +254,14 @@
 .move-board .route-kind {
   width: 38px;
   height: 38px;
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-primary-soft);
   border-radius: 10px;
 }
 
 .move-board .route-copy strong {
   color: var(--color-ink);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
 .move-board .route-copy small,
@@ -271,12 +271,12 @@
 
 .move-board .route-copy small {
   margin-top: 4px;
-  font-size: 11px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .move-board .route-copy em {
   margin-top: 4px;
-  font-size: 10px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .move-board .route-radio {
@@ -306,7 +306,7 @@
   width: 32px;
   height: 32px;
   padding: 7px;
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-primary-soft);
   border: 0;
   border-radius: 9px;
@@ -314,11 +314,11 @@
 
 .move-board .horizon-title > span {
   padding: 5px 9px;
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-primary-soft);
   border-radius: 999px;
-  font-size: 9px;
-  font-weight: 750;
+  font-size: var(--text-caption);
+  font-weight: 650;
 }
 
 .move-board .horizon-segments {
@@ -340,18 +340,18 @@
 
 .move-board .horizon-segments button.active {
   background: var(--color-primary);
-  border-color: var(--color-primary);
+  border-color: var(--color-accent);
   box-shadow: none;
 }
 
 .move-board .horizon-meta {
   color: var(--color-muted);
-  font-size: 9px;
+  font-size: var(--text-caption);
 }
 
 .move-board .horizon-meta strong {
   color: var(--color-ink);
-  font-size: 12px;
+  font-size: var(--text-body);
 }
 
 .move-board .horizon-meta strong i {
@@ -362,7 +362,7 @@
 .move-board .cost-card h4 {
   margin: 18px 0 8px;
   color: var(--color-muted);
-  font-size: 10px;
+  font-size: var(--text-caption);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -395,30 +395,30 @@
 .move-board .cost-list > div.paid > i {
   color: var(--color-alabaster-grey-50);
   background: var(--color-primary);
-  border-color: var(--color-primary);
+  border-color: var(--color-accent);
 }
 
 .move-board .cost-list span strong {
   color: var(--color-ink);
-  font-size: 11px;
+  font-size: var(--text-caption);
 }
 
 .move-board .cost-list span small {
   color: var(--color-muted);
-  font-size: 9px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .move-board .cost-list em {
   padding: 3px 7px;
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-surface);
   border-radius: 999px;
-  font-size: 9px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .move-board .cost-list b {
   color: var(--color-ink);
-  font-size: 12px;
+  font-size: var(--text-body);
 }
 
 .move-board .recurring-costs > div {
@@ -439,11 +439,11 @@
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 10px;
-  font-size: 11px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .move-board .move-actions button:first-child:hover {
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-primary-soft);
   border-color: var(--color-ink-black-300);
 }
@@ -456,8 +456,8 @@
 
 .move-board .move-detail-drawer small {
   color: var(--color-muted);
-  font-size: 9px !important;
-  font-weight: 750;
+  font-size: var(--text-caption) !important;
+  font-weight: 650;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -465,12 +465,12 @@
 .move-board .move-detail-drawer strong {
   margin: 5px 0 2px;
   color: var(--color-ink);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
 .move-board .move-detail-drawer span {
   color: var(--color-muted);
-  font-size: 10px;
+  font-size: var(--text-caption);
 }
 
 /* Sponsor workspace */
@@ -500,7 +500,7 @@
   background: transparent;
   border: 0;
   border-radius: 8px;
-  font-size: 11px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .sponsor-reference-tabs button:hover {
@@ -550,7 +550,7 @@
 
 .sponsor-reference-person small {
   color: var(--color-muted);
-  font-size: 10px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .sponsor-reference-person h3 {
@@ -561,24 +561,24 @@
 
 .sponsor-reference-person p {
   color: var(--color-muted);
-  font-size: 10px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .sponsor-reference-person button {
   min-height: 38px;
   margin-top: 18px;
   padding: 0 13px;
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-surface);
   border: 1px solid var(--color-ink-black-300);
   border-radius: 9px;
-  font-size: 11px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .sponsor-reference-person button:hover {
   color: var(--color-alabaster-grey-50);
   background: var(--color-primary);
-  border-color: var(--color-primary);
+  border-color: var(--color-accent);
 }
 
 .sponsor-reference-commitment {
@@ -592,11 +592,11 @@
 
 .commitment-total span {
   color: var(--color-muted);
-  font-size: 10px;
+  font-size: var(--text-caption);
 }
 
 .commitment-total strong {
-  color: var(--color-primary);
+  color: var(--color-accent);
   font-size: 24px;
 }
 
@@ -617,7 +617,7 @@
 
 .commitment-row span {
   color: var(--color-muted);
-  font-size: 10px;
+  font-size: var(--text-caption);
 }
 
 .commitment-row > b {
@@ -635,7 +635,7 @@
 }
 
 .commitment-row.received strong {
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .commitment-row.remaining i {
@@ -661,7 +661,7 @@
 
 .schedule-title p {
   color: var(--color-muted);
-  font-size: 10px !important;
+  font-size: var(--text-caption) !important;
 }
 
 .schedule-head,
@@ -675,7 +675,7 @@
   color: var(--color-muted);
   background: var(--color-surface-soft);
   border-block: 1px solid var(--color-line);
-  font-size: 10px;
+  font-size: var(--text-caption);
   font-weight: 700;
 }
 
@@ -683,18 +683,18 @@
   min-height: 52px;
   color: var(--color-ink);
   border-bottom: 1px solid var(--color-line);
-  font-size: 11px;
+  font-size: var(--text-caption);
 }
 
 .schedule-line em {
   padding: 4px 8px;
   border-radius: 999px;
-  font-size: 9px !important;
+  font-size: var(--text-caption) !important;
   font-weight: 700;
 }
 
 .schedule-line em.paid {
-  color: var(--color-primary);
+  color: var(--color-accent);
   background: var(--color-primary-soft);
 }
 
@@ -709,7 +709,7 @@
 }
 
 .sponsor-reference-panel > span {
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .sponsor-reference-panel h3 {
@@ -724,7 +724,7 @@
 }
 
 .sponsor-reference-panel.privacy > svg {
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 @media (max-width: 980px) {
@@ -891,12 +891,110 @@
   }
 
   .commitment-row strong {
-    font-size: 13px;
+    font-size: var(--text-body);
   }
 
   .schedule-head,
   .schedule-line {
     grid-template-columns: 36% minmax(0, 1fr) auto;
-    font-size: 10px;
+    font-size: var(--text-caption);
   }
+}
+
+/* Arrival planning: compact modes and a larger, editable cost breakdown. */
+.move-board-grid {
+  grid-template-columns: minmax(260px, .65fr) minmax(0, 1.35fr);
+  align-items: start;
+}
+.move-board .route-choice-card { min-height: 0; }
+.move-board .route-choices > button { padding: 14px 12px; }
+.move-board .route-copy small { font-size: 13px; }
+.move-board .move-help { color: var(--color-muted); font-size: 14px; line-height: 1.5; margin: 12px 0 18px; }
+.move-arrival-date { cursor: pointer; }
+.move-arrival-date label { display: block; color: var(--color-muted); }
+.move-arrival-date input { display: block; margin-top: 5px; color: var(--color-ink); font-size: 16px; font-weight: 600; border: 0; background: transparent; max-width: 100%; cursor: pointer; }
+.move-board .cost-card h4 { display: flex; justify-content: space-between; gap: 12px; }
+.move-board .cost-card h4 span { text-transform: none; letter-spacing: 0; }
+.move-board .cost-list > div { grid-template-columns: 28px minmax(0, 1fr) auto; }
+.move-board .cost-list input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--color-dusty-denim-700); cursor: pointer; }
+.move-board .cost-list > div.excluded { opacity: .6; }
+.move-board .horizon-segments button { font-size: 12px; color: var(--color-ink); }
+.move-board .horizon-segments button.active { color: white; }
+.move-board .move-budget-editor { grid-template-columns: 1fr; }
+.move-board .move-budget-editor label span { margin-bottom: 6px; }
+.move-board .move-budget-editor input { width: 100%; padding: 10px; border: 1px solid var(--color-line); border-radius: 8px; background: var(--color-surface); color: var(--color-ink); }
+@media (max-width: 980px) { .move-board-grid { grid-template-columns: 1fr; } }
+
+/* A calmer arrival workspace with editing where the costs live. */
+.move-board .arrival-summary { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 26px 28px; background: var(--color-primary-soft); border-radius: 16px; border: 1px solid var(--color-line); }
+.arrival-summary > div:first-child > span, .arrival-summary > div:first-child > small { display: block; color: var(--color-muted); }
+.arrival-summary > div:first-child > strong { display: block; font-size: 38px; letter-spacing: -1.5px; margin: 4px 0; }
+.arrival-summary-breakdown { display: flex; align-items: center; gap: 22px; }
+.arrival-summary-breakdown div > small { display: block; margin-bottom: 8px; color: var(--color-muted); }
+.arrival-summary-breakdown strong { font-size: 20px; }
+.arrival-summary-breakdown strong small { font-weight: 400; font-size: 13px; color: var(--color-muted); }
+.move-board .planner-assist, .move-board .planner-edit { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 14px; border: 1px solid var(--color-line); border-radius: 8px; background: var(--color-surface); color: var(--color-ink); font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: none; }
+.move-board .planner-assist:hover, .move-board .planner-edit:hover { border-color: var(--color-accent); background: var(--color-primary-soft); }
+.move-board .planner-assist svg, .move-board .planner-edit svg { width: 18px; height: 18px; }
+.move-board button:focus-visible, .move-board select:focus-visible, .move-board input:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+.move-board .route-choice-card h3 > span, .move-board .cost-card h3 > span { background: transparent; width: 26px; height: 26px; }
+.move-board .route-choice-card, .move-board .cost-card { box-shadow: none; padding: 24px; }
+.move-board .route-choices > button { grid-template-columns: 26px minmax(0, 1fr) 16px; gap: 12px; min-height: 108px; }
+.move-board .route-kind { background: transparent; width: 26px; height: 26px; }
+.move-board .route-choices > button.selected { box-shadow: none; }
+.move-board .route-copy strong { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; }
+.move-board .mode-price { white-space: nowrap; font-size: 15px; }
+.move-board .route-radio { width: 16px; height: 16px; }
+.planner-cost-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.move-board .planner-cost-heading .move-help { margin-bottom: 0; margin-top: 8px; }
+.planner-duration { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 24px 0; padding: 14px 16px; border-radius: 10px; background: var(--color-surface-soft); font-size: 14px; }
+.planner-duration select { border: 1px solid var(--color-line); border-radius: 7px; padding: 8px 12px; background: var(--color-surface); color: var(--color-ink); font: inherit; cursor: pointer; }
+.move-board .cost-card h4 { font-size: 14px; text-transform: none; letter-spacing: 0; margin: 24px 0 8px; }
+.move-board .cost-list > div, .move-board .cost-list > div.paid, .move-board .recurring-costs > div { background: transparent; padding: 15px 0; margin: 0; border-radius: 0; border-bottom: 1px solid var(--color-line); gap: 12px; }
+.move-board .cost-list > div.paid + div.paid { margin-top: 0; }
+.move-board .cost-list span strong { font-size: 14px; }
+.move-board .cost-list span small { font-size: 12px; margin-top: 4px; }
+.cost-check { position: relative; width: 21px; height: 21px; display: block; }
+.move-board .cost-check input[type="checkbox"] { position: absolute; inset: 0; opacity: 0; width: 21px; height: 21px; margin: 0; z-index: 1; }
+.move-board .cost-check > span { display: grid; place-items: center; width: 21px; height: 21px; border: 1px solid var(--color-line); border-radius: 6px; background: var(--color-surface); }
+.cost-check svg { width: 13px; height: 13px; opacity: 0; }
+.move-board .cost-check input:checked + span { color: white; background: var(--color-primary); border-color: var(--color-accent); }
+.cost-check input:checked + span svg { opacity: 1; }
+.cost-check input:focus-visible + span { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+.cost-amount-edit { display: flex; align-items: center; gap: 4px; }
+.cost-amount-edit input { width: 100px; border: 1px solid var(--color-line); border-radius: 6px; padding: 8px; background: var(--color-surface); color: var(--color-ink); font: inherit; }
+.planner-estimate-note { font-size: 12px; color: var(--color-muted); margin: 18px 0 0; }
+.planner-arrival-note { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-muted); }
+.planner-arrival-note svg { width: 18px; height: 18px; }
+@media (max-width: 1100px) { .move-board .arrival-summary { flex-wrap: wrap; } .arrival-summary-breakdown { flex: 1; } }
+@media (max-width: 600px) { .arrival-summary-breakdown { flex-basis: 100%; } .planner-cost-heading { flex-wrap: wrap; } .move-board .route-choice-card, .move-board .cost-card { padding: 18px; } .planner-duration { flex-wrap: wrap; } .cost-amount-edit input { width: 74px; } }
+.move-arrival-date.planner-date-picker { position: relative; min-width: 220px; box-shadow: none; }
+.planner-date-picker label strong { display: block; margin-top: 6px; color: var(--color-ink); font-size: 16px; }
+.move-arrival-date.planner-date-picker input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.planner-date-picker:focus-within { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+
+/* Route cards contain multiline content, unlike ordinary action buttons. */
+.move-board .route-choices > button {
+  white-space: normal;
+  box-sizing: border-box;
+  align-items: start;
+  padding: 18px 14px;
+  height: auto;
+}
+.move-board .route-copy { min-width: 0; }
+.move-board .route-copy strong { flex-wrap: wrap; line-height: 1.4; }
+.move-board .route-copy small { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+.move-board .route-copy em { margin-top: 7px; line-height: 1.4; }
+.move-board .route-kind, .move-board .route-radio { margin-top: 3px; }
+.move-board .route-radio { box-sizing: border-box; justify-self: end; }
+.move-board-grid > *, .move-board .move-side-stack, .planner-cost-heading > div { min-width: 0; }
+.move-board .cost-list > div { min-width: 0; }
+.move-board .cost-list > div > b { white-space: nowrap; }
+@media (max-width: 600px) {
+  .move-board .arrival-summary { padding: 20px; gap: 20px; }
+  .arrival-summary-breakdown { gap: 12px; flex-wrap: wrap; }
+  .arrival-summary-breakdown strong { font-size: 18px; }
+  .move-board .planner-cost-heading .planner-edit { flex-shrink: 0; }
+  .move-board .cost-list > div { column-gap: 8px; }
+  .move-board .cost-list span strong { overflow-wrap: anywhere; }
 }

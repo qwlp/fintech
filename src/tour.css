@@ -1,0 +1,20 @@
+/* A nonmodal guide: the page stays visible and interactive. */
+.guide-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+.guide-focus { position: fixed; border: 2px solid var(--ui-primary); border-radius: 12px; pointer-events: none; background: transparent; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-primary) 12%, transparent); }
+.guide-layer .guide-card { position: fixed; right: 20px; bottom: 20px; width: min(320px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-surface); color: var(--color-ink); box-shadow: 0 6px 24px #00000014; pointer-events: auto; }
+.guide-header { display: flex; align-items: center; gap: 10px; }
+.guide-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--color-primary-soft); color: var(--ui-primary); flex-shrink: 0; }
+.guide-header strong { font-size: 14px; font-weight: 600; flex: 1; }
+.guide-header button { width: 28px; height: 28px; padding: 0; color: var(--ui-muted); border: 0; background: transparent; }
+.guide-card > p { margin: 12px 0 18px; font-size: 13px; line-height: 1.5; color: var(--ui-muted); }
+.guide-footer { display: flex; align-items: center; gap: 8px; }
+.guide-dots { display: flex; gap: 5px; }
+.guide-dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%; background: var(--color-line); position: relative; }
+.guide-dots button::after { content: ""; position: absolute; inset: -6px -2px; }
+.guide-dots button[aria-current=step] { background: var(--ui-primary); }
+.guide-count { font-size: 11px; color: var(--ui-muted); margin-right: auto; }
+.guide-footer > button { font-family: inherit; font-size: 12px; }
+.guide-footer > button:nth-last-child(2) { width: 28px; height: 28px; padding: 0; border: 0; background: transparent; color: var(--color-ink); }
+.guide-footer > button:last-child { height: 30px; padding: 0 10px; border: 0; background: var(--ui-primary); color: white; border-radius: 6px; }
+.guide-card button:focus-visible { outline: 2px solid var(--ui-primary); outline-offset: 3px; }
+@media (max-width: 760px) { .guide-layer .guide-card { left: 16px; right: 16px; bottom: 16px; top: auto; width: auto; } }
