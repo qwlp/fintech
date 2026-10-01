@@ -22,7 +22,18 @@ export default defineSchema({
     ),
     selectedRoute: v.string(),
     sponsorRequestSent: v.boolean(),
-  }).index("by_email", ["email"]),
+    ownerAccountId: v.optional(v.id("accounts")),
+    moveType: v.optional(
+      v.union(
+        v.literal("study"),
+        v.literal("work"),
+        v.literal("relocation"),
+        v.literal("travel"),
+      ),
+    ),
+  })
+    .index("by_email", ["email"])
+    .index("by_owner_accountId", ["ownerAccountId"]),
   costs: defineTable({
     accountId: v.id("accounts"),
     key: v.string(),
@@ -41,6 +52,22 @@ export default defineSchema({
     status: v.string(),
     available: v.string(),
   }).index("by_account", ["accountId"]),
+  sponsorLinks: defineTable({
+    accountId: v.id("accounts"),
+    name: v.string(),
+    email: v.string(),
+    relationship: v.string(),
+    commitment: v.number(),
+    nextDate: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("declined"),
+    ),
+    notificationId: v.id("notifications"),
+  })
+    .index("by_account_status", ["accountId", "status"])
+    .index("by_account_email", ["accountId", "email"]),
   sponsors: defineTable({
     accountId: v.id("accounts"),
     key: v.string(),
@@ -100,7 +127,9 @@ export default defineSchema({
     accountId: v.id("accounts"),
     key: v.string(),
     value: v.any(),
-  }).index("by_account", ["accountId"]),
+  })
+    .index("by_account", ["accountId"])
+    .index("by_account_and_key", ["accountId", "key"]),
   sponsorRequests: defineTable({
     accountId: v.id("accounts"),
     sponsorKey: v.string(),

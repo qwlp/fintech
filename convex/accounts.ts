@@ -3,17 +3,332 @@ import {
   queryGeneric as query,
 } from "convex/server";
 import { v } from "convex/values";
+import { mutation as appMutation, query as appQuery } from "./_generated/server";
+import { getWorkspace } from "./lib/workspaces";
 
 const DEMO_EMAIL = "dara@financialpassport.demo";
 
-export const bootstrap = query({
-  args: { email: v.string() },
-  handler: async (ctx, { email }) => {
-    const account = await ctx.db
+export const saveBudget = appMutation({
+  args: {
+    workspaceId: v.optional(v.id("accounts")),
+    allocations: v.array(
+      v.object({ category: v.string(), amount: v.number() }),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, { allocations, workspaceId }) => {
+    if (allocations.length > 20) throw new Error("Use at most 20 categories.");
+    const normalized = allocations.map(({ category, amount }) => {
+      const name = category.trim();
+      if (!name || name.length > 60)
+        throw new Error("Enter a category of 1–60 characters.");
+      if (!Number.isFinite(amount) || amount < 0 || amount > 1_000_000_000) {
+        throw new Error("Enter a valid, non-negative budget amount.");
+      }
+      return { category: name, amount: Math.round(amount * 100) / 100 };
+    });
+    if (
+      new Set(normalized.map((row) => row.category.toLowerCase())).size !==
+      normalized.length
+    ) {
+      throw new Error("Each category must have a unique name.");
+    }
+    const account = await getWorkspace(ctx, workspaceId);
+    const existing = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account_and_key", (q) =>
+        q.eq("accountId", account._id).eq("key", "budget"),
+      )
+      .unique();
+    const value = { currency: "GBP", allocations: normalized };
+    if (existing) await ctx.db.patch("appConfig", existing._id, { value });
+    else
+      await ctx.db.insert("appConfig", {
+        accountId: account._id,
+        key: "budget",
+        value,
+      });
+    return null;
+  },
+});
+
+export const sendSponsorLinkRequest = appMutation({
+  args: {
+    userCode: v.string(),
+    name: v.string(),
+    email: v.string(),
+    relationship: v.string(),
+    commitment: v.number(),
+    nextDate: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const code = args.userCode.trim();
+    const accountId = ctx.db.normalizeId(
+      "accounts",
+      code.startsWith("FP-") ? code.slice(3) : "",
+    );
+    const account = accountId ? await ctx.db.get("accounts", accountId) : null;
+    if (!account) throw new Error("User code not found.");
+    const name = args.name.trim(),
+      email = args.email.trim().toLowerCase(),
+      relationship = args.relationship.trim();
+    if (
+      !name ||
+      name.length > 80 ||
+      !relationship ||
+      relationship.length > 60 ||
+      email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    )
+      throw new Error("Enter valid sponsor details.");
+    const date = new Date(args.nextDate);
+    if (
+      !Number.isFinite(args.commitment) ||
+      args.commitment < 0 ||
+      args.commitment > 1e9 ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(args.nextDate) ||
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== args.nextDate
+    )
+      throw new Error("Enter a valid amount and date.");
+    const existing = await ctx.db
+      .query("sponsorLinks")
+      .withIndex("by_account_email", (q) =>
+        q.eq("accountId", account._id).eq("email", email),
+      )
+      .order("desc")
+      .first();
+    if (existing && existing.status !== "declined")
+      throw new Error(
+        "This sponsor already has a pending or accepted request.",
+      );
+    const pending = await ctx.db
+      .query("sponsorLinks")
+      .withIndex("by_account_status", (q) =>
+        q.eq("accountId", account._id).eq("status", "pending"),
+      )
+      .take(20);
+    if (pending.length >= 20)
+      throw new Error("This move has too many pending requests.");
+    const notificationId = await ctx.db.insert("notifications", {
+      accountId: account._id,
+      title: "New sponsor request",
+      detail: `${name} wants to sponsor your move. Review in Sponsors.`,
+      read: false,
+      timestamp: Date.now(),
+    });
+    await ctx.db.insert("sponsorLinks", {
+      accountId: account._id,
+      name,
+      email,
+      relationship,
+      commitment: Math.round(args.commitment * 100) / 100,
+      nextDate: args.nextDate,
+      status: "pending",
+      notificationId,
+    });
+    return null;
+  },
+});
+
+export const respondSponsorLink = appMutation({
+  args: {
+    workspaceId: v.optional(v.id("accounts")),
+    requestId: v.id("sponsorLinks"),
+    accept: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const account = await getWorkspace(ctx, args.workspaceId);
+    const request = await ctx.db.get("sponsorLinks", args.requestId);
+    if (!request || request.accountId !== account._id)
+      throw new Error("Request not found.");
+    if (request.status !== "pending")
+      throw new Error("This request has already been reviewed.");
+    if (args.accept) {
+      const sponsors = await ctx.db
+        .query("sponsors")
+        .withIndex("by_account", (q) => q.eq("accountId", account._id))
+        .take(20);
+      if (sponsors.length >= 20)
+        throw new Error("You can add up to 20 sponsors.");
+      await ctx.db.insert("sponsors", {
+        accountId: account._id,
+        key: `link-${request._id}`,
+        name: request.name,
+        relationship: request.relationship,
+        commitment: request.commitment,
+        nextDate: request.nextDate,
+        permissions: [],
+      });
+    }
+    await ctx.db.patch("sponsorLinks", request._id, {
+      status: args.accept ? "accepted" : "declined",
+    });
+    await ctx.db.patch("notifications", request.notificationId, { read: true });
+    await ctx.db.insert("auditEvents", {
+      accountId: account._id,
+      type: "SPONSOR_LINK_REVIEWED",
+      detail: `${request.name}: ${args.accept ? "accepted" : "declined"}`,
+      actor: account.name,
+      timestamp: Date.now(),
+    });
+    return null;
+  },
+});
+
+export const createMoveProfile = appMutation({
+  args: {
+    name: v.string(),
+    type: v.union(
+      v.literal("study"),
+      v.literal("work"),
+      v.literal("relocation"),
+      v.literal("travel"),
+    ),
+    countryFrom: v.string(),
+    countryTo: v.string(),
+    arrivalDate: v.string(),
+  },
+  returns: v.id("accounts"),
+  handler: async (ctx, args) => {
+    const name = args.name.trim();
+    const countryFrom = args.countryFrom.trim();
+    const countryTo = args.countryTo.trim();
+    if (
+      !name ||
+      name.length > 80 ||
+      !countryFrom ||
+      countryFrom.length > 80 ||
+      !countryTo ||
+      countryTo.length > 80
+    )
+      throw new Error("Enter a profile name and countries.");
+    const date = new Date(args.arrivalDate);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(args.arrivalDate) ||
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== args.arrivalDate
+    )
+      throw new Error("Enter a valid arrival date.");
+    const owner = await getWorkspace(ctx);
+    const existing = await ctx.db
+      .query("accounts")
+      .withIndex("by_owner_accountId", (q) => q.eq("ownerAccountId", owner._id))
+      .take(19);
+    if (existing.length >= 19)
+      throw new Error("You can have up to 20 move profiles.");
+    const accountId = await ctx.db.insert("accounts", {
+      ownerAccountId: owner._id,
+      moveType: args.type,
+      email: `move-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@financialpassport.demo`,
+      name: owner.name,
+      initials: owner.initials,
+      role: {
+        study: "Student",
+        work: "Professional",
+        relocation: "Resident",
+        travel: "Traveller",
+      }[args.type],
+      planName: name,
+      countryFrom,
+      countryTo,
+      university: "",
+      course: "",
+      paymentStatus: "not_started",
+      selectedRoute: "",
+      sponsorRequestSent: false,
+    });
+    for (const [key, value] of Object.entries({
+      profile: {
+        courseStart: args.arrivalDate,
+        financialStatus: "Not planned",
+        sponsorSupport: "",
+      },
+      move: {
+        arrivalDate: args.arrivalDate,
+        readyBy: "",
+        setupEmpty: true,
+        routes: [],
+        requirements: [],
+        oneTime: 0,
+        monthly: 0,
+        tuition: 0,
+      },
+      budget: { currency: "GBP", allocations: [] },
+      banking: { paymentAmount: 0, recipient: "", sendBy: "" },
+      sponsorship: { transferred: 0, schedule: [] },
+      departure: { documents: [], deadlines: [] },
+      security: {
+        approvalRequired: true,
+        paymentLimit: 2500,
+        approvalExpiryMinutes: 10,
+      },
+    }))
+      await ctx.db.insert("appConfig", { accountId, key, value });
+    for (const [currency, symbol] of [
+      ["GBP", "£"],
+      ["USD", "$"],
+      ["KHR", "៛"],
+    ]) {
+      await ctx.db.insert("wallets", {
+        accountId,
+        currency,
+        symbol,
+        amount: 0,
+        gbpValue: 0,
+        label: "Available",
+      });
+    }
+    for (const [position, [key, label]] of [
+      ["visa", "Prepare visa requirements"],
+      ["housing", "Plan accommodation"],
+      ["budget", "Set your move budget"],
+      ["funding", "Arrange funding"],
+    ].entries()) {
+      await ctx.db.insert("checklist", {
+        accountId,
+        key,
+        label,
+        detail: "Not started",
+        done: false,
+        position,
+      });
+    }
+    await ctx.db.insert("auditEvents", {
+      accountId,
+      type: "MOVE_CREATED",
+      detail: `${name} profile created`,
+      timestamp: Date.now(),
+      actor: owner.name,
+    });
+    return accountId;
+  },
+});
+
+export const bootstrap = appQuery({
+  returns: v.any(),
+  args: { email: v.string(), workspaceId: v.optional(v.id("accounts")) },
+  handler: async (ctx, { email, workspaceId }) => {
+    const owner = await ctx.db
       .query("accounts")
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
-    if (!account) return null;
+    if (!owner) return null;
+    if (owner.email !== DEMO_EMAIL) throw new Error("Move profile not found.");
+    const account = await getWorkspace(ctx, workspaceId);
+    const otherProfiles = await ctx.db
+      .query("accounts")
+      .withIndex("by_owner_accountId", (q) => q.eq("ownerAccountId", owner._id))
+      .take(20);
+    const moveProfiles = [owner, ...otherProfiles].map((profile) => ({
+      id: profile._id,
+      name: profile.planName,
+      type: profile.moveType ?? "study",
+      countryFrom: profile.countryFrom,
+      countryTo: profile.countryTo,
+    }));
     const accountId = account._id;
     const [
       costs,
@@ -85,6 +400,14 @@ export const bootstrap = query({
     ]);
     return {
       account,
+      moveProfiles,
+      userCode: `FP-${account._id}`,
+      sponsorLinks: await ctx.db
+        .query("sponsorLinks")
+        .withIndex("by_account_status", (q) =>
+          q.eq("accountId", accountId).eq("status", "pending"),
+        )
+        .take(20),
       costs,
       funding,
       sponsors,

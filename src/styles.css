@@ -44,17 +44,17 @@
   --color-dusty-denim-800: #27313f;
   --color-dusty-denim-900: #14191f;
   --color-dusty-denim-950: #0e1116;
-  --color-alabaster-grey-50: #f3f3f1;
-  --color-alabaster-grey-100: #e6e7e4;
-  --color-alabaster-grey-200: #cecfc9;
-  --color-alabaster-grey-300: #b5b7ae;
-  --color-alabaster-grey-400: #9c9f93;
-  --color-alabaster-grey-500: #838778;
-  --color-alabaster-grey-600: #696c60;
-  --color-alabaster-grey-700: #4f5148;
-  --color-alabaster-grey-800: #353630;
-  --color-alabaster-grey-900: #1a1b18;
-  --color-alabaster-grey-950: #121311;
+  --color-alabaster-grey-50: var(--color-dusty-denim-50);
+  --color-alabaster-grey-100: var(--color-dusty-denim-100);
+  --color-alabaster-grey-200: var(--color-dusty-denim-200);
+  --color-alabaster-grey-300: var(--color-dusty-denim-300);
+  --color-alabaster-grey-400: var(--color-dusty-denim-400);
+  --color-alabaster-grey-500: var(--color-dusty-denim-500);
+  --color-alabaster-grey-600: var(--color-dusty-denim-600);
+  --color-alabaster-grey-700: var(--color-dusty-denim-700);
+  --color-alabaster-grey-800: var(--color-dusty-denim-800);
+  --color-alabaster-grey-900: var(--color-dusty-denim-900);
+  --color-alabaster-grey-950: var(--color-dusty-denim-950);
 
   font-family:
     Inter,
@@ -8355,6 +8355,12 @@ select:focus-visible {
 .profile {
   padding: 16px 8px 2px;
   border-top: 1px solid var(--color-line);
+}
+.sidebar .profile.active {
+  background: var(--color-alabaster-grey-100);
+}
+:root[data-theme="dark"] .sidebar .profile.active {
+  background: var(--color-dusty-denim-800);
 }
 :root[data-theme="dark"] .sidebar nav button.active {
   color: var(--color-ink-black-50);

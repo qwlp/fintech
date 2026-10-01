@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Activity,
   ArrowRight,
@@ -64,23 +64,37 @@ import {
 } from "./lib/finance";
 import type { AuditEvent, PaymentStatus } from "./types";
 import { convexApi, convexClient, demoEmail } from "./lib/convex";
+import type { Id } from "../convex/_generated/dataModel";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Area,
   AreaChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
+type MoveType = "study" | "work" | "relocation" | "travel";
+type MoveProfileSummary = { id: Id<"accounts">; name: string; type: MoveType; countryFrom: string; countryTo: string };
+type NewMoveProfile = { name: string; type: MoveType; countryFrom: string; countryTo: string; arrivalDate: string };
+
+type NewSponsor = { userCode: string; email: string; name: string; relationship: string; commitment: number; nextDate: string };
+
+type BudgetAllocation = { category: string; amount: number };
+
 type DatabaseState = {
+  userCode: string;
+  sponsorLinks: Array<{ _id: Id<"sponsorLinks">; name: string; email: string; relationship: string; commitment: number; nextDate: string }>;
+  moveProfiles: MoveProfileSummary[];
   account: {
     _id: string;
+    countryFrom: string;
+    countryTo: string;
+    university: string;
+    course: string;
+    moveType?: MoveType;
     name: string;
     initials: string;
     role: string;
@@ -179,7 +193,6 @@ type Page =
 type Variation = 1 | 2 | 3 | 4 | 5;
 const nav: { page: Page; icon: typeof Home }[] = [
   { page: "Dashboard", icon: LayoutDashboard },
-  { page: "Profile", icon: UserRound },
   { page: "Move Planner", icon: Route },
   { page: "AI Agent", icon: Bot },
   { page: "Payments", icon: CreditCard },
@@ -197,16 +210,19 @@ const burn = monthlyBurn(650, [250, 80, 70, 55, 120, 75]),
 
 function App() {
   const pageFromHash = (): Page =>
-    nav.find(
-      ({ page }) =>
-        `#${page.toLowerCase().replace(" ", "-")}` === window.location.hash,
-    )?.page ?? "Dashboard";
+    [...nav.map((item) => item.page), "Profile" as Page].find(
+      (page) => `#${page.toLowerCase().replace(" ", "-")}` === window.location.hash,
+    ) ?? "Dashboard";
   const [page, setPage] = useState<Page>(pageFromHash);
   const [mobileNav, setMobileNav] = useState(false);
   const [localPaymentStatus, setLocalPaymentStatus] =
     useState<PaymentStatus>("not_started");
   const [localAudit, setLocalAudit] = useState<AuditEvent[]>(initialAudit);
   const [database, setDatabase] = useState<DatabaseState | null>(null);
+  const [workspaceId, setWorkspaceId] = useState<Id<"accounts"> | undefined>(() => {
+    const stored = localStorage.getItem("financial-passport-workspace");
+    return stored ? stored as Id<"accounts"> : undefined;
+  });
   const [syncState, setSyncState] = useState<
     "demo" | "connecting" | "synced" | "error"
   >(convexClient ? "connecting" : "demo");
@@ -245,8 +261,8 @@ function App() {
 
   useEffect(() => {
     const client = convexClient;
-    if (!client) return;
-    const watch = client.watchQuery(convexApi.bootstrap, { email: demoEmail });
+    if (!client || new URLSearchParams(window.location.search).has("sponsor")) return;
+    const watch = client.watchQuery(convexApi.bootstrap, { email: demoEmail, ...(workspaceId ? { workspaceId } : {}) });
     const unsubscribe = watch.onUpdate(() => {
       try {
         const result = watch.localQueryResult();
@@ -271,11 +287,14 @@ function App() {
           }
         }
       } catch {
-        setSyncState("error");
+        if (workspaceId) {
+          localStorage.removeItem("financial-passport-workspace");
+          setWorkspaceId(undefined);
+        } else setSyncState("error");
       }
     });
     return unsubscribe;
-  }, []);
+  }, [workspaceId]);
 
   const account = database?.account;
   const visibleCosts =
@@ -452,11 +471,36 @@ function App() {
           targetRate,
         })
       : Promise.resolve(false);
+  const addSponsor = (sponsor: NewSponsor) => mutate(convexApi.sendSponsorLinkRequest, sponsor);
+  const saveBudget = (allocations: BudgetAllocation[]) =>
+    mutate(convexApi.saveBudget, { allocations, ...(workspaceId ? { workspaceId } : {}) });
   const readNotifications = () => {
     setNotificationsOpen((open) => !open);
     if (account)
       void mutate(convexApi.markNotificationsRead, { accountId: account._id });
   };
+  const switchWorkspace = (id: Id<"accounts">) => {
+    if (id === account?._id) return;
+    setDatabase(null);
+    setNotificationsOpen(false);
+    setWorkspaceId(id);
+    localStorage.setItem("financial-passport-workspace", id);
+    setPage("Profile");
+    window.history.replaceState(null, "", "#profile");
+    window.scrollTo(0, 0);
+  };
+  const createMove = async (profile: NewMoveProfile) => {
+    if (!convexClient) return false;
+    try {
+      const id = await convexClient.mutation(convexApi.createMoveProfile, profile);
+      switchWorkspace(id);
+      return true;
+    } catch {
+      announce("Could not create the move profile. Please try again.");
+      return false;
+    }
+  };
+
   const go = (p: Page) => {
     setPage(p);
     window.history.replaceState(
@@ -467,6 +511,8 @@ function App() {
     setMobileNav(false);
     window.scrollTo(0, 0);
   };
+
+  if (new URLSearchParams(window.location.search).has("sponsor")) return <main className="sponsor-connect-page"><Sponsors sponsorOnly storedSponsors={[]} requests={[]} onAdd={addSponsor} onRequest={async () => false} onPermission={async () => false} /></main>;
 
   if (!convexClient)
     return (
@@ -580,7 +626,12 @@ function App() {
               )}
             </div>
           </div>
-          <button className="profile" onClick={() => go("Profile")}>
+          <button
+            className={`profile ${page === "Profile" ? "active" : ""}`}
+            aria-label="Open your profile"
+            aria-current={page === "Profile" ? "page" : undefined}
+            onClick={() => go("Profile")}
+          >
             <span>{account?.initials ?? "DC"}</span>
             <div>
               <strong>{account?.name ?? "Dara Chan"}</strong>
@@ -611,7 +662,7 @@ function App() {
           <AnimatePresence mode="wait">
             <motion.div
               className="page-view"
-              key={`${page}-${variation}`}
+              key={`${account?._id}-${page}-${variation}`}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
@@ -641,10 +692,13 @@ function App() {
                     coverage: planCoverage,
                   }}
                   onSave={saveProfile}
+                  moves={database.moveProfiles ?? [{ id: account!._id as Id<"accounts">, name: account!.planName, type: account!.moveType ?? "study", countryFrom: account!.countryFrom, countryTo: account!.countryTo }]}
+                  onSwitch={switchWorkspace}
+                  onCreate={createMove}
                 />
               )}
               {page === "Move Planner" && (
-                <MovePlanner go={go} config={database?.config?.move} />
+                <MovePlanner go={go} config={database?.config?.move} essentials={database?.checklist ?? []} toggleEssential={toggleChecklist} />
               )}
               {page === "AI Agent" && (
                 <Agent
@@ -663,6 +717,7 @@ function App() {
                   onSelectRoute={selectRoute}
                   storedRoutes={database?.paymentRoutes}
                   config={database?.config?.banking}
+                  costs={database?.costs ?? []}
                 />
               )}
               {page === "Exchange" && (
@@ -674,23 +729,43 @@ function App() {
               )}
               {page === "Sponsors" && (
                 <Sponsors
-                  announce={announce}
-                  requestSent={account?.sponsorRequestSent}
-                  onRequest={requestSponsor}
-                  storedSponsors={database?.sponsors}
+                  userCode={database?.userCode ?? ""}
+                  links={database?.sponsorLinks ?? []}
+                  onRespond={(requestId, accept) => mutate(convexApi.respondSponsorLink, { requestId, accept, ...(workspaceId ? { workspaceId } : {}) })}
+                  onAdd={addSponsor}
+                  onRequest={createSponsorRequest}
+                  onPermission={setSponsorPermission}
+                  storedSponsors={database?.sponsors ?? []}
+                  requests={database?.sponsorRequests ?? []}
                   config={database?.config?.sponsorship}
                 />
               )}
               {page === "Wallet" && (
-                <Wallet storedWallets={database?.wallets} />
+                <Wallet
+                  storedWallets={database?.wallets}
+                  budget={database?.config?.budget?.allocations}
+                  costs={database?.costs ?? []}
+                  onSaveBudget={saveBudget}
+                />
               )}
               {page === "Security" && (
-                <Security audit={audit} config={database?.config?.security} />
+                <Security audit={audit} />
               )}
             </motion.div>
           </AnimatePresence>
         </div>
       </main>
+      {page !== "AI Agent" && !mobileNav && !tourOpen && (
+        <button
+          type="button"
+          className="agent-launcher"
+          aria-label="Open AI Agent"
+          title="Ask your AI agent"
+          onClick={() => go("AI Agent")}
+        >
+          <Bot size={22} aria-hidden="true" />
+        </button>
+      )}
       {tourOpen && (
         <Tour
           page={page}
@@ -782,11 +857,11 @@ function Tour({
     },
     {
       page: "Security",
-      target: ".security-grid",
-      eyebrow: "Stay in control",
-      title: "Approval always stays with you",
+      target: ".audit-table",
+      eyebrow: "Activity",
+      title: "Follow your activity",
       body:
-        "Security controls, payment limits, and a complete activity history remain visible at every step.",
+        "Review account changes, payment actions, and sponsor requests in your activity log.",
       tip: "You’re ready. Reopen this tour anytime from the sidebar.",
     },
   ];
@@ -1060,244 +1135,253 @@ function OverviewDashboard({
   go: (page: Page) => void;
   database: DatabaseState | null;
 }) {
-  const fallbackCategories = [
+  const planCosts = database?.costs ?? [];
+  const planFunding = database?.funding ?? [];
+  const planned = planCosts.reduce((sum, item) => sum + item.amount, 0);
+  const confirmed = planFunding
+    .filter((item) => item.status === "confirmed")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const coverage = fundingCoverage(planned, confirmed);
+  const gap = fundingGap(planned, confirmed);
+  const essentials = database?.checklist ?? [];
+  const completed = essentials.filter((item) => item.done).length;
+  const readiness = essentials.length
+    ? Math.round((completed / essentials.length) * 100)
+    : 0;
+  const move = database?.config?.move ?? {};
+  const arrival = move.arrivalDate;
+  const arrivalTime = arrival ? Date.parse(arrival) : NaN;
+  const daysAway = Number.isFinite(arrivalTime)
+    ? Math.ceil((arrivalTime - Date.now()) / 86400000)
+    : null;
+  const destination = database?.account.countryTo || "your destination";
+  const nextTask = essentials.find((item) => !item.done);
+  const milestones = [
     {
-      name: "Tuition",
-      icon: GraduationCap,
-      spend: 4000,
-      budget: 6000,
-      color: "var(--color-ink-black-600)",
+      title: "Visa",
+      icon: FileCheck2,
+      task: essentials.find((item) => /visa/i.test(item.key)),
+      page: "Move Planner" as Page,
     },
     {
-      name: "Housing",
+      title: "Housing",
       icon: Home,
-      spend: 5200,
-      budget: 7800,
-      color: "var(--color-dusty-denim-600)",
+      task: essentials.find((item) => /housing/i.test(item.key)),
+      page: "Move Planner" as Page,
     },
     {
-      name: "Living costs",
-      icon: ReceiptText,
-      spend: 3150,
-      budget: 5100,
-      color: "var(--color-prussian-blue-600)",
+      title: "Funding",
+      icon: Landmark,
+      task: essentials.find((item) => /emergency|fund/i.test(item.key)),
+      page: "Sponsors" as Page,
     },
     {
-      name: "Visa & health",
-      icon: ShieldCheck,
-      spend: 1600,
-      budget: 1600,
-      color: "var(--color-alabaster-grey-600)",
-    },
-    {
-      name: "Flight & arrival",
+      title: "Arrival",
       icon: Plane,
-      spend: 610,
-      budget: 2100,
-      color: "var(--color-dusk-blue-600)",
+      task: undefined,
+      page: "Move Planner" as Page,
     },
   ];
-  const dbCosts = database?.costs ?? [];
-  const dbFunding = database?.funding ?? [];
-  const dbTotal = dbCosts.length
-    ? dbCosts.reduce((sum, item) => sum + item.amount, 0)
-    : total;
-  const dbFunded = dbFunding.length
-    ? dbFunding
-        .filter((item) => item.status === "confirmed")
-        .reduce((sum, item) => sum + item.amount, 0)
-    : funded;
-  const dbGap = fundingGap(dbTotal, dbFunded);
-  const dbCoverage = fundingCoverage(dbTotal, dbFunded);
-  const categories = dbCosts.length
-    ? dbCosts.map((item, index) => ({
-        name: item.name,
-        icon: [GraduationCap, Home, ReceiptText, ShieldCheck, Plane][index % 5],
-        spend: item.paid ? item.amount : 0,
-        budget: item.amount,
-        color: ["var(--color-ink-black-600)", "var(--color-dusty-denim-600)", "var(--color-prussian-blue-600)", "var(--color-alabaster-grey-600)", "var(--color-dusk-blue-600)"][
-          index % 5
-        ],
-      }))
-    : fallbackCategories;
-  const allocation = dbFunding.length
-    ? [
-        ...dbFunding.map((item, index) => ({
-          name: item.name,
-          value: item.amount,
-          color: ["var(--color-ink-black-600)", "var(--color-dusty-denim-600)", "var(--color-prussian-blue-600)"][index % 3],
-        })),
-        ...(dbGap ? [{ name: "Gap", value: dbGap, color: "var(--color-dusk-blue-600)" }] : []),
-      ]
-    : [
-        { name: "Savings", value: 8900, color: "var(--color-ink-black-600)" },
-        { name: "Sponsor", value: 9000, color: "var(--color-dusty-denim-600)" },
-        { name: "Scholarship", value: 4000, color: "var(--color-prussian-blue-600)" },
-        { name: "Gap", value: 2700, color: "var(--color-dusk-blue-600)" },
-      ];
   return (
-    <div className="consumer-dashboard">
-      <section className="consumer-welcome">
+    <div className="consumer-dashboard move-dashboard">
+      <header className="move-dashboard-welcome">
         <div>
-          <span>
-            {new Intl.DateTimeFormat("en-GB", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            }).format(new Date())}
-          </span>
-          <h2>
-            Good morning, {database?.account.name.split(" ")[0] ?? "there"}
-          </h2>
-          <p>Your UK study plan, at a glance.</p>
+          <h2>Hello, {database?.account.name.split(" ")[0] ?? "there"}</h2>
         </div>
-        <button onClick={() => go("AI Agent")}>
-          <Sparkles size={16} /> Ask your agent
-        </button>
+      </header>
+
+      <section className="dashboard-overview dashboard-panel">
+        <div className="dashboard-overview-copy">
+          <span className="dashboard-status">
+            <CheckCircle2 size={15} />{" "}
+            {gap === 0 ? "Fully funded" : "Plan in progress"}
+          </span>
+          <h1>
+            {daysAway !== null && daysAway > 0
+              ? `${destination} is ${daysAway} days away.`
+              : `Your next chapter in ${destination}.`}
+          </h1>
+
+          <div className="dashboard-overview-actions">
+            <button
+              className="dashboard-primary"
+              onClick={() => go(paid ? "Move Planner" : "Payments")}
+            >
+              {paid ? "Continue plan" : "Review payment"}
+              <ArrowRight size={16} />
+            </button>
+            <button
+              className="dashboard-text-button"
+              onClick={() => go("Move Planner")}
+            >
+              View plan
+            </button>
+          </div>
+        </div>
+        <div className="dashboard-destination">
+          <span className="dashboard-destination-tag">
+            <MapPin size={14} /> {destination}
+          </span>
+          <svg
+            className="dashboard-city"
+            viewBox="0 0 420 240"
+            aria-hidden="true"
+          >
+            <path
+              d="M0 185 Q110 155 220 190 T420 175 V240 H0Z"
+              fill="currentColor"
+              opacity=".12"
+            />
+            <g fill="currentColor" opacity=".22">
+              <path d="M25 190V105h35v85M75 190V130h45v60M140 190V90h48v100M205 190V115h45v75M320 190V98h55v92" />
+              <path d="M270 190V65h20v125M264 65h32l-16-24zM277 41V18h6v23" />
+            </g>
+            <g stroke="currentColor" fill="none" opacity=".45" strokeWidth="3">
+              <circle cx="105" cy="104" r="44" />
+              <path d="M105 60v88M61 104h88M74 73l62 62M74 135l62-62M105 104L76 191M105 104l29 87M0 193h420" />
+            </g>
+          </svg>
+          <div>
+            <Plane size={24} />
+            <h2>{destination}</h2>
+            <p>
+              <CalendarDays size={16} />{" "}
+              {arrival ? `Arrival · ${arrival}` : "Arrival date not set"}
+            </p>
+          </div>
+        </div>
       </section>
-      <section className="money-hero" data-tour="readiness">
-        <div>
-          <span>READY TO FUND</span>
-          <strong>{formatGBP(dbFunded)}</strong>
-          <p>of {formatGBP(dbTotal)} planned</p>
-        </div>
-        <div className="hero-score">
-          <strong>{Math.round(dbCoverage)}%</strong>
-          <span>ready</span>
-        </div>
-        <div className="hero-progress">
-          <i style={{ width: `${dbCoverage}%` }} />
-        </div>
-        <footer>
-          <span>
-            <b>{baseRunway.toFixed(1)}</b> months runway
-          </span>
-          <span>
-            <b>{formatGBP(dbGap)}</b> still to cover
-          </span>
-          <button onClick={() => go("Move Planner")}>
-            View plan <ArrowRight size={15} />
-          </button>
-        </footer>
-      </section>
-      <div className="insights-layout">
-        <section className="spending-card">
-          <div className="consumer-card-head">
+
+      <div className="dashboard-summary-grid">
+        <section
+          className="dashboard-panel dashboard-readiness"
+          data-tour="readiness"
+        >
+          <div className="dashboard-card-heading">
+            <h3>Readiness score</h3>
+          </div>
+          <div className="dashboard-score-summary">
+            <div
+              className="dashboard-score-ring"
+              style={{
+                background: `conic-gradient(var(--color-info) ${readiness}%, var(--color-line) 0)`,
+              }}
+            >
+              <div>
+                <strong>{readiness}</strong>
+                <span>of 100</span>
+              </div>
+            </div>
             <div>
-              <span>PLAN CATEGORIES</span>
-              <h3>Planned spending</h3>
+              <h4>
+                {completed}/{essentials.length} essentials complete
+              </h4>
+              <p>
+                {readiness === 100
+                  ? "Ready to go"
+                  : `${essentials.length - completed} remaining`}
+              </p>
             </div>
-            <button onClick={() => go("Move Planner")}>Show all</button>
           </div>
-          <div className="category-labels">
-            <span>Category</span>
-            <span>Planned</span>
-            <span>Budget</span>
-          </div>
-          {categories.map(({ name, icon: Icon, spend, budget, color }) => (
-            <div className="category-row" key={name}>
-              <div className="category-title">
-                <Icon />
-                <strong>{name}</strong>
-              </div>
-              <b>{formatGBP(spend)}</b>
-              <span>{formatGBP(budget)}</span>
-              <div className="category-track">
-                <i
-                  style={{
-                    width: `${Math.min(100, (spend / budget) * 100)}%`,
-                    background: color,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
         </section>
-        <section className="allocation-card">
-          <div className="consumer-card-head">
+        <section className="dashboard-panel dashboard-fund">
+          <div className="dashboard-card-heading dashboard-heading-action">
             <div>
-              <span>FUNDING MIX</span>
-              <h3>Funding mix</h3>
+              <h3>Move fund</h3>
+            </div>
+            <span className="dashboard-currency">GBP</span>
+          </div>
+          <div className="dashboard-fund-amounts">
+            <div>
+              <small>Confirmed</small>
+              <strong>{formatGBP(confirmed)}</strong>
+            </div>
+            <div>
+              <small>Goal</small>
+              <b>{formatGBP(planned)}</b>
             </div>
           </div>
-          <div className="allocation-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={allocation}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius="58%"
-                  outerRadius="88%"
-                  paddingAngle={4}
-                  cornerRadius={7}
-                >
-                  {allocation.map((item) => (
-                    <Cell key={item.name} fill={item.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => formatGBP(Number(value))}
-                  contentStyle={{
-                    border: 0,
-                    borderRadius: 12,
-                    boxShadow: "0 12px 30px color-mix(in srgb, var(--color-dusty-denim-950) 13.3%, transparent)",
-                    fontSize: 11,
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div>
-              <span>Funded</span>
-              <strong>{formatGBP(dbFunded)}</strong>
-              <small>of {formatGBP(dbTotal)}</small>
-            </div>
+          <div
+            className="dashboard-fund-track"
+            role="progressbar"
+            aria-label="Funding coverage"
+            aria-valuenow={Math.round(coverage)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <i style={{ width: `${Math.min(100, coverage)}%` }} />
           </div>
-          <div className="allocation-legend">
-            {allocation.map((item) => (
-              <span key={item.name}>
-                <i style={{ background: item.color }} />
-                {item.name}
-                <b>{Math.round((item.value / dbTotal) * 100)}%</b>
-              </span>
+          <div className="dashboard-fund-caption">
+            <strong>{Math.round(coverage)}% funded</strong>
+            <span>{formatGBP(gap)} remaining</span>
+          </div>
+          <div className="dashboard-funding-sources">
+            {planFunding.slice(0, 3).map((item) => (
+              <div key={item.key}>
+                <span>{item.name}</span>
+                <strong>{formatGBP(item.amount)}</strong>
+                <small>{item.status}</small>
+              </div>
             ))}
           </div>
         </section>
+        <section className="dashboard-panel dashboard-move-timeline">
+          <div className="dashboard-card-heading dashboard-heading-action">
+            <div>
+              <h3>Move timeline</h3>
+            </div>
+            <span className="dashboard-status">
+              <Clock3 size={14} />{" "}
+              {daysAway !== null && daysAway > 0
+                ? `${daysAway} days`
+                : "In progress"}
+            </span>
+          </div>
+          <div className="dashboard-milestones">
+            {milestones.map(({ title, icon: Icon, task, page }) => (
+              <button
+                className={task?.done ? "done" : ""}
+                key={title}
+                onClick={() => go(page)}
+              >
+                <span className="dashboard-milestone-dot">
+                  {task?.done && <Check size={14} />}
+                </span>
+                <strong>
+                  <Icon size={15} />
+                  {title}
+                </strong>
+                <small>
+                  {task
+                    ? task.done
+                      ? "Complete"
+                      : "To prepare"
+                    : arrival || "Plan arrival"}
+                </small>
+              </button>
+            ))}
+          </div>
+          <div className="dashboard-next-action" data-tour="next-action">
+            <span className="dashboard-next-icon">
+              <ReceiptText size={20} />
+            </span>
+            <div>
+              <small>Next action</small>
+              <strong>
+                {paid
+                  ? (nextTask?.label ?? "Review move plan")
+                  : "Review tuition payment"}
+              </strong>
+            </div>
+            <button
+              className="dashboard-primary"
+              onClick={() => go(paid ? "Move Planner" : "Payments")}
+            >
+              Continue <ArrowRight size={16} />
+            </button>
+          </div>
+        </section>
       </div>
-      <section className="smart-insights" data-tour="next-action">
-        <article className="cash-insight">
-          <span>Cash flow this term</span>
-          <strong>+£1,000</strong>
-          <p>Sponsor funding on 15 November keeps you positive.</p>
-          <button onClick={() => go("Dashboard")}>
-            Open runway <ChevronRight />
-          </button>
-        </article>
-        <article className="action-insight">
-          <div className="insight-dot orange" />
-          <div>
-            <strong>
-              {paid ? "Tuition payment complete" : "Tuition is due in 12 days"}
-            </strong>
-            <p>
-              {paid
-                ? "Your plan and audit trail are up to date."
-                : "Save about $58 and arrive before the deadline."}
-            </p>
-          </div>
-          <button onClick={() => go("Payments")}>
-            {paid ? "View receipt" : "Review"} <ArrowRight />
-          </button>
-        </article>
-        <article className="positive-insight">
-          <div className="insight-dot green" />
-          <div>
-            <strong>Your runway is up 0.8 months</strong>
-            <p>Lower arrival costs moved you ahead.</p>
-          </div>
-          <button onClick={() => go("AI Agent")}>Why?</button>
-        </article>
-      </section>
     </div>
   );
 }
@@ -1846,150 +1930,185 @@ function ExchangeWorkspace({
   database: DatabaseState | null;
   onRateAlert: (targetRate: number) => Promise<boolean>;
 }) {
-  const [tab, setTab] = useState("Convert"),
-    [amount, setAmount] = useState(2500),
-    [targetRate, setTargetRate] = useState(0.79);
+  const [amount, setAmount] = useState(2500);
+  const [targetRate, setTargetRate] = useState(0.79);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState("");
   const bestRoute =
     database?.paymentRoutes.find((route) => route.recommended) ??
     database?.paymentRoutes[0];
   const rate = bestRoute?.fxRate ?? 0;
   const fee = bestRoute?.fee ?? 0;
-  const received = amount * rate - fee;
+  const validAmount = Number.isFinite(amount) && amount > fee && rate > 0;
+  const received = validAmount ? (amount - fee) * rate : 0;
   const alert = database?.rateAlerts.find(
     (item) => item.active && item.pair === "USD/GBP",
   );
   const visibleWallets = database?.wallets ?? [];
   return (
-    <div className="workspace">
-      <WorkspaceHeader
-        number={4}
-        title="Exchange desk"
-        description="Manage currency exposure and compare the true cost of moving money."
-        tabs={["Convert", "Balances", "Rate alerts"]}
-        active={tab}
-        setActive={setTab}
-      />
-      {tab === "Convert" && (
-        <div className="exchange-workspace">
-          <section className="exchange-form">
-            <label>
-              You send
-              <span>
-                <b>$</b>
+    <div className="exchange-page-compact">
+      <header className="exchange-compact-header">
+        <h2>Exchange</h2>
+        <span>USD → GBP · Demo estimate</span>
+      </header>
+      <div className="exchange-unified-panel">
+        <section
+          className="exchange-compact-converter"
+          aria-labelledby="exchange-converter-title"
+        >
+          <h3 id="exchange-converter-title">Convert currency</h3>
+          <div className="exchange-amounts">
+            <label className="exchange-amount-box" htmlFor="exchange-send">
+              <span>You send</span>
+              <div>
+                <b aria-hidden="true">$</b>
                 <input
+                  id="exchange-send"
                   type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
                   value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  onChange={(event) => setAmount(Number(event.target.value))}
                 />
                 <em>USD</em>
-              </span>
+              </div>
             </label>
-            <ArrowRight />
-            <label>
-              University receives
-              <span>
-                <b>£</b>
+            <ArrowRight size={18} aria-hidden="true" />
+            <div className="exchange-amount-box exchange-receive">
+              <span>Estimated receipt</span>
+              <div>
                 <strong>
                   {received.toLocaleString("en-GB", {
+                    style: "currency",
+                    currency: "GBP",
+                    minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </strong>
                 <em>GBP</em>
-              </span>
-            </label>
-            <dl>
-              <div>
-                <dt>Rate</dt>
-                <dd>{rate} GBP</dd>
               </div>
-              <div>
-                <dt>Fee</dt>
-                <dd>{formatUSD(fee)}</dd>
-              </div>
-              <div>
-                <dt>Arrival</dt>
-                <dd>{bestRoute?.delivery}</dd>
-              </div>
-            </dl>
-            <button onClick={() => go("Payments")}>
-              Review {bestRoute?.provider} <ArrowRight />
-            </button>
-          </section>
-          <aside className="rate-context">
-            <span>USD / GBP</span>
-            <strong>{rate}</strong>
-            <small>Demo rate · 29 Sep 2026</small>
-            <div className="sparkline">
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-            </div>
-            <p>
-              A 5% weaker dollar would reduce this conversion by{" "}
-              <b>£{(amount * rate * 0.05).toFixed(0)}</b>.
-            </p>
-          </aside>
-        </div>
-      )}
-      {tab === "Balances" && (
-        <div className="balance-ledger">
-          {visibleWallets.map((w) => (
-            <div key={w.currency}>
-              <span>{w.currency}</span>
-              <strong>
-                {w.symbol}
-                {w.amount.toLocaleString()}
-              </strong>
-              <small>{w.label}</small>
-              <b>{formatGBP(w.gbpValue)}</b>
-            </div>
-          ))}
-          <footer>
-            <span>Total in GBP</span>
-            <strong>
-              {formatGBP(visibleWallets.reduce((s, w) => s + w.gbpValue, 0))}
-            </strong>
-          </footer>
-        </div>
-      )}
-      {tab === "Rate alerts" && (
-        <section className="alert-builder">
-          <div>
-            <Bell />
-            <div>
-              <h3>Notify me when USD strengthens</h3>
-              <p>We will compare the demo mid-market rate with your target.</p>
             </div>
           </div>
-          <label>
-            Target rate{" "}
-            <input
-              type="number"
-              step="0.001"
-              min="0.001"
-              value={targetRate}
-              onChange={(e) => setTargetRate(Number(e.target.value))}
-            />
-            <span>GBP per USD</span>
-          </label>
+          <dl className="exchange-quote-details">
+            <div>
+              <dt>Rate</dt>
+              <dd>{rate ? `${rate} GBP / USD` : "Unavailable"}</dd>
+            </div>
+            <div>
+              <dt>Fee</dt>
+              <dd>{formatUSD(fee)}</dd>
+            </div>
+            <div>
+              <dt>Delivery</dt>
+              <dd>{bestRoute?.delivery ?? "Unavailable"}</dd>
+            </div>
+          </dl>
           <button
-            className={alert ? "sent" : ""}
-            onClick={() => void onRateAlert(targetRate)}
+            className="exchange-primary-action"
+            disabled={!validAmount}
+            onClick={() => go("Payments")}
           >
-            {alert ? (
-              <>
-                <Check /> Alert active at {alert.targetRate}
-              </>
-            ) : (
-              <>Create rate alert</>
-            )}
+            Review payment routes <ArrowRight size={16} />
           </button>
         </section>
-      )}
+        <section
+          className="exchange-compact-alert"
+          aria-labelledby="exchange-alert-title"
+        >
+          <h3 id="exchange-alert-title">
+            <Bell size={17} /> Rate alert
+          </h3>
+          {alert && (
+            <span className="exchange-alert-active">
+              <CheckCircle2 size={14} /> Active at {alert.targetRate} GBP / USD
+            </span>
+          )}
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!Number.isFinite(targetRate) || targetRate <= 0) return;
+              setSaving(true);
+              setFeedback("");
+              try {
+                setFeedback(
+                  (await onRateAlert(targetRate))
+                    ? "Rate alert saved."
+                    : "Could not save the alert. Try again.",
+                );
+              } catch {
+                setFeedback("Could not save the alert. Try again.");
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            <label htmlFor="exchange-target">Notify me at (GBP per USD)</label>
+            <div className="exchange-alert-controls">
+              <input
+                id="exchange-target"
+                type="number"
+                inputMode="decimal"
+                step="0.001"
+                min="0.001"
+                required
+                value={targetRate}
+                onChange={(event) => setTargetRate(Number(event.target.value))}
+              />
+              <button
+                type="submit"
+                disabled={
+                  saving || !Number.isFinite(targetRate) || targetRate <= 0
+                }
+              >
+                {saving ? "Saving…" : alert ? "Update alert" : "Set alert"}
+              </button>
+            </div>
+          </form>
+          <p className="exchange-rate-impact">
+            A 5% weaker USD reduces this estimate by{" "}
+            <strong>{formatGBP(received * 0.05)}</strong>.
+          </p>
+          {feedback && (
+            <p className="exchange-alert-feedback" role="status">
+              {feedback}
+            </p>
+          )}
+        </section>
+        <section
+          className="exchange-compact-balances"
+          aria-labelledby="exchange-balances-title"
+        >
+          <div className="exchange-balances-heading">
+            <h3 id="exchange-balances-title">Your balances</h3>
+            <span>
+              Total{" "}
+              <strong>
+                {formatGBP(
+                  visibleWallets.reduce(
+                    (sum, wallet) => sum + wallet.gbpValue,
+                    0,
+                  ),
+                )}
+              </strong>
+            </span>
+          </div>
+          <div className="exchange-balance-grid">
+            {visibleWallets.map((wallet) => (
+              <div key={wallet.currency}>
+                <span>{wallet.currency}</span>
+                <strong>
+                  {wallet.symbol}
+                  {wallet.amount.toLocaleString("en-GB", {
+                    maximumFractionDigits: 2,
+                  })}
+                </strong>
+                <small>≈ {formatGBP(wallet.gbpValue)}</small>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -2369,16 +2488,32 @@ function Profile({
   config,
   totals,
   onSave,
+  moves,
+  onSwitch,
+  onCreate,
 }: {
   announce: (message: string) => void;
-  account?: any;
+  account?: DatabaseState["account"];
   config?: any;
   totals: { funded: number; gap: number; coverage: number };
   onSave: (profile: Record<string, string>) => Promise<boolean>;
+  moves: MoveProfileSummary[];
+  onSwitch: (id: Id<"accounts">) => void;
+  onCreate: (profile: NewMoveProfile) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [profile, setProfile] = useState({
+  const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+  const [draft, setDraft] = useState<NewMoveProfile>({
+    name: "",
+    type: "study",
+    countryFrom: account?.countryFrom ?? "",
+    countryTo: "",
+    arrivalDate: "",
+  });
+  const values = () => ({
     name: account?.name ?? "",
     home: account?.countryFrom ?? "",
     study: account?.countryTo ?? "",
@@ -2387,183 +2522,352 @@ function Profile({
     start: config?.courseStart ?? "",
     status: config?.financialStatus ?? "",
     income: config?.sponsorSupport ?? "",
-    funding: config?.confirmedFunding ?? "",
   });
-  const update = (key: keyof typeof profile, value: string) =>
-    setProfile((current) => ({ ...current, [key]: value }));
+  const [profile, setProfile] = useState(values);
   useEffect(() => {
-    if (!account) return;
-    setProfile({
-      name: account.name,
-      home: account.countryFrom,
-      study: account.countryTo,
-      university: account.university,
-      course: account.course,
-      start: config?.courseStart ?? "",
-      status: config?.financialStatus ?? "",
-      income: config?.sponsorSupport ?? "",
-      funding: formatGBP(totals.funded),
-    });
-  }, [account, config, totals.funded]);
+    if (!editing) setProfile(values());
+  }, [account, config, editing]);
+  const type = account?.moveType ?? "study";
+  const types = {
+    study: { label: "Study", icon: GraduationCap },
+    work: { label: "Work", icon: Building2 },
+    relocation: { label: "Relocation", icon: Home },
+    travel: { label: "Travel", icon: Plane },
+  };
+  const MoveIcon = types[type].icon;
+  const fields: Array<[keyof typeof profile, string]> = [
+    ["name", "Full name"],
+    ["home", "From"],
+    ["study", "Destination"],
+    ["university", type === "study" ? "University" : "Organisation / host"],
+    [
+      "course",
+      type === "study" ? "Programme" : type === "work" ? "Role" : "Purpose",
+    ],
+    ["start", type === "study" ? "Study start" : "Move date"],
+    ["status", "Financial status"],
+    ["income", "Sponsor support"],
+  ];
+  const initials = profile.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
   return (
-    <div className="page-stack profile-page">
-      <section className="page-intro">
+    <div className="move-profiles-page">
+      <header className="move-profiles-header">
         <div>
-          <span className="eyebrow">Student profile</span>
-          <h2>Your financial passport</h2>
-          <p>
-            The details used to tailor costs, routes, banking, and sponsor
-            recommendations.
-          </p>
+          <h2>Your move profiles</h2>
+          <p>Choose a workspace for each move.</p>
         </div>
         <button
-          className="primary"
-          onClick={async () => {
-            if (editing) {
-              const saved = await onSave(profile);
-              if (!saved) return;
-              announce("Profile saved to the database");
-            }
-            if (!editing) setDetailsOpen(true);
-            setEditing(!editing);
+          className="move-profile-primary"
+          type="button"
+          disabled={moves.length >= 20}
+          aria-expanded={adding}
+          aria-controls="new-move-profile"
+          onClick={() => {
+            setAdding(!adding);
+            setError("");
           }}
         >
-          {editing ? (
-            <>
-              <Check /> Save profile
-            </>
-          ) : (
-            <>
-              <Settings /> Edit profile
-            </>
-          )}
+          <Plus size={17} /> Add move
         </button>
-      </section>
-      <section className="profile-hero">
-        <div className="profile-avatar">DC</div>
-        <div>
-          <h3>{profile.name}</h3>
-          <p>
-            {profile.course} · {profile.university}
-          </p>
-          <span>
-            <MapPin /> {profile.home} <ArrowRight /> {profile.study}
-          </span>
-        </div>
-        <b>{profile.status}</b>
-      </section>
-      <button
-        className="disclosure-button"
-        onClick={() => setDetailsOpen((open) => !open)}
-      >
-        {detailsOpen ? "Hide profile details" : "View profile details"}
-        <ChevronRight />
-      </button>
-      {detailsOpen && (
-        <div className="profile-grid">
-          <section className="profile-section">
-            <div className="section-heading">
-              <div>
-                <span className="eyebrow">Personal & study</span>
-                <h3>Core details</h3>
-              </div>
-              <GraduationCap />
-            </div>
-            <div className="field-grid">
-              {(
-                [
-                  ["name", "Full name"],
-                  ["home", "Home country"],
-                  ["study", "Country of study"],
-                  ["university", "University"],
-                  ["course", "Programme"],
-                  ["start", "Course start"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key}>
-                  <span>{label}</span>
-                  {editing ? (
-                    <input
-                      value={profile[key]}
-                      onChange={(e) => update(key, e.target.value)}
-                    />
-                  ) : (
-                    <strong className="profile-value">{profile[key]}</strong>
-                  )}
-                </label>
-              ))}
-            </div>
-          </section>
-          <section className="profile-section">
-            <div className="section-heading">
-              <div>
-                <span className="eyebrow">Financial position</span>
-                <h3>Funding snapshot</h3>
-              </div>
-              <WalletCards />
-            </div>
-            <div className="field-grid">
-              {(
-                [
-                  ["status", "Financial status"],
-                  ["income", "Sponsor support"],
-                  ["funding", "Confirmed funding"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key}>
-                  <span>{label}</span>
-                  {editing ? (
-                    <input
-                      value={profile[key]}
-                      onChange={(e) => update(key, e.target.value)}
-                    />
-                  ) : (
-                    <strong className="profile-value">{profile[key]}</strong>
-                  )}
-                </label>
-              ))}
-            </div>
-            <div className="profile-summary">
-              <span>
-                <CheckCircle2 /> {Math.round(totals.coverage)}% funded
-              </span>
-              <strong>{formatGBP(totals.gap)} gap</strong>
-              <p>
-                Your move remains viable, but the emergency buffer is not fully
-                funded.
-              </p>
-            </div>
-          </section>
-        </div>
+      </header>
+      {adding && (
+        <form
+          id="new-move-profile"
+          className="new-move-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setCreating(true);
+            setError("");
+            try {
+              if (!(await onCreate(draft)))
+                setError("Could not create this move. Please try again.");
+            } finally {
+              setCreating(false);
+            }
+          }}
+        >
+          <h3>Create a move profile</h3>
+          <p>Starts with its own budget, sponsors, payments, and activity.</p>
+          <div className="new-move-fields">
+            <label>
+              Profile name
+              <input
+                required
+                maxLength={80}
+                value={draft.name}
+                placeholder="e.g. Singapore work move"
+                onChange={(event) =>
+                  setDraft({ ...draft, name: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Move type
+              <select
+                value={draft.type}
+                onChange={(event) =>
+                  setDraft({ ...draft, type: event.target.value as MoveType })
+                }
+              >
+                {Object.entries(types).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              From
+              <input
+                required
+                maxLength={80}
+                value={draft.countryFrom}
+                onChange={(event) =>
+                  setDraft({ ...draft, countryFrom: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Destination
+              <input
+                required
+                maxLength={80}
+                value={draft.countryTo}
+                placeholder="Country or city"
+                onChange={(event) =>
+                  setDraft({ ...draft, countryTo: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Planned arrival
+              <input
+                required
+                type="date"
+                value={draft.arrivalDate}
+                onChange={(event) =>
+                  setDraft({ ...draft, arrivalDate: event.target.value })
+                }
+              />
+            </label>
+          </div>
+          <div className="move-profile-form-actions">
+            <button
+              type="button"
+              disabled={creating}
+              onClick={() => setAdding(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="move-profile-primary"
+              type="submit"
+              disabled={
+                creating ||
+                !draft.name.trim() ||
+                !draft.countryFrom.trim() ||
+                !draft.countryTo.trim()
+              }
+            >
+              {creating ? "Creating…" : "Create & switch"}
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </form>
       )}
+      {error && (
+        <p className="move-profile-error" role="alert">
+          {error}
+        </p>
+      )}
+      <section
+        className="move-profile-picker"
+        aria-label="Choose your move workspace"
+      >
+        {moves.map((move) => {
+          const Icon = types[move.type].icon;
+          const active = move.id === account?._id;
+          return (
+            <button
+              type="button"
+              className={active ? "active" : ""}
+              aria-pressed={active}
+              key={move.id}
+              onClick={() => onSwitch(move.id)}
+            >
+              <span className="move-picker-icon">
+                <Icon size={23} />
+              </span>
+              <span className="move-picker-name">
+                <strong>{move.name}</strong>
+                <small>
+                  {types[move.type].label} · {move.countryTo}
+                </small>
+              </span>
+              <span className="move-picker-status">
+                {active ? (
+                  <>
+                    <Check size={14} /> Active
+                  </>
+                ) : (
+                  <ChevronRight size={17} />
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </section>
+      <section className="move-profile-detail">
+        <div className="move-profile-identity">
+          <div className="move-profile-avatar" aria-hidden="true">
+            {initials}
+          </div>
+          <div>
+            <span className="move-profile-type">
+              <MoveIcon size={14} /> {types[type].label} profile
+            </span>
+            <h3>{profile.name}</h3>
+            <p>
+              <MapPin size={14} />
+              {profile.home}
+              <ArrowRight size={14} />
+              {profile.study}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(!editing);
+              setError("");
+            }}
+            disabled={saving}
+          >
+            {editing ? "Cancel edit" : "Edit details"}
+            <Settings size={15} />
+          </button>
+        </div>
+        <form
+          className="move-profile-details-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setSaving(true);
+            setError("");
+            try {
+              if (await onSave(profile)) {
+                setEditing(false);
+                announce("Move profile saved.");
+              } else setError("Could not save the profile. Please try again.");
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          <div className="move-profile-fields">
+            {fields.map(([key, label]) => (
+              <label key={key}>
+                <span>{label}</span>
+                {editing ? (
+                  <input
+                    disabled={saving}
+                    required={["name", "home", "study"].includes(key)}
+                    maxLength={120}
+                    value={profile[key]}
+                    onChange={(event) =>
+                      setProfile({ ...profile, [key]: event.target.value })
+                    }
+                  />
+                ) : (
+                  <strong>{profile[key] || "Not set"}</strong>
+                )}
+              </label>
+            ))}
+          </div>
+          {editing && (
+            <div className="move-profile-form-actions">
+              <button
+                className="move-profile-primary"
+                type="submit"
+                disabled={saving}
+              >
+                {saving ? "Saving…" : "Save details"}
+                <Check size={16} />
+              </button>
+            </div>
+          )}
+        </form>
+        <div className="move-profile-funding">
+          <div>
+            <span>Confirmed funding</span>
+            <strong>{formatGBP(totals.funded)}</strong>
+          </div>
+          <div>
+            <span>Funding gap</span>
+            <strong>{formatGBP(totals.gap)}</strong>
+          </div>
+          <div>
+            <span>Plan funded</span>
+            <strong>{Math.round(totals.coverage)}%</strong>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
-function MovePlanner({ go, config }: { go: (page: Page) => void; config?: any }) {
+function MovePlanner({
+  go,
+  config,
+  essentials,
+  toggleEssential,
+}: {
+  go: (page: Page) => void;
+  config?: any;
+  essentials: DatabaseState["checklist"];
+  toggleEssential: (key: string) => void;
+}) {
   const [months, setMonths] = useState(11);
   const [selectedRoute, setSelectedRoute] = useState(1);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const fallbackRoutes = [
     ["Fastest Route", "Phnom Penh → London · 1 stop", "18h 21m"],
     ["Budget Option", "Phnom Penh → London · 2 stops", "28h 35m"],
     ["Budget Option", "Phnom Penh → Bangkok · 1 stop", "23h 33m"],
     ["Balanced Choice", "Phnom Penh → London · 1 stop", "23h 31m"],
   ];
-  const routes = (config?.routes?.length ? config.routes : fallbackRoutes)
-    .map((route: any[], index: number) => ({
-      name: index === 0 ? "Fastest Route" : index === 1 ? "Budget Option" : index === 2 ? "Budget Option" : route[0],
+  const routes = (config?.setupEmpty ? [] : config?.routes?.length ? config.routes : fallbackRoutes).map(
+    (route: any[], index: number) => ({
+      name:
+        index === 0
+          ? "Fastest Route"
+          : index === 1
+            ? "Budget Option"
+            : index === 2
+              ? "Budget Option"
+              : route[0],
       detail: route[1],
       time: route[2],
-    }));
-  if (routes.length === 3) routes.push({ name: "Balanced Choice", detail: "Phnom Penh → London · 1 stop", time: "23h 31m" });
-  const requirements = config?.requirements?.length ? config.requirements : [
-    ["Visa & health surcharge", "Paid", "£1,600"],
-    ["Flight", "Compare", "£480–610"],
-    ["First month rent + deposit", "Reserved", "£1,950"],
-    ["Utilities", "Estimated", "£145 / mo"],
-    ["Daily expenses", "Budgeted", "£425 / mo"],
-  ];
+    }),
+  );
+  if (routes.length === 3)
+    routes.push({
+      name: "Balanced Choice",
+      detail: "Phnom Penh → London · 1 stop",
+      time: "23h 31m",
+    });
+  const requirements = config?.setupEmpty ? [] : config?.requirements?.length
+    ? config.requirements
+    : [
+        ["Visa & health surcharge", "Paid", "£1,600"],
+        ["Flight", "Compare", "£480–610"],
+        ["First month rent + deposit", "Reserved", "£1,950"],
+        ["Utilities", "Estimated", "£145 / mo"],
+        ["Daily expenses", "Budgeted", "£425 / mo"],
+      ];
   const routeIcons = [Clock3, Banknote, Plane, Route];
 
   return (
@@ -2572,69 +2876,298 @@ function MovePlanner({ go, config }: { go: (page: Page) => void; config?: any })
         <div>
           <span>Move planning</span>
           <h2>Plan your arrival</h2>
-          <p>Compare routes, prepare essential costs, and keep your arrival plan on track.</p>
-        </div>
-        <div className="move-arrival-date">
-          <CalendarDays />
-          <span>Planned arrival<strong>{config?.arrivalDate ?? "14 Sep 2026"}</strong></span>
+          <p>
+            Compare routes, prepare essential costs, and keep your arrival plan
+            on track.
+          </p>
         </div>
       </section>
-      <section className="timeline-card">
-        <div className="timeline-copy">
-          <h2>Move timeline</h2>
-          <div className="timeline-track">
-            <div className="timeline-point"><b>1</b><span><strong>Transfer Funds</strong><small>{config?.readyBy ?? "07 Sep 2026"}</small></span></div>
-            <i />
-            <div className="timeline-point"><b>3</b><span><strong>Arrival</strong><small>{config?.arrivalDate ?? "14 Sep 2026"}</small></span></div>
-          </div>
-        </div>
-        <div className="timeline-budget"><small>Estimated total budget</small><strong>£23,120</strong></div>
-        <button onClick={() => go("AI Agent")}><Sparkles /> Ask AI to simplify details</button>
-      </section>
-
-      <div className="move-board-grid">
-        <section className="route-choice-card">
-          <h3><span><Plane /></span>Getting There</h3>
-          <div className="route-choices">
-            {routes.slice(0, 4).map((route: any, index: number) => {
-              const Icon = routeIcons[index];
-              return <button type="button" aria-pressed={selectedRoute === index} className={selectedRoute === index ? "selected" : ""} onClick={() => setSelectedRoute(index)} key={`${route.name}-${index}`}>
-                <span className="route-kind"><Icon /></span>
-                <span className="route-copy"><strong>{route.name}</strong><small>{route.detail}</small><em><Clock3 /> {route.time}</em></span>
-                <i className="route-radio" />
-              </button>;
-            })}
-          </div>
-        </section>
-
-        <div className="move-side-stack">
-          <section className="horizon-card">
-            <div className="horizon-title"><h3><CalendarDays /> Planning horizon</h3><span>4 costs ready</span></div>
-            <div className="horizon-segments">{[1, 3, 6, 9, 12, 15, 18, 24].map((value, i) => <button type="button" aria-label={`${value} month planning horizon`} className={Math.abs(months - value) <= 1 || (months > 18 && i === 7) ? "active" : ""} onClick={() => setMonths(value)} key={value} />)}</div>
-            <input aria-label="Planning horizon" type="range" min="1" max="24" value={months} onChange={(e) => setMonths(Number(e.target.value))} />
-            <div className="horizon-meta"><span>Planning horizon</span><strong>£75/mo <i /></strong><span>{months} months</span></div>
+      <div className="move-options-card">
+        <div className="move-mode-stack">
+          <section className="route-choice-card">
+            <h3>
+              <span>
+                <Plane />
+              </span>
+              Mode
+            </h3>
+            <div className="route-choices">
+              {!routes.length && <p>Route options will appear when your travel plan is set up.</p>}
+              {routes.slice(0, 4).map((route: any, index: number) => {
+                const Icon = routeIcons[index];
+                return (
+                  <button
+                    type="button"
+                    aria-pressed={selectedRoute === index}
+                    className={selectedRoute === index ? "selected" : ""}
+                    onClick={() => setSelectedRoute(index)}
+                    key={`${route.name}-${index}`}
+                  >
+                    <span className="route-kind">
+                      <Icon />
+                    </span>
+                    <span className="route-copy">
+                      <strong>{route.name}</strong>
+                      <small>{route.detail}</small>
+                      <em>
+                        <Clock3 /> {route.time}
+                      </em>
+                    </span>
+                    <i className="route-radio" />
+                  </button>
+                );
+              })}
+            </div>
           </section>
 
+
+        </div>
+
+        <div className="move-side-stack">
           <section className="cost-card">
-            <h3><span><ReceiptText /></span>Upfront Costs</h3>
+            <h3>
+              <span>
+                <ReceiptText />
+              </span>
+              Upfront Costs
+            </h3>
             <h4>1. Upfront Costs</h4>
+            {!requirements.length && <p>No costs added yet. Set your budget in Wallet.</p>}
             <div className="cost-list">
-              {requirements.slice(0, 3).map(([name, status, amount]: string[], index: number) => <div className="paid" key={name}><i><Check /></i><span><strong>{index === 2 ? "Deposit" : name}</strong><small>{status}</small></span><em>Paid</em><b>{amount}</b></div>)}
+              {requirements
+                .slice(0, 3)
+                .map(([name, status, amount]: string[], index: number) => (
+                  <div className="paid" key={name}>
+                    <i>
+                      <Check />
+                    </i>
+                    <span>
+                      <strong>{index === 2 ? "Deposit" : name}</strong>
+                      <small>{status}</small>
+                    </span>
+                    <em>Paid</em>
+                    <b>{amount}</b>
+                  </div>
+                ))}
             </div>
             <h4>2. Monthly Recurring Costs</h4>
             <div className="cost-list recurring-costs">
-              {requirements.slice(3, 5).map(([name, status, amount]: string[]) => <div key={name}><i /><span><strong>{name === "Daily expenses" ? "Expenses" : name}</strong><small>{status}</small></span><b>{amount.replace(" / mo", "")}<small>/mo</small></b></div>)}
+              {requirements
+                .slice(3, 5)
+                .map(([name, status, amount]: string[]) => (
+                  <div key={name}>
+                    <i />
+                    <span>
+                      <strong>
+                        {name === "Daily expenses" ? "Expenses" : name}
+                      </strong>
+                      <small>{status}</small>
+                    </span>
+                    <b>
+                      {amount.replace(" / mo", "")}
+                      <small>/mo</small>
+                    </b>
+                  </div>
+                ))}
             </div>
+            <button
+              className="manage-budget-button"
+              type="button"
+              onClick={() => go("Wallet")}
+            >
+              Manage Budget <ArrowRight size={16} />
+            </button>
           </section>
-          <div className="move-actions"><button type="button" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((open) => !open)}>{detailsOpen ? "Hide Details" : "View Details"}</button><button type="button" onClick={() => go("Payments")}>Manage Budget</button></div>
         </div>
       </div>
-      {detailsOpen && <section className="move-detail-drawer">
-        <div><small>Selected route</small><strong>{routes[selectedRoute]?.name}</strong><span>{routes[selectedRoute]?.detail} · {routes[selectedRoute]?.time}</span></div>
-        <div><small>Apartment</small><strong>{config?.apartment ?? "Riverside House, Zone 2"}</strong><span>Balanced for university access and city connections.</span></div>
-        <button type="button" onClick={() => go("Payments")}>Review payment plan <ArrowRight /></button>
-      </section>}
+      <div className="move-schedule-grid">
+        <section className="timeline-card">
+          <div className="timeline-copy">
+            <h2>Move timeline</h2>
+            <div className="timeline-track">
+              <div className="timeline-point">
+                <b>1</b>
+                <span>
+                  <strong>Transfer Funds</strong>
+                  <small>{config?.readyBy ?? "07 Sep 2026"}</small>
+                </span>
+              </div>
+              <i />
+              <div className="timeline-point">
+                <b>3</b>
+                <span>
+                  <strong>Arrival</strong>
+                  <small>{config?.arrivalDate ?? "14 Sep 2026"}</small>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="timeline-budget">
+            <small>Estimated total budget</small>
+            <strong>{config?.setupEmpty ? "Set your budget" : "£23,120"}</strong>
+          </div>
+          <section className="move-essentials-card">
+            <h3>
+              <FileCheck2 size={19} /> Move essentials{" "}
+              <small>
+                {essentials.filter((item) => item.done).length}/
+                {essentials.length}
+              </small>
+            </h3>
+            <div className="move-essential-list">
+              {essentials.map((item) => (
+                <button
+                  type="button"
+                  key={item.key}
+                  aria-pressed={item.done}
+                  onClick={() => toggleEssential(item.key)}
+                >
+                  <span
+                    className={`move-essential-check ${item.done ? "done" : ""}`}
+                  >
+                    {item.done && <Check size={14} />}
+                  </span>
+                  <span>
+                    <strong>{item.label}</strong>
+                    <small>{item.detail}</small>
+                  </span>
+                  <span className="move-essential-status">
+                    {item.done ? "Complete" : "To do"}
+                  </span>
+                </button>
+              ))}
+              {!essentials.length && <p>No move essentials yet.</p>}
+            </div>
+          </section>
+        </section>
+        <PlanningCalendar
+          arrival={config?.arrivalDate ?? "14 Sep 2026"}
+          months={months}
+          setMonths={setMonths}
+        />
+      </div>
     </div>
+  );
+}
+
+function PlanningCalendar({
+  arrival,
+  months,
+  setMonths,
+}: {
+  arrival: string;
+  months: number;
+  setMonths: (months: number) => void;
+}) {
+  const parsed = new Date(arrival);
+  const arrivalDate = Number.isNaN(parsed.getTime()) ? null : parsed;
+  const initialDate = arrivalDate ?? new Date();
+  const [offset, setOffset] = useState(0);
+  const viewedMonth = new Date(
+    Date.UTC(
+      initialDate.getUTCFullYear(),
+      initialDate.getUTCMonth() + offset,
+      1,
+    ),
+  );
+  const year = viewedMonth.getUTCFullYear();
+  const month = viewedMonth.getUTCMonth();
+  const leadingDays = (viewedMonth.getUTCDay() + 6) % 7;
+  const dayCount = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const cells = Math.ceil((leadingDays + dayCount) / 7) * 7;
+  const monthLabel = new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(viewedMonth);
+  return (
+    <section
+      className="horizon-card planning-calendar"
+      aria-label="Planning horizon calendar"
+    >
+      <div className="horizon-title">
+        <h3>
+          <CalendarDays /> Planning horizon
+        </h3>
+      </div>
+      <div className="planning-calendar-arrival">
+        <span>
+          <Plane size={17} /> Planned arrival
+        </span>
+        <strong>{arrival}</strong>
+      </div>
+      <div className="planning-calendar-month">
+        <button
+          type="button"
+          aria-label="Previous month"
+          onClick={() => setOffset((value) => value - 1)}
+        >
+          <ChevronRight className="calendar-previous" size={17} />
+        </button>
+        <strong aria-live="polite">{monthLabel}</strong>
+        <button
+          type="button"
+          aria-label="Next month"
+          onClick={() => setOffset((value) => value + 1)}
+        >
+          <ChevronRight size={17} />
+        </button>
+      </div>
+      <div className="planning-calendar-grid" aria-label={monthLabel}>
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+          <span className="calendar-weekday" key={day}>
+            {day}
+          </span>
+        ))}
+        {Array.from({ length: cells }, (_, index) => {
+          const day = index - leadingDays + 1;
+          if (day < 1 || day > dayCount)
+            return <span key={index} aria-hidden="true" />;
+          const isArrival =
+            arrivalDate?.getUTCFullYear() === year &&
+            arrivalDate.getUTCMonth() === month &&
+            arrivalDate.getUTCDate() === day;
+          return (
+            <span
+              key={index}
+              className={`calendar-day ${isArrival ? "arrival-day" : ""}`}
+              aria-label={
+                isArrival
+                  ? `${day} ${monthLabel}, planned arrival`
+                  : `${day} ${monthLabel}`
+              }
+            >
+              {day}
+            </span>
+          );
+        })}
+      </div>
+      {offset !== 0 && (
+        <button
+          type="button"
+          className="calendar-return"
+          onClick={() => setOffset(0)}
+        >
+          Back to {arrivalDate ? "arrival month" : "current month"}
+        </button>
+      )}
+      <div className="planning-calendar-horizon">
+        <label htmlFor="planning-horizon">
+          Planning horizon{" "}
+          <strong>
+            {months} {months === 1 ? "month" : "months"}
+          </strong>
+        </label>
+        <input
+          id="planning-horizon"
+          type="range"
+          min="1"
+          max="24"
+          value={months}
+          onChange={(event) => setMonths(Number(event.target.value))}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -2722,9 +3255,6 @@ function LegacyMovePlanner({
           <strong>{config?.readyBy}</strong>
           <small>Recommended funds-transfer date</small>
         </div>
-        <button onClick={() => go("AI Agent")}>
-          <Sparkles /> Ask AI to adjust
-        </button>
       </section>
       <div className="planner-grid">
         <section className="planner-panel">
@@ -3020,6 +3550,7 @@ function Payments({
   onSelectRoute,
   storedRoutes,
   config,
+  costs,
 }: {
   status: PaymentStatus;
   paid: boolean;
@@ -3030,6 +3561,7 @@ function Payments({
   onSelectRoute: (route: string) => void;
   storedRoutes?: DatabaseState["paymentRoutes"];
   config?: any;
+  costs: DatabaseState["costs"];
 }) {
   const [localSelected, setLocalSelected] = useState("wise");
   const [consent, setConsent] = useState(false);
@@ -3047,13 +3579,16 @@ function Payments({
   const currentStep =
     status === "not_started" ? 1 : status === "prepared" ? 2 : 3;
   const paymentSteps = ["Route", "Confirm", "Send"];
+  if (!availableRoutes.length || amount <= 0) return (
+    <div className="payments-page payment-checkout"><section className="payment-checkout-header"><div><h2>Payments</h2><p>No payment has been set up for this move yet.</p></div></section><UpcomingPayments costs={costs} /></div>
+  );
   return (
     <div className="payments-page payment-checkout">
       <section className="payment-checkout-header">
         <div>
           <span className="eyebrow">Tuition payment</span>
-          <h2>Total: {formatGBP(amount)}</h2>
-          <p>Choose a route and confirm the details.</p>
+          <h2>Payments</h2>
+          <p>Compare routes, review the total, and approve.</p>
         </div>
         <ol className="payment-steps" aria-label="Payment progress">
           {paymentSteps.map((label, index) => {
@@ -3092,13 +3627,13 @@ function Payments({
       <div className="payment-checkout-grid">
         <section className="payment-route-panel">
           <div className="payment-section-heading">
-            <span>Payment route</span>
-            <h3>How would you like to send?</h3>
+            <h3>Choose a payment route</h3>
           </div>
           <div className="payment-route-cards">
             {availableRoutes.map((r, index) => {
               const RouteIcon =
-                r.id.includes("swift") || r.provider.toLowerCase().includes("bank")
+                r.id.includes("swift") ||
+                r.provider.toLowerCase().includes("bank")
                   ? Landmark
                   : r.id.includes("card") ||
                       r.provider.toLowerCase().includes("card")
@@ -3118,8 +3653,10 @@ function Payments({
                   <span className="payment-route-icon">
                     <RouteIcon />
                   </span>
-                  <strong>{r.provider}</strong>
-                  {r.recommended && <em>Best value</em>}
+                  <span className="payment-route-provider">
+                    <strong>{r.provider}</strong>
+                    {r.recommended && <em>Best value</em>}
+                  </span>
                   <span className="payment-route-stat">
                     <small>Total cost</small>
                     <b>{formatUSD(routeEffectiveCost(r))}</b>
@@ -3150,8 +3687,7 @@ function Payments({
           </div>
         </section>
         <aside className="payment-checkout-review">
-          <span className="eyebrow">Review</span>
-          <h3>Payment details</h3>
+          <h3>Payment summary</h3>
           <div className="payment-total-row">
             <span>University receives</span>
             <strong>{formatGBP(amount)}</strong>
@@ -3223,184 +3759,862 @@ function Payments({
               <CheckCircle2 /> Payment complete
             </button>
           )}
-          <small className="payment-sandbox-note">Sandbox · no real funds</small>
+          <small className="payment-sandbox-note">
+            Sandbox · no real funds
+          </small>
         </aside>
+        <UpcomingPayments costs={costs} />
       </div>
     </div>
   );
 }
 
+function UpcomingPayments({ costs }: { costs: DatabaseState["costs"] }) {
+  const upcoming = costs.filter((item) => !item.paid);
+  return (
+    <section className="planner-upcoming-payments">
+      <div className="dashboard-card-heading">
+        <h3>Upcoming payments</h3>
+      </div>
+      <div className="dashboard-task-list">
+        {upcoming.length ? (
+          upcoming.map((item) => (
+            <div key={item.key} className="dashboard-task">
+              <span className="dashboard-task-date">
+                <CalendarDays size={18} />
+                <small>{item.due || "Planned"}</small>
+              </span>
+              <span>
+                <strong>{item.name}</strong>
+                <small>
+                  {formatGBP(item.amount)} · {item.category}
+                </small>
+              </span>
+            </div>
+          ))
+        ) : (
+          <p className="dashboard-empty">
+            <CheckCircle2 size={20} /> All planned payments are complete.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function Sponsors({
-  announce,
-  requestSent,
-  onRequest,
+  sponsorOnly = false,
+  userCode = "",
+  links = [],
+  onRespond,
   storedSponsors,
   config,
+  requests,
+  onAdd,
+  onRequest,
+  onPermission,
 }: {
-  announce: (s: string) => void;
-  requestSent?: boolean;
-  onRequest: () => void;
-  storedSponsors?: DatabaseState["sponsors"];
+  sponsorOnly?: boolean;
+  userCode?: string;
+  links?: DatabaseState["sponsorLinks"];
+  onRespond?: (id: Id<"sponsorLinks">, accept: boolean) => Promise<boolean>;
+  storedSponsors: DatabaseState["sponsors"];
   config?: any;
+  requests: DatabaseState["sponsorRequests"];
+  onAdd: (sponsor: NewSponsor) => Promise<boolean>;
+  onRequest: (request: {
+    sponsorKey: string;
+    amount: number;
+    purpose: string;
+    neededBy: string;
+  }) => Promise<boolean>;
+  onPermission: (
+    sponsorKey: string,
+    permission: string,
+    enabled: boolean,
+  ) => Promise<boolean>;
 }) {
-  const [tab, setTab] = useState<"Sponsors" | "Requests" | "Privacy">(
-    "Sponsors",
+  const [adding, setAdding] = useState(sponsorOnly);
+  const [saving, setSaving] = useState(false);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const [reviewing, setReviewing] = useState<Id<"sponsorLinks"> | null>(null);
+  const [draft, setDraft] = useState({
+    userCode: "",
+    email: "",
+    name: "",
+    relationship: "Parent",
+    commitment: "",
+    nextDate: "",
+  });
+  const [request, setRequest] = useState({
+    amount: "",
+    purpose: "Living expenses",
+    neededBy: "",
+  });
+  const [requesting, setRequesting] = useState(false);
+  const [permissionSaving, setPermissionSaving] = useState(false);
+  const selected = storedSponsors.find(
+    (sponsor) => sponsor.key === selectedKey,
   );
-  const visibleSponsors = storedSponsors ?? sponsors;
-  const sponsor = visibleSponsors[0];
-  const totalCommitment = sponsor?.commitment ?? 0;
-  const transferred = config?.transferred ?? 0;
-  const progress = totalCommitment
-    ? Math.round((transferred / totalCommitment) * 100)
-    : 0;
-  const schedule = config?.schedule ?? [
-    ["15 Nov 2026", "Living expenses", 1000],
-    ["15 Jan 2027", "Tuition instalment", 2000],
-  ];
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? value
+      : new Intl.DateTimeFormat("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        }).format(date);
+  };
   return (
-    <div className="sponsor-reference-page">
-      <section className="sponsor-reference-header">
+    <div className="sponsors-id-page">
+      <header className="sponsors-id-header">
         <div>
-          <span>Sponsor coordination</span>
-          <h2>Sponsor workspace</h2>
+          <h2>{sponsorOnly ? "Connect with a user" : "Your sponsors"}</h2>
           <p>
-            Coordinate contributions without exposing private spending or account
-            balances.
+            {sponsorOnly
+              ? "Send a request using their move code."
+              : "Review sponsor requests and manage contributions."}
           </p>
         </div>
-        <div className="sponsor-reference-tabs" role="tablist">
-          {(["Sponsors", "Requests", "Privacy"] as const).map((item) => (
-            <button
-              key={item}
-              className={tab === item ? "active" : ""}
-              onClick={() => setTab(item)}
-              role="tab"
-              aria-selected={tab === item}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {tab === "Sponsors" && sponsor && (
-        <>
-          <section className="sponsor-reference-summary">
-            <div className="sponsor-reference-person">
-              <div className="sponsor-reference-avatar">SC</div>
-              <div>
-                <small>Parent sponsor</small>
-                <h3>{sponsor.name}</h3>
-                <p>{sponsor.relationship} · Connected sponsor</p>
-              </div>
-              <button onClick={() => announce("Sponsor profile opened")}>
-                Open profile
-              </button>
-            </div>
-            <div className="sponsor-reference-commitment">
-              <div className="commitment-total">
-                <span>Annual commitment</span>
-                <strong>{formatGBP(totalCommitment)}</strong>
-                <i
-                  style={
-                    {
-                      "--progress": `${progress * 3.6}deg`,
-                    } as React.CSSProperties
-                  }
-                />
-              </div>
-              <div className="commitment-row received">
-                <span>Received</span>
-                <b>
-                  <i style={{ width: `${progress}%` }} />
-                </b>
-                <strong>{formatGBP(transferred)}</strong>
-              </div>
-              <div className="commitment-row remaining">
-                <span>Remaining</span>
-                <b>
-                  <i style={{ width: `${100 - progress}%` }} />
-                </b>
-                <strong>
-                  {formatGBP(Math.max(0, totalCommitment - transferred))}
-                </strong>
-              </div>
-            </div>
-          </section>
-          <section className="sponsor-reference-schedule">
-            <div className="schedule-title">
-              <h3>Contribution schedule</h3>
-              <p>Upcoming Payments</p>
-            </div>
-            <div className="schedule-head">
-              <span>Date</span>
-              <span>Description</span>
-              <span>Amount</span>
-              <span>Status</span>
-            </div>
-            {schedule.map((item: any[], index: number) => (
-              <div className="schedule-line" key={`${item[0]}-${item[1]}`}>
-                <span>{item[0]}</span>
-                <span>{item[1]}</span>
-                <span>{formatGBP(Number(item[2]))}</span>
-                <em className={index === 0 ? "paid" : "pending"}>
-                  {index === 0 ? "Paid" : "Pending"}
-                </em>
-              </div>
-            ))}
-          </section>
-        </>
-      )}
-
-      {tab === "Requests" && (
-        <section className="sponsor-reference-panel">
-          <span>Contribution request</span>
-          <h3>
-            Ask {sponsor?.name ?? "your sponsor"} for the next contribution
-          </h3>
-          <p>
-            The request shares its purpose and amount, but no private account
-            activity.
-          </p>
+        {sponsorOnly && (
           <button
-            className="primary"
-            disabled={requestSent}
+            type="button"
+            className="sponsor-primary"
+            aria-expanded={adding}
+            aria-controls="add-sponsor-form"
             onClick={() => {
-              onRequest();
-              announce("Contribution request sent");
+              setAdding(!adding);
+              setFeedback("");
             }}
           >
-            {requestSent ? (
-              <>
-                <Check /> Request sent
-              </>
-            ) : (
-              <>
-                <Send /> Request contribution
-              </>
-            )}
+            <Plus size={17} />{" "}
+            {sponsorOnly ? "Request form" : "Sponsor request form"}
           </button>
+        )}
+      </header>
+      {!sponsorOnly && (
+        <section className="sponsor-code-panel">
+          <div>
+            <h3>Your move code</h3>
+            <p>Share this code and link with your sponsor.</p>
+            <code>{userCode}</code>
+          </div>
+          <div>
+            <button
+              className="sponsor-primary"
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(userCode);
+                  setFeedback("Code copied.");
+                } catch {
+                  setFeedback("Copy the code shown above.");
+                }
+              }}
+            >
+              Copy code
+            </button>
+            <a
+              href={`${window.location.pathname}?sponsor=1`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open sponsor form <ArrowRight size={15} />
+            </a>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(
+                    `${window.location.origin}${window.location.pathname}?sponsor=1`,
+                  );
+                  setFeedback("Sponsor link copied.");
+                } catch {
+                  setFeedback("Open the sponsor form and copy its address.");
+                }
+              }}
+            >
+              Copy sponsor link
+            </button>
+          </div>
         </section>
       )}
-
-      {tab === "Privacy" && (
-        <section className="sponsor-reference-panel privacy">
-          <LockKeyhole />
-          <span>Private by default</span>
-          <h3>Your sponsor sees contributions, not your finances.</h3>
-          <p>
-            Wallet balances, transaction history, and personal spending remain
-            hidden.
-          </p>
+      {!sponsorOnly && links.length > 0 && (
+        <section className="sponsor-incoming">
+          <h3>
+            Pending requests <span>{links.length}</span>
+          </h3>
+          {links.map((link) => (
+            <article key={link._id}>
+              <div>
+                <strong>{link.name}</strong>
+                <small>
+                  {link.relationship} · {link.email}
+                </small>
+                <small>
+                  {formatGBP(link.commitment)} committed ·{" "}
+                  {formatDate(link.nextDate)}
+                </small>
+              </div>
+              <div>
+                {[true, false].map((accept) => (
+                  <button
+                    type="button"
+                    key={String(accept)}
+                    className={accept ? "sponsor-primary" : ""}
+                    disabled={reviewing !== null}
+                    onClick={async () => {
+                      setReviewing(link._id);
+                      try {
+                        const saved = await onRespond?.(link._id, accept);
+                        setFeedback(
+                          saved
+                            ? `Request ${accept ? "accepted" : "declined"}.`
+                            : "Could not review this request.",
+                        );
+                      } finally {
+                        setReviewing(null);
+                      }
+                    }}
+                  >
+                    {reviewing === link._id
+                      ? "…"
+                      : accept
+                        ? "Accept"
+                        : "Decline"}
+                  </button>
+                ))}
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+      {adding && (
+        <form
+          id="add-sponsor-form"
+          className="sponsor-add-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setSaving(true);
+            setFeedback("");
+            try {
+              const saved = await onAdd({
+                userCode: draft.userCode.trim(),
+                email: draft.email.trim(),
+                name: draft.name.trim(),
+                relationship: draft.relationship.trim(),
+                commitment: Number(draft.commitment),
+                nextDate: draft.nextDate,
+              });
+              if (saved) {
+                setAdding(false);
+                setDraft({
+                  userCode: "",
+                  email: "",
+                  name: "",
+                  relationship: "Parent",
+                  commitment: "",
+                  nextDate: "",
+                });
+                setFeedback(
+                  "Request sent. The user must accept before you are linked.",
+                );
+              } else
+                setFeedback(
+                  "Could not send the request. Check the code and details, or whether a request is already pending.",
+                );
+            } catch {
+              setFeedback(
+                "Could not send the request. Check the code and details, or whether a request is already pending.",
+              );
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          <h3>Send a sponsor request</h3>
+          <p>For sponsors: enter the user’s move code and your details.</p>
+          <div className="sponsor-add-fields">
+            <label>
+              User’s move code
+              <input
+                required
+                value={draft.userCode}
+                onChange={(event) =>
+                  setDraft({ ...draft, userCode: event.target.value })
+                }
+                placeholder="FP-…"
+              />
+            </label>
+            <label>
+              Your email
+              <input
+                required
+                type="email"
+                maxLength={254}
+                value={draft.email}
+                onChange={(event) =>
+                  setDraft({ ...draft, email: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Name
+              <input
+                required
+                maxLength={80}
+                value={draft.name}
+                onChange={(event) =>
+                  setDraft({ ...draft, name: event.target.value })
+                }
+                placeholder="Full name"
+              />
+            </label>
+            <label>
+              Relationship
+              <input
+                required
+                maxLength={60}
+                value={draft.relationship}
+                onChange={(event) =>
+                  setDraft({ ...draft, relationship: event.target.value })
+                }
+                placeholder="Parent, family, organisation…"
+              />
+            </label>
+            <label>
+              Commitment (GBP)
+              <input
+                required
+                type="number"
+                inputMode="decimal"
+                min="0"
+                max="1000000000"
+                step="0.01"
+                value={draft.commitment}
+                onChange={(event) =>
+                  setDraft({ ...draft, commitment: event.target.value })
+                }
+                placeholder="0.00"
+              />
+            </label>
+            <label>
+              Next contribution
+              <input
+                required
+                type="date"
+                value={draft.nextDate}
+                onChange={(event) =>
+                  setDraft({ ...draft, nextDate: event.target.value })
+                }
+              />
+            </label>
+          </div>
+          <div className="sponsor-form-actions">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setAdding(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="sponsor-primary"
+              disabled={
+                saving ||
+                !draft.userCode.trim() ||
+                !draft.email.trim() ||
+                !draft.name.trim() ||
+                !draft.relationship.trim()
+              }
+            >
+              {saving ? "Sending…" : "Send request"}
+              <Check size={16} />
+            </button>
+          </div>
+        </form>
+      )}
+      {feedback && (
+        <p className="sponsor-feedback" role="status">
+          {feedback}
+        </p>
+      )}
+      <div className="sponsor-id-grid">
+        {storedSponsors.map((sponsor) => {
+          const initials = sponsor.name
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0])
+            .join("")
+            .toUpperCase();
+          const sponsorRequests = requests.filter(
+            (item) => item.sponsorKey === sponsor.key,
+          );
+          return (
+            <article
+              className={`sponsor-id-card ${selectedKey === sponsor.key ? "selected" : ""}`}
+              key={sponsor.key}
+            >
+              <div className="sponsor-id-top">
+                <span>
+                  <UsersRound size={14} /> Financial Passport
+                </span>
+                <span className="sponsor-id-tag">Sponsor</span>
+              </div>
+              <div className="sponsor-id-person">
+                <div className="sponsor-id-avatar" aria-hidden="true">
+                  {initials}
+                </div>
+                <div>
+                  <h3>{sponsor.name}</h3>
+                  <span>{sponsor.relationship}</span>
+                </div>
+              </div>
+              <dl className="sponsor-id-facts">
+                <div>
+                  <dt>Commitment</dt>
+                  <dd>{formatGBP(sponsor.commitment)}</dd>
+                </div>
+                <div>
+                  <dt>Next contribution</dt>
+                  <dd>{formatDate(sponsor.nextDate)}</dd>
+                </div>
+              </dl>
+              <div className="sponsor-id-footer">
+                <span>
+                  {
+                    sponsorRequests.filter((item) => item.status === "sent")
+                      .length
+                  }{" "}
+                  pending requests
+                </span>
+                <button
+                  type="button"
+                  aria-expanded={selectedKey === sponsor.key}
+                  aria-controls="sponsor-details"
+                  onClick={() => {
+                    setSelectedKey(
+                      selectedKey === sponsor.key ? null : sponsor.key,
+                    );
+                    setRequest({
+                      amount: "",
+                      purpose: "Living expenses",
+                      neededBy: "",
+                    });
+                    setFeedback("");
+                  }}
+                >
+                  {selectedKey === sponsor.key
+                    ? "Close details"
+                    : "View details"}
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            </article>
+          );
+        })}
+        <button
+          type="button"
+          className="sponsor-add-tile"
+          onClick={() => {
+            setAdding(true);
+            setFeedback("");
+          }}
+        >
+          <span>
+            <Plus size={24} />
+          </span>
+          <strong>Add a sponsor</strong>
+          <small>Family, friends or an organisation</small>
+        </button>
+      </div>
+      {selected && (
+        <section
+          id="sponsor-details"
+          className="sponsor-details-panel"
+          aria-label={`Details for ${selected.name}`}
+        >
+          <div className="sponsor-details-heading">
+            <h3>{selected.name}</h3>
+            <button
+              type="button"
+              aria-label="Close sponsor details"
+              onClick={() => setSelectedKey(null)}
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="sponsor-details-grid">
+            <div>
+              <h4>Contribution request</h4>
+              <form
+                className="sponsor-request-form"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  setRequesting(true);
+                  setFeedback("");
+                  try {
+                    const sent = await onRequest({
+                      sponsorKey: selected.key,
+                      amount: Number(request.amount),
+                      purpose: request.purpose.trim(),
+                      neededBy: request.neededBy,
+                    });
+                    setFeedback(
+                      sent
+                        ? `Request sent to ${selected.name}.`
+                        : "Could not send the request. Try again.",
+                    );
+                  } catch {
+                    setFeedback("Could not send the request. Try again.");
+                  } finally {
+                    setRequesting(false);
+                  }
+                }}
+              >
+                <label>
+                  Amount (GBP)
+                  <input
+                    required
+                    type="number"
+                    inputMode="decimal"
+                    min="0.01"
+                    step="0.01"
+                    value={request.amount}
+                    onChange={(event) =>
+                      setRequest({ ...request, amount: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Purpose
+                  <input
+                    required
+                    maxLength={120}
+                    value={request.purpose}
+                    onChange={(event) =>
+                      setRequest({ ...request, purpose: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Needed by
+                  <input
+                    required
+                    type="date"
+                    value={request.neededBy}
+                    onChange={(event) =>
+                      setRequest({ ...request, neededBy: event.target.value })
+                    }
+                  />
+                </label>
+                <button
+                  className="sponsor-primary"
+                  type="submit"
+                  disabled={requesting}
+                >
+                  {requesting ? "Sending…" : "Request contribution"}
+                  <Send size={15} />
+                </button>
+              </form>
+              <div className="sponsor-request-history">
+                {requests
+                  .filter((item) => item.sponsorKey === selected.key)
+                  .map((item) => (
+                    <div key={item._id}>
+                      <span>
+                        {item.purpose}
+                        <small>
+                          {formatDate(item.neededBy)} · {item.status}
+                        </small>
+                      </span>
+                      <strong>{formatGBP(item.amount)}</strong>
+                    </div>
+                  ))}
+              </div>
+              {selected.key === "sp1" && config?.schedule?.length > 0 && (
+                <div className="sponsor-planned-schedule">
+                  <h4>Planned contributions</h4>
+                  {config.schedule.map((item: any[]) => (
+                    <div key={`${item[0]}-${item[1]}`}>
+                      <span>
+                        {item[1]}
+                        <small>{item[0]}</small>
+                      </span>
+                      <strong>{formatGBP(Number(item[2]))}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="sponsor-sharing">
+              <h4>
+                <LockKeyhole size={16} /> Sharing permissions
+              </h4>
+              <p>Choose what this sponsor can view.</p>
+              {[
+                "Commitment status",
+                "Sponsored tuition",
+                "Funding requests",
+                "Wallet balances",
+              ].map((permission) => (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={selected.permissions.includes(permission)}
+                  disabled={permissionSaving}
+                  key={permission}
+                  onClick={async () => {
+                    setPermissionSaving(true);
+                    try {
+                      await onPermission(
+                        selected.key,
+                        permission,
+                        !selected.permissions.includes(permission),
+                      );
+                    } finally {
+                      setPermissionSaving(false);
+                    }
+                  }}
+                >
+                  <span>{permission}</span>
+                  <strong>
+                    {selected.permissions.includes(permission)
+                      ? "Shared"
+                      : "Private"}
+                  </strong>
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
       )}
     </div>
   );
 }
+
+function BudgetEditor({
+  budget,
+  costs,
+  available,
+  onSave,
+  allocation,
+}: {
+  budget?: BudgetAllocation[];
+  costs: DatabaseState["costs"];
+  available: number;
+  allocation: ReactNode;
+  onSave: (allocations: BudgetAllocation[]) => Promise<boolean>;
+}) {
+  const [rows, setRows] = useState(() =>
+    (
+      budget ??
+      costs
+        .slice(0, 20)
+        .map((item) => ({ category: item.name, amount: item.amount }))
+    ).map((item) => ({
+      id: crypto.randomUUID(),
+      category: item.category,
+      amount: String(item.amount),
+    })),
+  );
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const total = rows.reduce(
+    (sum, row) =>
+      sum + (Number.isFinite(Number(row.amount)) ? Number(row.amount) : 0),
+    0,
+  );
+  const remaining = available - total;
+  const updateRow = (
+    id: string,
+    field: "category" | "amount",
+    value: string,
+  ) => {
+    setRows((items) =>
+      items.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
+    );
+    setMessage("");
+    setError("");
+  };
+  return (
+    <form
+      className="wallet-budget-card"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        const allocations = rows.map((row) => ({
+          category: row.category.trim(),
+          amount: Number(row.amount),
+        }));
+        if (
+          allocations.some(
+            (row, index) =>
+              !row.category ||
+              !rows[index].amount.trim() ||
+              !Number.isFinite(row.amount) ||
+              row.amount < 0 ||
+              row.amount > 1_000_000_000,
+          )
+        ) {
+          setError("Enter a category and a valid amount for each row.");
+          return;
+        }
+        if (
+          new Set(allocations.map((row) => row.category.toLowerCase())).size !==
+          allocations.length
+        ) {
+          setError("Use a different name for each category.");
+          return;
+        }
+        setSaving(true);
+        setError("");
+        setMessage("");
+        try {
+          const saved = await onSave(allocations);
+          if (saved) setMessage("Budget saved.");
+          else setError("Could not save your budget. Please try again.");
+        } catch {
+          setError("Could not save your budget. Please try again.");
+        } finally {
+          setSaving(false);
+        }
+      }}
+    >
+      <div className="wallet-budget-heading">
+        <div>
+          <h3>Your move budget</h3>
+          <p>Set aside an amount for each category. All amounts in GBP.</p>
+        </div>
+        <span className="dashboard-currency">GBP</span>
+      </div>
+      <div className="wallet-budget-summary">
+        <div>
+          <span>Planned spending</span>
+          <strong>{formatGBP(total)}</strong>
+        </div>
+        <div>
+          <span>Available balance</span>
+          <strong>{formatGBP(available)}</strong>
+        </div>
+        <div className={remaining < 0 ? "over-budget" : ""}>
+          <span>
+            {remaining < 0 ? "Over available balance" : "Unallocated"}
+          </span>
+          <strong>{formatGBP(Math.abs(remaining))}</strong>
+        </div>
+      </div>
+      <div className="wallet-budget-content">
+      {allocation}
+      <fieldset disabled={saving}>
+        <legend className="budget-sr-only">Budget categories</legend>
+        <div className="wallet-budget-labels" aria-hidden="true">
+          <span>Category</span>
+          <span>Amount (GBP)</span>
+        </div>
+        <div className="wallet-budget-rows">
+          {rows.map((row, index) => (
+            <div className="wallet-budget-row" key={row.id}>
+              <input
+                aria-label={`Category ${index + 1}`}
+                maxLength={60}
+                required
+                value={row.category}
+                placeholder="e.g. Groceries"
+                onChange={(event) =>
+                  updateRow(row.id, "category", event.target.value)
+                }
+              />
+              <div className="wallet-budget-amount">
+                <span aria-hidden="true">£</span>
+                <input
+                  aria-label={`Amount for ${row.category || `category ${index + 1}`} in GBP`}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max="1000000000"
+                  step="0.01"
+                  required
+                  value={row.amount}
+                  placeholder="0.00"
+                  onChange={(event) =>
+                    updateRow(row.id, "amount", event.target.value)
+                  }
+                />
+              </div>
+              <button
+                type="button"
+                className="budget-remove"
+                aria-label={`Remove ${row.category || `category ${index + 1}`}`}
+                onClick={() => {
+                  setRows((items) =>
+                    items.filter((item) => item.id !== row.id),
+                  );
+                  setMessage("");
+                  setError("");
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+        {!rows.length && (
+          <p className="wallet-budget-empty">
+            Add a category to start your budget.
+          </p>
+        )}
+        <div className="wallet-budget-actions">
+          <button
+            type="button"
+            disabled={rows.length >= 20}
+            onClick={() => {
+              setRows((items) => [
+                ...items,
+                { id: crypto.randomUUID(), category: "", amount: "" },
+              ]);
+              setMessage("");
+              setError("");
+            }}
+          >
+            <Plus size={16} /> Add category
+          </button>
+          <button type="submit" className="budget-save">
+            {saving ? "Saving…" : "Save budget"}
+            <Check size={16} />
+          </button>
+        </div>
+      </fieldset>
+      </div>
+      {error && (
+        <p className="wallet-budget-feedback" role="alert">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p className="wallet-budget-feedback" role="status">
+          {message}
+        </p>
+      )}
+    </form>
+  );
+}
+
 function Wallet({
   storedWallets,
+  budget,
+  costs,
+  onSaveBudget,
 }: {
   storedWallets?: DatabaseState["wallets"];
+  budget?: BudgetAllocation[];
+  costs: DatabaseState["costs"];
+  onSaveBudget: (allocations: BudgetAllocation[]) => Promise<boolean>;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [walletNotice, setWalletNotice] = useState("");
@@ -3410,6 +4624,14 @@ function Wallet({
     ...wallet,
     percent: totalValue ? Math.round((wallet.gbpValue / totalValue) * 100) : 0,
   }));
+  const allocationColors = ["var(--color-dusty-denim-600)", "var(--color-dusty-denim-400)", "var(--color-dusty-denim-300)"];
+  let allocationStart = 0;
+  const allocationStops = visibleWallets.map((wallet, index) => {
+    const start = allocationStart;
+    allocationStart += totalValue > 0 ? wallet.gbpValue / totalValue * 100 : 0;
+    return `${allocationColors[index % allocationColors.length]} ${start}% ${allocationStart}%`;
+  });
+  const allocationGradient = totalValue > 0 ? `conic-gradient(${allocationStops.join(", ")})` : "var(--color-line)";
   const foreignShare = exposure
     .filter((wallet) => wallet.currency !== "GBP")
     .reduce((sum, wallet) => sum + wallet.percent, 0);
@@ -3425,24 +4647,15 @@ function Wallet({
       <section className="wallet-redesign-intro">
         <div>
           <span className="eyebrow">Multi-currency wallet</span>
-          <h2>Your balances</h2>
-          <p>One view across accounts. Rates are demo estimates.</p>
+          <h2>Wallet & budget</h2>
+          <p>Plan your spending and view your balances.</p>
         </div>
-        <div className="wallet-allocation" aria-label="Currency allocation">
-          <i />
-          <div className="wallet-allocation-labels">
-            {exposure.map((wallet) => (
-              <span key={wallet.currency}>
-                <b className={`currency-${wallet.currency.toLowerCase()}`} />
-                {wallet.currency} {wallet.percent}%
-              </span>
-            ))}
-          </div>
-        </div>
+
         <div className="total-balance">
           <span>Total available</span>
           <strong>{formatGBP(totalValue)} ↗</strong>
         </div>
+
       </section>
       <section className="wallet-account-grid">
         {visibleWallets.map((w) => (
@@ -3480,6 +4693,26 @@ function Wallet({
           </article>
         ))}
       </section>
+      <BudgetEditor
+        budget={budget}
+        costs={costs}
+        available={totalValue}
+        onSave={onSaveBudget}
+        allocation={
+      <section className="wallet-allocation-section" aria-labelledby="wallet-allocation-heading">
+        <div className="wallet-allocation-heading"><h3 id="wallet-allocation-heading">Currency allocation</h3><p>Share of your available balance in GBP.</p></div>
+        <div className="wallet-allocation" aria-label="Currency allocation">
+          <i aria-hidden="true" style={{ background: allocationGradient }} />
+          <div className="wallet-allocation-labels">
+            {exposure.map((wallet, index) => <div className="wallet-allocation-row" key={wallet.currency}>
+              <span><b style={{ background: allocationColors[index % allocationColors.length] }} />{wallet.currency}</span>
+              <strong>{wallet.percent}%</strong><small>{formatGBP(wallet.gbpValue)}</small>
+            </div>)}
+          </div>
+        </div>
+      </section>
+        }
+      />
       <div className="wallet-page-footer">
         <span>Rates are demo estimates.</span>
         <button onClick={() => setDetailsOpen((open) => !open)}>
@@ -3521,8 +4754,8 @@ function Wallet({
     </div>
   );
 }
-function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
-  const [activityOpen, setActivityOpen] = useState(false);
+
+function Security({ audit }: { audit: AuditEvent[] }) {
   const exportAudit = () => {
     const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
     const csv = [
@@ -3539,83 +4772,34 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
   };
   return (
     <div className="page-stack">
-      <section className="page-intro">
-        <div>
-          <span className="eyebrow">Controls & evidence</span>
-          <h2>Security center</h2>
-          <p>
-            Review permissions, limits, approvals, and every consequential
-            action.
-          </p>
-        </div>
-        <span className="status success">
-          <ShieldCheck /> All controls active
-        </span>
-      </section>
-      <section className="security-grid">
-        <div className="card control">
-          <LockKeyhole />
+      <section className="card section-card">
+        <div className="section-heading">
           <div>
-            <strong>Approval required</strong>
-            <p>Every payment requires explicit student approval.</p>
+            <span className="eyebrow">Security</span>
+            <h3>Activity log</h3>
           </div>
-          <span>{config?.approvalRequired ? "On" : "Off"}</span>
+          <button className="secondary" onClick={exportAudit}>
+            <History /> Export CSV
+          </button>
         </div>
-        <div className="card control">
-          <CircleDollarSign />
-          <div>
-            <strong>Payment limit</strong>
-            <p>Single sandbox transaction maximum.</p>
+        <div className="audit-table">
+          <div className="audit-head">
+            <span>Event</span>
+            <span>Details</span>
+            <span>Actor</span>
+            <span>Time</span>
           </div>
-          <span>{formatGBP(config?.paymentLimit ?? 0)}</span>
-        </div>
-        <div className="card control">
-          <Clock3 />
-          <div>
-            <strong>Approval expiry</strong>
-            <p>Unused authorizations expire automatically.</p>
-          </div>
-          <span>{config?.approvalExpiryMinutes ?? 0} min</span>
+          {!audit.length && <p>No activity recorded yet.</p>}
+          {audit.map((a) => (
+            <div className="audit-row" key={a.id}>
+              <strong>{a.type.replaceAll("_", " ")}</strong>
+              <span>{a.detail}</span>
+              <span>{a.actor}</span>
+              <span>{a.timestamp}</span>
+            </div>
+          ))}
         </div>
       </section>
-      <button
-        className="disclosure-button"
-        onClick={() => setActivityOpen((open) => !open)}
-      >
-        {activityOpen
-          ? "Hide activity log"
-          : `View activity log (${audit.length})`}
-        <ChevronRight />
-      </button>
-      {activityOpen && (
-        <section className="card section-card">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">Immutable evidence</span>
-              <h3>Activity log</h3>
-            </div>
-            <button className="secondary" onClick={exportAudit}>
-              <History /> Export CSV
-            </button>
-          </div>
-          <div className="audit-table">
-            <div className="audit-head">
-              <span>Event</span>
-              <span>Details</span>
-              <span>Actor</span>
-              <span>Time</span>
-            </div>
-            {audit.map((a) => (
-              <div className="audit-row" key={a.id}>
-                <strong>{a.type.replaceAll("_", " ")}</strong>
-                <span>{a.detail}</span>
-                <span>{a.actor}</span>
-                <span>{a.timestamp}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }
