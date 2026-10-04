@@ -45,3 +45,5 @@ The frontend is React + TypeScript on Vite/Bun. Convex stores the account, plan 
 ## Scope note
 
 This remains a sandbox MVP. The seeded profile is intentionally passwordless for a frictionless product demo; production authentication, real provider connections, live FX rates, and compliance controls are still required before handling real financial data or funds.
+
+## Update
