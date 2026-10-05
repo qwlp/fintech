@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MoveWise · Topic C presentation</title>
+    <style>
+      @page {
+        size: 12in 6.75in;
+        margin: 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #e8edf2;
+        font-family: Arial, sans-serif;
+        color: #18324e;
+      }
+      section {
+        width: 100%;
+        min-height: 100vh;
+        max-width: 1440px;
+        padding: 7vh 7vw;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        page-break-after: always;
+        background: #f8fafc;
+      }
+      small {
+        font-size: 18px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: #55758d;
+      }
+      h1 {
+        font-size: clamp(36px, 5vw, 68px);
+        line-height: 1.08;
+        margin: 28px 0;
+      }
+      h2 {
+        font-size: clamp(24px, 3vw, 40px);
+        font-weight: 400;
+        line-height: 1.25;
+        margin: 0 0 32px;
+      }
+      p {
+        font-size: clamp(18px, 2vw, 26px);
+        line-height: 1.5;
+        max-width: 1000px;
+      }
+      footer {
+        font-size: 16px;
+        color: #5c7183;
+        margin-top: 32px;
+        line-height: 1.5;
+        border-top: 1px solid #c9d6e0;
+        padding-top: 20px;
+      }
+      @media print {
+        section {
+          width: 12in;
+          height: 6.75in;
+          min-height: 0;
+          padding: 0.55in 0.8in;
+        }
+        h1 {
+          font-size: 48px;
+          margin: 20px 0;
+        }
+        h2 {
+          font-size: 30px;
+          margin-bottom: 20px;
+        }
+        p {
+          font-size: 22px;
+        }
+        small,
+        footer {
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <small>MoveWise · 01 / 10</small>
+      <h1>MoveWise</h1>
+      <h2>An AI financial participant for international students</h2>
+      <p>Topic C · Tuition, living funds and private sponsor coordination</p>
+      <footer>
+        Team: add contestant names and university affiliations before
+        submission.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 02 / 10</small>
+      <h1>The student problem</h1>
+      <h2>Tuition is only one part of the financial decision.</h2>
+      <p>
+        Students must balance currency conversion, payment timing, living costs
+        and family support.
+      </p>
+      <footer>
+        Research hypothesis: a guided, auditable task reduces uncertainty.
+        User-study results are not yet claimed.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 03 / 10</small>
+      <h1>One task, end to end</h1>
+      <h2>“Help me prepare my tuition payment.”</h2>
+      <p>
+        Compare fresh routes → check deadline and reserve → prepare → owner
+        approves → sandbox execution.
+      </p>
+      <footer>
+        The demo uses illustrative USD-to-GBP quotes and fictional account
+        records.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 04 / 10</small>
+      <h1>The AI does useful work</h1>
+      <h2>Four bounded tools, deterministic results.</h2>
+      <p>
+        Compare tuition routes · Simulate rent changes · Stress-test FX ·
+        Prepare a payment proposal.
+      </p>
+      <footer>
+        The model has no approval or execution capability. Each tool is bound to
+        the authenticated student.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 05 / 10</small>
+      <h1>Protect time and living costs</h1>
+      <h2>The cheapest route must also meet the student’s plan.</h2>
+      <p>
+        A shared decision engine checks quote freshness, buffered arrival and
+        available cash. Deadline and reserve checks run at preparation and
+        execution.
+      </p>
+      <footer>
+        Blocked routes explain the funding top-up. UTC weekdays exclude holidays
+        and university processing; arrival is an estimate.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 06 / 10</small>
+      <h1>Approval means exact terms</h1>
+      <h2>One proposal. One recipient. One quote.</h2>
+      <p>
+        Owner approval covers provider, recipient, rate, fee, amount, expiry,
+        deadline and reserve. Provider changes require reset and fresh approval.
+      </p>
+      <footer>
+        Source quotes expire in ten minutes; proposal expiry never extends them.
+        AI preparation never grants authority to pay.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 07 / 10</small>
+      <h1>Execution you can inspect</h1>
+      <h2>A receipt backed by a financial ledger.</h2>
+      <p>
+        Atomic wallet debit + ledger entry + UUID receipt + audit. A retry
+        returns the original receipt without another debit.
+      </p>
+      <footer>
+        Chat shows recorded calculations. Evidence exports include proposals,
+        tool results, actor timestamps and before/after balances. No external
+        settlement is claimed.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 08 / 10</small>
+      <h1>Privacy and security</h1>
+      <h2>Students control sponsor access and AI processing.</h2>
+      <p>
+        Purpose-limited sponsor views · Revocable AI consent · Server-only API
+        secret · Allowlisted tools · Account ownership checks · Daily AI limits.
+      </p>
+      <footer>
+        Known limits: no MFA, no real payee/KYC verification, fallible model
+        prose and no independent security audit.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 09 / 10</small>
+      <h1>Validation</h1>
+      <h2>Show the tests and the actual journey.</h2>
+      <p>
+        80 local regression checks · 21 browser checks · Six live-model smoke
+        scenarios. Evidence includes deadlines, authorization, arithmetic,
+        recorded calculations and refusal behavior.
+      </p>
+      <footer>
+        Exact latest counts are in docs/validation.md. Local tests mock the
+        model; live checks use fictional inputs and read-only tools, not
+        authenticated payment execution.
+      </footer>
+    </section>
+    <section>
+      <small>MoveWise · 10 / 10</small>
+      <h1>Next milestones</h1>
+      <h2>From a defensible sandbox to verified integrations.</h2>
+      <p>
+        Student usability study · Provider sandbox integration · University
+        rules and holiday calendars · Broader multilingual and adversarial
+        evaluations.
+      </p>
+      <footer>
+        The submission demonstrates a bounded financial task, with human control
+        and auditable execution.
+      </footer>
+    </section>
+  </body>
+</html>

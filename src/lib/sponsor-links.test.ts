@@ -154,6 +154,23 @@ describe("sponsor invitations", () => {
     await expect(
       student.client.query(api.sponsorLinks.dashboard, {}),
     ).rejects.toThrow("Sponsor account");
+    await student.client.mutation(api.accounts.setSponsorPermission, {
+      accountId: student.accountId,
+      sponsorKey: String(sponsor.accountId),
+      permission: "Funding requests",
+      enabled: false,
+    });
+    expect(
+      (await sponsor.client.query(api.sponsorLinks.dashboard, {}))[0].requests,
+    ).toEqual([]);
+    await expect(
+      student.client.mutation(api.accounts.setSponsorPermission, {
+        accountId: student.accountId,
+        sponsorKey: String(sponsor.accountId),
+        permission: "Wallet balances",
+        enabled: true,
+      }),
+    ).rejects.toThrow("Unknown sponsor permission");
     await student.client.mutation(api.sponsorLinks.disconnect, { id: link.id });
     expect(await sponsor.client.query(api.sponsorLinks.dashboard, {})).toEqual(
       [],

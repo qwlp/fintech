@@ -6,16 +6,16 @@ import { Calendar } from "./calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { cn } from "../../lib/utils";
 
-export function DatePicker({ value, onChange, label, className }: {
-  value: string; onChange: (value: string) => void; label: string; className?: string;
+export function DatePicker({ value, onChange, label, className, disabled = false, compact = false }: {
+  value: string; onChange: (value: string) => void; label: string; className?: string; disabled?: boolean; compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const parsed = value ? new Date(`${value}T12:00:00`) : undefined;
   const date = parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined;
   return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild>
-      <Button type="button" variant="outline" className={cn("ui-date-trigger", className)} aria-label={`${label}: ${date ? format(date, "d MMM yyyy") : "Choose date"}`}>
-        <CalendarBlank weight="duotone" /><span><small>{label}</small><strong>{date ? format(date, "d MMM yyyy") : "Choose date"}</strong></span>
+      <Button type="button" variant="outline" disabled={disabled} className={cn("ui-date-trigger", compact && "ui-date-trigger-compact", className)} aria-label={compact ? label : `${label}: ${date ? format(date, "d MMM yyyy") : "Choose date"}`}>
+        <CalendarBlank weight="duotone" /><span>{!compact && <small>{label}</small>}<strong>{date ? format(date, "d MMM yyyy") : "Choose date"}</strong></span>
       </Button>
     </PopoverTrigger>
     <PopoverContent className="ui-popover" align="end" sideOffset={8}>

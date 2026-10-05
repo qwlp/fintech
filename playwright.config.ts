@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
+  workers: 1, // Bound CPU/GPU contention from animated previews.
   testDir: "./e2e",
   testMatch: "**/*.pw.ts",
   use: {

@@ -16,7 +16,10 @@
     "preview": "vite preview",
     "auth:setup": "bun scripts/setup-auth.mjs",
     "ai:setup": "bun scripts/setup-ai.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:eval": "bun scripts/evaluate-local.mjs",
+    "eval:live": "bun scripts/evaluate-agent-live.ts",
+    "deck:build": "bun scripts/build-presentation.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",

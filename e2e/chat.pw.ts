@@ -18,6 +18,21 @@ for (const width of [1440, 390]) {
     await page.goto("/chat-preview");
     await expect(page.getByRole("heading", { name: "Let’s make a plan." })).toBeVisible();
     const input = page.getByRole("textbox", { name: "Message your plan assistant" });
+    await page.getByRole("button", { name: "AI privacy settings", exact: true }).click();
+    const privacy = page.getByRole("dialog", { name: "AI privacy", exact: true });
+    await expect(privacy).toBeVisible();
+    await expect(privacy).toContainText("OpenRouter and its model provider");
+    await page.screenshot({ path: `/tmp/fintech-ai-privacy-${width}.png` });
+    await privacy.getByRole("button", { name: "Disable AI processing", exact: true }).click();
+    await expect(privacy).not.toBeVisible();
+    await expect(input).toBeDisabled();
+    await page.getByRole("button", { name: "AI privacy settings", exact: true }).click();
+    await privacy.getByRole("button", { name: "Enable AI processing", exact: true }).click();
+    await expect(input).toBeEnabled();
+    await page.getByRole("button", { name: "AI privacy settings", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(privacy).not.toBeVisible();
+
     await input.fill("Explain my gap");
     await input.press("Shift+Enter");
     await input.type("Please");
@@ -26,6 +41,9 @@ for (const width of [1440, 390]) {
     await input.press("Enter");
     await expect(page.getByRole("log")).toContainText("Your funding gap is £250.");
     await expect(page.locator(".assistant-markdown strong").first()).toHaveText("£250");
+    await page.locator(".agent-calculation summary").click();
+    await expect(page.locator(".agent-calculation")).toContainText("£3,483.00");
+    await expect(page.locator(".agent-calculation")).toContainText("Hypothetical loss: £387.00");
     await expect(page.locator(".assistant-markdown li")).toHaveCount(2);
     await expect(page.getByRole("link", { name: "Review your plan" })).toHaveAttribute("rel", "noopener noreferrer");
     await page.getByRole("button", { name: "New chat", exact: true }).click();
@@ -40,5 +58,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole("log")).toContainText("Explain my gap");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(input).toBeInViewport();
+    const bottomGap = await page.locator(".assistant-note").evaluate(el => innerHeight - el.getBoundingClientRect().bottom);
+    expect(bottomGap).toBeLessThanOrEqual(width <= 800 ? 76 : 12);
   });
 }

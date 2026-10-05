@@ -192,6 +192,8 @@ test("registration opens the workspace, restores the session, and signs in again
 for (const route of ["#home", "#login", "#register"]) {
   test(`preview autoplays without a toolbar on ${route}`, async ({ page }) => {
     await page.goto(`/${route}`);
+    await page.bringToFront();
+    await page.evaluate(() => document.fonts.ready);
     const demo = page.locator(".app-showcase");
     await demo.scrollIntoViewIfNeeded();
     await expect(demo.locator(".showcase-controls")).toHaveCount(0);

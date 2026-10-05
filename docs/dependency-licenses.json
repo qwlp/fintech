@@ -1,0 +1,283 @@
+[
+  {
+    "package": "@auth/core",
+    "installedVersion": "0.41.3",
+    "license": "ISC",
+    "repository": "https://github.com/nextauthjs/next-auth.git"
+  },
+  {
+    "package": "@convex-dev/auth",
+    "installedVersion": "0.0.96",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/get-convex/convex-auth"
+  },
+  {
+    "package": "@phosphor-icons/react",
+    "installedVersion": "2.1.10",
+    "license": "MIT",
+    "repository": "phosphor-icons/react"
+  },
+  {
+    "package": "@playwright/test",
+    "installedVersion": "1.63.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/microsoft/playwright.git"
+    }
+  },
+  {
+    "package": "@tailwindcss/vite",
+    "installedVersion": "4.3.3",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/tailwindlabs/tailwindcss.git",
+      "directory": "packages/@tailwindcss-vite"
+    }
+  },
+  {
+    "package": "@types/react",
+    "installedVersion": "19.3.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "directory": "types/react"
+    }
+  },
+  {
+    "package": "@types/react-dom",
+    "installedVersion": "19.3.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "directory": "types/react-dom"
+    }
+  },
+  {
+    "package": "@types/three",
+    "installedVersion": "0.186.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "directory": "types/three"
+    }
+  },
+  {
+    "package": "@vitejs/plugin-react",
+    "installedVersion": "6.1.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/vitejs/vite-plugin-react.git",
+      "directory": "packages/plugin-react"
+    }
+  },
+  {
+    "package": "@zxing/browser",
+    "installedVersion": "0.2.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/zxing-js/browser"
+    }
+  },
+  {
+    "package": "class-variance-authority",
+    "installedVersion": "0.7.1",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/joe-bell/cva.git"
+  },
+  {
+    "package": "clsx",
+    "installedVersion": "2.1.1",
+    "license": "MIT",
+    "repository": "lukeed/clsx"
+  },
+  {
+    "package": "convex",
+    "installedVersion": "1.46.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/get-convex/convex-backend.git",
+      "directory": "npm-packages/convex"
+    }
+  },
+  {
+    "package": "convex-test",
+    "installedVersion": "0.0.60",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/get-convex/convex-test"
+  },
+  {
+    "package": "date-fns",
+    "installedVersion": "4.4.0",
+    "license": "MIT",
+    "repository": "https://github.com/date-fns/date-fns"
+  },
+  {
+    "package": "jose",
+    "installedVersion": "6.2.12",
+    "license": "MIT",
+    "repository": "panva/jose"
+  },
+  {
+    "package": "lucide-react",
+    "installedVersion": "1.49.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/lucide-icons/lucide.git",
+      "directory": "packages/lucide-react"
+    }
+  },
+  {
+    "package": "motion",
+    "installedVersion": "13.4.5",
+    "license": "MIT",
+    "repository": "https://github.com/motiondivision/motion"
+  },
+  {
+    "package": "prettier",
+    "installedVersion": "3.9.9",
+    "license": "MIT",
+    "repository": "prettier/prettier"
+  },
+  {
+    "package": "qrcode.react",
+    "installedVersion": "4.2.0",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/zpao/qrcode.react.git"
+    }
+  },
+  {
+    "package": "radix-ui",
+    "installedVersion": "1.6.7",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/radix-ui/primitives.git",
+      "directory": "packages/react/radix-ui"
+    }
+  },
+  {
+    "package": "react",
+    "installedVersion": "19.3.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/react/react.git",
+      "directory": "packages/react"
+    }
+  },
+  {
+    "package": "react-day-picker",
+    "installedVersion": "9.14.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/gpbl/react-day-picker"
+    }
+  },
+  {
+    "package": "react-dom",
+    "installedVersion": "19.3.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/react/react.git",
+      "directory": "packages/react-dom"
+    }
+  },
+  {
+    "package": "react-markdown",
+    "installedVersion": "10.1.0",
+    "license": "MIT",
+    "repository": "remarkjs/react-markdown"
+  },
+  {
+    "package": "recharts",
+    "installedVersion": "3.10.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/recharts/recharts.git"
+    }
+  },
+  {
+    "package": "remark-gfm",
+    "installedVersion": "4.0.1",
+    "license": "MIT",
+    "repository": "remarkjs/remark-gfm"
+  },
+  {
+    "package": "tailwind-merge",
+    "installedVersion": "3.7.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcastil/tailwind-merge.git",
+      "directory": "packages/tailwind-merge"
+    }
+  },
+  {
+    "package": "tailwindcss",
+    "installedVersion": "4.3.3",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/tailwindlabs/tailwindcss.git",
+      "directory": "packages/tailwindcss"
+    }
+  },
+  {
+    "package": "three",
+    "installedVersion": "0.186.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mrdoob/three.js"
+    }
+  },
+  {
+    "package": "tw-animate-css",
+    "installedVersion": "1.4.0",
+    "license": "MIT",
+    "repository": "Wombosvideo/tw-animate-css"
+  },
+  {
+    "package": "typescript",
+    "installedVersion": "7.0.2",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/microsoft/TypeScript.git"
+    }
+  },
+  {
+    "package": "vite",
+    "installedVersion": "8.3.2",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/vitejs/vite.git",
+      "directory": "packages/vite"
+    }
+  },
+  {
+    "package": "vitest",
+    "installedVersion": "5.0.3",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/vitest-dev/vitest.git",
+      "directory": "packages/vitest"
+    }
+  }
+]

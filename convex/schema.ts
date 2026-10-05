@@ -16,6 +16,10 @@ export default defineSchema({
     university: v.string(),
     course: v.string(),
     setupComplete: v.optional(v.boolean()),
+    aiConsentAt: v.optional(v.number()),
+    aiLastRequestAt: v.optional(v.number()),
+    aiRequestDay: v.optional(v.string()),
+    aiDailyRequests: v.optional(v.number()),
     paymentStatus: v.union(
       v.literal("not_started"),
       v.literal("prepared"),
@@ -26,7 +30,9 @@ export default defineSchema({
     ),
     selectedRoute: v.string(),
     sponsorRequestSent: v.boolean(),
-  }).index("by_email", ["email"]).index("by_user", ["userId"]),
+  })
+    .index("by_email", ["email"])
+    .index("by_user", ["userId"]),
   costs: defineTable({
     accountId: v.id("accounts"),
     key: v.string(),
@@ -50,7 +56,9 @@ export default defineSchema({
     code: v.string(),
     expiresAt: v.number(),
     usedAt: v.optional(v.number()),
-  }).index("by_code", ["code"]).index("by_account", ["accountId"]),
+  })
+    .index("by_code", ["code"])
+    .index("by_account", ["accountId"]),
   sponsors: defineTable({
     sponsorAccountId: v.optional(v.id("accounts")),
     accountId: v.id("accounts"),
@@ -60,7 +68,9 @@ export default defineSchema({
     commitment: v.number(),
     nextDate: v.string(),
     permissions: v.array(v.string()),
-  }).index("by_account", ["accountId"]).index("by_sponsor", ["sponsorAccountId"]),
+  })
+    .index("by_account", ["accountId"])
+    .index("by_sponsor", ["sponsorAccountId"]),
   wallets: defineTable({
     accountId: v.id("accounts"),
     currency: v.string(),
@@ -77,7 +87,62 @@ export default defineSchema({
     fee: v.number(),
     fxRate: v.number(),
     delivery: v.string(),
+    maxBusinessDays: v.optional(v.number()),
+    quotedAt: v.optional(v.number()),
+    quoteExpiresAt: v.optional(v.number()),
     recommended: v.optional(v.boolean()),
+  }).index("by_account", ["accountId"]),
+  paymentProposals: defineTable({
+    accountId: v.id("accounts"),
+    recipient: v.string(),
+    recipientLast4: v.string(),
+    routeKey: v.string(),
+    provider: v.string(),
+    fxRate: v.number(),
+    sourceCurrency: v.string(),
+    targetCurrency: v.string(),
+    amountMinor: v.number(),
+    sourceMinor: v.number(),
+    feeMinor: v.number(),
+    totalMinor: v.number(),
+    protectedReserveMinor: v.optional(v.number()),
+    remainingGBPMinor: v.optional(v.number()),
+    delivery: v.string(),
+    deadline: v.optional(v.string()),
+    bufferBusinessDays: v.optional(v.number()),
+    maxBusinessDays: v.optional(v.number()),
+    status: v.union(
+      v.literal("prepared"),
+      v.literal("approved"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+    ),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    approvedAt: v.optional(v.number()),
+    approvedBy: v.optional(v.id("users")),
+    completedAt: v.optional(v.number()),
+    reference: v.optional(v.string()),
+  }).index("by_account", ["accountId"]),
+  ledgerEntries: defineTable({
+    accountId: v.id("accounts"),
+    proposalId: v.id("paymentProposals"),
+    reference: v.string(),
+    currency: v.string(),
+    debitMinor: v.number(),
+    beforeMinor: v.number(),
+    afterMinor: v.number(),
+    recipient: v.string(),
+    receivedMinor: v.number(),
+    receivedCurrency: v.string(),
+    timestamp: v.number(),
+  }).index("by_account", ["accountId"]),
+  toolExecutions: defineTable({
+    accountId: v.id("accounts"),
+    name: v.string(),
+    arguments: v.any(),
+    result: v.any(),
+    timestamp: v.number(),
   }).index("by_account", ["accountId"]),
   auditEvents: defineTable({
     accountId: v.id("accounts"),
@@ -87,12 +152,17 @@ export default defineSchema({
     actor: v.string(),
   }).index("by_account", ["accountId"]),
   messages: defineTable({
+    toolResults: v.optional(
+      v.array(v.object({ name: v.string(), result: v.any() })),
+    ),
     chatId: v.optional(v.string()),
     accountId: v.id("accounts"),
     from: v.union(v.literal("agent"), v.literal("user")),
     text: v.string(),
     timestamp: v.number(),
-  }).index("by_account", ["accountId"]).index("by_chat", ["accountId", "chatId"]),
+  })
+    .index("by_account", ["accountId"])
+    .index("by_chat", ["accountId", "chatId"]),
   notifications: defineTable({
     accountId: v.id("accounts"),
     title: v.string(),

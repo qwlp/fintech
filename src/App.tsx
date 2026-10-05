@@ -4,7 +4,9 @@ import { Assistant, ChatHistory } from "./Chat";
 import type { Id } from "../convex/_generated/dataModel";
 import BudgetDonut, {planChartColors, FundingSourcesChart} from "./BudgetDonut";
 import Brand from "./Brand";
-import TuitionPlanner from "./TuitionPlanner";
+import PaymentWorkspace from "./PaymentWorkspace";
+import PaymentEvidence from "./PaymentEvidence";
+import TuitionDecision from "./TuitionDecision";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
@@ -121,6 +123,7 @@ type DatabaseState = {
     paymentStatus: PaymentStatus;
     selectedRoute: string;
     sponsorRequestSent: boolean;
+    aiConsentAt?: number;
   };
   auditEvents: Array<{
     _id: string;
@@ -129,7 +132,7 @@ type DatabaseState = {
     timestamp: number;
     actor: string;
   }>;
-  messages: Array<{ _id: string; from: "agent" | "user"; text: string; timestamp?: number; chatId?: string }>;
+  messages: Array<{ _id: string; from: "agent" | "user"; text: string; timestamp?: number; chatId?: string; toolResults?: { name: string; result: unknown }[] }>;
   notifications: Array<{
     _id: string;
     title: string;
@@ -173,7 +176,11 @@ type DatabaseState = {
     gbpValue: number;
     label: string;
   }>;
+  toolExecutions?: Array<{ name: string; arguments: unknown; result: unknown; timestamp: number }>;
   paymentRoutes: Array<{
+    maxBusinessDays?: number;
+    quotedAt?: number;
+    quoteExpiresAt?: number;
     key: string;
     provider: string;
     sourceAmount: number;
@@ -191,6 +198,8 @@ type DatabaseState = {
     neededBy: string;
     status: "sent" | "fulfilled";
   }>;
+  paymentProposals?: Array<{ _id: string; recipient: string; recipientLast4: string; provider: string; amountMinor: number; totalMinor: number; feeMinor: number; fxRate: number; sourceCurrency: string; targetCurrency: string; status: string; expiresAt: number; createdAt: number; protectedReserveMinor?: number; remainingGBPMinor?: number; reference?: string }>;
+  ledgerEntries?: Array<{ reference: string; currency: string; debitMinor: number; beforeMinor: number; afterMinor: number; recipient: string; receivedMinor: number; receivedCurrency: string; timestamp: number }>;
   rateAlerts: Array<{
     _id: string;
     pair: string;
@@ -395,10 +404,14 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       },
       ...a,
     ]);
-  const transition = async (next: "prepared" | "approved" | "completed") =>
-    account
-      ? mutate(convexApi.transitionPayment, { accountId: account._id, next })
-      : false;
+  const transition = async (next: "prepared" | "approved" | "completed") => {
+    if (!account || !convexClient) return false;
+    await convexClient.mutation(convexApi.transitionPayment, {
+      accountId: account._id as any, next,
+      proposalId: next === "prepared" ? undefined : database?.paymentProposals?.slice().sort((a, b) => b.createdAt - a.createdAt)[0]?._id as any,
+    });
+    return true;
+  };
   const prepare = async () => {
     if (account) {
       if (!(await transition("prepared"))) return false;
@@ -445,9 +458,9 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       } else setLocalPaymentStatus("completed");
       announce("Sandbox payment completed");
       return true;
-    } catch {
-      announce("Send not confirmed. Check status or reset the sandbox.");
-      return false;
+    } catch (error) {
+      announce("Send not confirmed. Check Payments for the current status.");
+      throw error;
     } finally {
       if (timeout) clearTimeout(timeout);
       setExecutingPayment(false);
@@ -482,7 +495,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       await convexClient.action(convexApi.sendMessage, { accountId: account._id as Id<"accounts">, text, chatId: activeChat });
       return true;
     } catch {
-      announce("AI reply unavailable. Please try again.");
+      announce("AI reply unavailable. Check Payments for any prepared proposal before retrying.");
       return false;
     }
   };
@@ -764,6 +777,8 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                 <Assistant
                   key={activeChat ?? "legacy"}
                   messages={(database?.messages ?? []).filter((message) => message.chatId === activeChat)}
+                  aiEnabled={!!account?.aiConsentAt}
+                  onConsent={async enabled => account ? mutate(convexApi.setAIConsent, { accountId: account._id, enabled }) : false}
                   onSend={sendMessage}
                   onNew={newChat}
                   onHistory={() => setShowChatHistory(true)}
@@ -771,7 +786,10 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               )
             )}
             {page === "Payments" && (
-              <Payments
+              <PaymentWorkspace amount={database?.config?.banking?.paymentAmount} recipient={database?.config?.banking?.recipient} paymentStatus={paymentStatus}
+                activity={<PaymentEvidence accountId={account?._id} banking={database?.config?.banking} proposals={database?.paymentProposals ?? []} ledger={database?.ledgerEntries ?? []} audit={database?.auditEvents ?? []} tools={database?.toolExecutions ?? []} />}
+                plan={database?.config?.banking ? <TuitionDecision accountId={account?._id} banking={database.config.banking} reserveGBP={database.config.security?.protectedReserveGBP ?? 1000} wallets={database.wallets} routes={database.paymentRoutes} selectedRoute={account?.selectedRoute} paymentStatus={paymentStatus} onSelect={selectRoute} /> : <PaymentEvidence accountId={account?._id} proposals={[]} ledger={[]} audit={[]} />}
+                review={              <Payments
                 status={paymentStatus}
                 paid={paid}
                 prepare={prepare}
@@ -780,9 +798,10 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                 reset={resetPayment}
                 storedRoute={account?.selectedRoute}
                 onSelectRoute={selectRoute}
+                proposal={database?.paymentProposals?.slice().sort((a, b) => b.createdAt - a.createdAt)[0]}
                 storedRoutes={database?.paymentRoutes}
-                config={database?.config?.banking}
-              />
+                config={{ ...database?.config?.banking, transactionReference: database?.paymentProposals?.find(p => p.status === "completed")?.reference }}
+              />} />
             )}
             {page === "Exchange" && (
               <ExchangeWorkspace
@@ -3768,6 +3787,7 @@ function Payments({
   onSelectRoute,
   storedRoutes,
   config,
+  proposal,
 }: {
   status: PaymentStatus;
   paid: boolean;
@@ -3778,6 +3798,7 @@ function Payments({
   storedRoute?: string;
   onSelectRoute: (route: string) => Promise<boolean>;
   storedRoutes?: DatabaseState["paymentRoutes"];
+  proposal?: NonNullable<DatabaseState["paymentProposals"]>[number];
   config?: any;
 }) {
   const availableRoutes =
@@ -3786,7 +3807,6 @@ function Payments({
     storedRoute ?? availableRoutes.find((r) => r.recommended)?.id ?? "wise",
   );
   const [consent, setConsent] = useState(false);
-  const [showSandbox, setShowSandbox] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
   const runAction = async (action: () => Promise<boolean>) => {
@@ -3795,8 +3815,8 @@ function Payments({
     setActionError("");
     try {
       if (!(await action())) setActionError("Could not save. Try again.");
-    } catch {
-      setActionError("Could not save. Try again.");
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message.split("Uncaught Error: ").pop()!.split("\n")[0] : "Could not save. Try again.");
     } finally {
       setBusy(false);
     }
@@ -3815,36 +3835,32 @@ function Payments({
     if (storedRoute) setSelected(storedRoute);
     setConsent(false);
   }, [storedRoute, status]);
+  const [quoteClock, setQuoteClock] = useState(Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setQuoteClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const activeProposal = status !== "not_started" && proposal?.status !== "cancelled" ? proposal : undefined;
   const route =
-    availableRoutes.find((r) => r.id === selected) ?? availableRoutes[0];
-  const amount = Number(config?.paymentAmount);
+    (() => {
+      const item = availableRoutes.find((r) => r.id === selected) ?? availableRoutes[0];
+      return item ? { ...item, ...(activeProposal ? { provider: activeProposal.provider, sourceAmount: (activeProposal.totalMinor - activeProposal.feeMinor) / 100, fee: activeProposal.feeMinor / 100, fxRate: activeProposal.fxRate } : { sourceAmount: Math.ceil(Math.round(Number(config?.paymentAmount) * 100) / item.fxRate) / 100 }) } : undefined;
+    })();
+  const amount = activeProposal ? activeProposal.amountMinor / 100 : Number(config?.paymentAmount);
+  const quoteExpired = !!activeProposal && activeProposal.expiresAt <= quoteClock && status !== "completed";
   const ready =
-    Number.isFinite(amount) && amount > 0 && !!route && route.fxRate > 0;
-  const amountLabel = ready ? formatGBP(amount) : "—";
-  const recipient = config?.recipient ?? "Example UK University";
-  const locked = !["not_started", "prepared"].includes(status);
+    !quoteExpired && Number.isFinite(amount) && amount > 0 && !!route && route.fxRate > 0 && config?.recipientVerified === true;
+  const amountLabel = Number.isFinite(amount) && amount > 0 ? formatGBP(amount) : "—";
+  const recipient = activeProposal?.recipient ?? config?.recipient ?? "Example UK University";
+  const locked = status !== "not_started";
   const currentStep =
     status === "not_started" ? 1 : status === "prepared" ? 2 : 3;
   return (
     <div className="payments-page payment-checkout pay-simple">
-      <TuitionPlanner />
       <div className="tuition-sandbox">
-        <Button
-          variant="secondary"
-          size="sm"
-          className="tuition-demo-button"
-          aria-expanded={showSandbox}
-          aria-controls="sandbox-checkout"
-          onClick={() => setShowSandbox((value) => !value)}
-        >
-          <CreditCard size={16} />
-          {showSandbox ? "Close demo" : "Payment demo"}
-          <ChevronRight size={14} />
-        </Button>
-        {showSandbox && (
           <div id="sandbox-checkout" className="tuition-sandbox-content">
             <header className="pay-heading">
-              <h2>Sandbox payment</h2>
+              <h2>Review your payment</h2>
               <div className="pay-header-actions">
                 <span className="fx-badge">Sandbox</span>
                 <Button
@@ -3941,15 +3957,15 @@ function Payments({
                     <div>
                       <strong>{recipient}</strong>
                       <small>
-                        •••• {config?.recipientAccountLast4 ?? "1842"}
+                        •••• {activeProposal?.recipientLast4 ?? config?.recipientAccountLast4 ?? "1842"}
                       </small>
                     </div>
                     <ShieldCheck
                       size={20}
-                      aria-label="Verified recipient"
+                      aria-label={config?.recipientVerified ? "Sandbox recipient checked" : "Unconfirmed sandbox recipient"}
                       role="img"
                     >
-                      <title>Verified recipient</title>
+                      <title>{config?.recipientVerified ? "Sandbox recipient checked" : "Unconfirmed sandbox recipient"}</title>
                     </ShieldCheck>
                   </div>
                 </CardContent>
@@ -3965,7 +3981,7 @@ function Payments({
                   </div>
                   {!ready && (
                     <p className="fx-error" role="status">
-                      Payment details unavailable.
+                      {quoteExpired ? "Quote expired. Reset the payment to prepare a fresh quote." : "Confirm the sandbox recipient above before preparing a payment."}
                     </p>
                   )}
                   <dl className="pay-details">
@@ -4067,7 +4083,6 @@ function Payments({
               </Card>
             </div>
           </div>
-        )}
       </div>
     </div>
   );

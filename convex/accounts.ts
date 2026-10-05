@@ -10,6 +10,12 @@ import { requireAccount } from "./ownership";
 import { internal } from "./_generated/api";
 import { internalQuery } from "./_generated/server";
 import { requestReply } from "./openrouter";
+import { paymentTransition } from "./paymentEngine";
+import {
+  assessTuition,
+  hasPreparationIntent,
+  parseDeadline,
+} from "./tuitionDecision";
 
 const DEMO_EMAIL = "dara@financialpassport.demo";
 
@@ -100,6 +106,20 @@ export const bootstrap = query({
       config: Object.fromEntries(configRows.map((row) => [row.key, row.value])),
       sponsorRequests,
       rateAlerts,
+      paymentProposals: await ctx.db
+        .query("paymentProposals")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .order("desc")
+        .collect(),
+      toolExecutions: await ctx.db
+        .query("toolExecutions")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .order("desc")
+        .take(50),
+      ledgerEntries: await ctx.db
+        .query("ledgerEntries")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .collect(),
     };
   },
 });
@@ -400,6 +420,17 @@ export const setRoute = mutation({
   args: { accountId: v.id("accounts"), route: v.string() },
   handler: async (ctx, args) => {
     await requireAccount(ctx, args.accountId);
+    const account = await ctx.db.get(args.accountId);
+    if (account?.paymentStatus !== "not_started")
+      throw new Error(
+        "Reset payment before changing provider; fresh approval is required",
+      );
+    const routes = await ctx.db
+      .query("paymentRoutes")
+      .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
+      .collect();
+    if (!routes.some((route) => route.key === args.route))
+      throw new Error("Unknown payment route");
     return ctx.db.patch(args.accountId, { selectedRoute: args.route });
   },
 });
@@ -444,28 +475,57 @@ export const requestSponsor = mutation({
 
 export const completeSetup = mutation({
   args: {
-    name: v.string(), countryFrom: v.string(), countryTo: v.string(),
-    university: v.string(), course: v.string(), courseStart: v.string(),
-    fundingAmount: v.number(), sponsorSupport: v.string(),
+    name: v.string(),
+    countryFrom: v.string(),
+    countryTo: v.string(),
+    university: v.string(),
+    course: v.string(),
+    courseStart: v.string(),
+    fundingAmount: v.number(),
+    sponsorSupport: v.string(),
   },
   handler: async (ctx, args) => {
     const account = await requireAccount(ctx);
     const name = args.name.trim();
     if (!name || name.length > 100) throw new Error("Enter your name");
     if (!args.countryFrom.trim()) throw new Error("Enter your home country");
-    if (account.role === "Student" && !args.countryTo.trim()) throw new Error("Enter your study country");
-    if (!Number.isFinite(args.fundingAmount) || args.fundingAmount < 0) throw new Error("Enter a valid funding amount");
-    if (args.courseStart && !/^\d{4}-\d{2}(?:-\d{2})?$/.test(args.courseStart)) throw new Error("Choose a start date");
-    const rows = await ctx.db.query("appConfig").withIndex("by_account", q => q.eq("accountId", account._id)).collect();
-    const row = rows.find(item => item.key === "profile");
-    const value = { ...(row?.value ?? {}), courseStart: args.courseStart, fundingAmount: args.fundingAmount, sponsorSupport: args.sponsorSupport };
+    if (account.role === "Student" && !args.countryTo.trim())
+      throw new Error("Enter your study country");
+    if (!Number.isFinite(args.fundingAmount) || args.fundingAmount < 0)
+      throw new Error("Enter a valid funding amount");
+    if (args.courseStart && !/^\d{4}-\d{2}(?:-\d{2})?$/.test(args.courseStart))
+      throw new Error("Choose a start date");
+    const rows = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", account._id))
+      .collect();
+    const row = rows.find((item) => item.key === "profile");
+    const value = {
+      ...(row?.value ?? {}),
+      courseStart: args.courseStart,
+      fundingAmount: args.fundingAmount,
+      sponsorSupport: args.sponsorSupport,
+    };
     await ctx.db.patch(account._id, {
-      name, initials: name.split(/\s+/).slice(0, 2).map(part => part[0].toUpperCase()).join(""),
-      countryFrom: args.countryFrom.trim(), countryTo: args.countryTo.trim(),
-      university: args.university.trim(), course: args.course.trim(), setupComplete: true,
+      name,
+      initials: name
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0].toUpperCase())
+        .join(""),
+      countryFrom: args.countryFrom.trim(),
+      countryTo: args.countryTo.trim(),
+      university: args.university.trim(),
+      course: args.course.trim(),
+      setupComplete: true,
     });
     if (row) await ctx.db.patch(row._id, { value });
-    else await ctx.db.insert("appConfig", { accountId: account._id, key: "profile", value });
+    else
+      await ctx.db.insert("appConfig", {
+        accountId: account._id,
+        key: "profile",
+        value,
+      });
   },
 });
 
@@ -492,7 +552,8 @@ export const updateProfile = mutation({
       fundingAmount,
       ...account
     } = args;
-    if (!Number.isFinite(fundingAmount) || fundingAmount < 0) throw new Error("Invalid confirmed funding amount");
+    if (!Number.isFinite(fundingAmount) || fundingAmount < 0)
+      throw new Error("Invalid confirmed funding amount");
     const initials = account.name
       .split(/\s+/)
       .filter(Boolean)
@@ -537,6 +598,20 @@ export const createSponsorRequest = mutation({
     await requireAccount(ctx, args.accountId);
     if (!Number.isFinite(args.amount) || args.amount <= 0)
       throw new Error("Amount must be positive");
+    const sponsor = (
+      await ctx.db
+        .query("sponsors")
+        .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
+        .collect()
+    ).find((s) => s.key === args.sponsorKey);
+    if (!sponsor) throw new Error("Sponsor not found");
+    if (
+      args.amount > 1e6 ||
+      !args.purpose.trim() ||
+      args.purpose.length > 500 ||
+      args.neededBy.length > 100
+    )
+      throw new Error("Invalid funding request");
     await ctx.db.insert("sponsorRequests", {
       ...args,
       status: "sent",
@@ -569,12 +644,25 @@ export const setSponsorPermission = mutation({
         .collect()
     ).find((item) => item.key === args.sponsorKey);
     if (!sponsor) throw new Error("Sponsor not found");
+    if (
+      !["Commitment status", "Sponsored tuition", "Funding requests"].includes(
+        args.permission,
+      )
+    )
+      throw new Error("Unknown sponsor permission");
     const permissions = args.enabled
       ? Array.from(new Set([...sponsor.permissions, args.permission]))
       : sponsor.permissions.filter(
           (permission: string) => permission !== args.permission,
         );
     await ctx.db.patch(sponsor._id, { permissions });
+    await ctx.db.insert("auditEvents", {
+      accountId: args.accountId,
+      type: "SPONSOR_PERMISSION",
+      detail: `${args.permission}: ${args.enabled ? "granted" : "revoked"}`,
+      actor: "Student",
+      timestamp: Date.now(),
+    });
   },
 });
 
@@ -712,7 +800,11 @@ export const ensureConfig = mutation({
       } else {
         // Older demo accounts may contain a config section with missing fields.
         const value = { ...defaults, ...row.value };
-        if (Object.keys(defaults).some((field) => row.value?.[field] === undefined))
+        if (
+          Object.keys(defaults).some(
+            (field) => row.value?.[field] === undefined,
+          )
+        )
           await ctx.db.patch(row._id, { value });
       }
     }
@@ -727,78 +819,44 @@ export const transitionPayment = mutation({
       v.literal("approved"),
       v.literal("completed"),
     ),
+    proposalId: v.optional(v.id("paymentProposals")),
   },
-  handler: async (ctx, { accountId, next }) => {
-    await requireAccount(ctx, accountId);
-    const account = await ctx.db.get(accountId);
-    if (!account) throw new Error("Account not found");
-    const configRow = (
-      await ctx.db
-        .query("appConfig")
-        .withIndex("by_account", (q) => q.eq("accountId", accountId))
-        .collect()
-    ).find((row) => row.key === "banking");
-    const banking = (configRow?.value ?? {}) as Record<string, any>;
-    const route = (
-      await ctx.db
-        .query("paymentRoutes")
-        .withIndex("by_account", (q) => q.eq("accountId", accountId))
-        .collect()
-    ).find((item) => item.key === account.selectedRoute);
-    const amount = Number(banking.paymentAmount ?? 0);
-    if (!Number.isFinite(amount) || amount <= 0 || !route || route.fxRate <= 0)
-      throw new Error("Payment details unavailable");
-    const allowed: Record<string, string> = {
-      not_started: "prepared",
-      prepared: "approved",
-      approved: "completed",
-    };
-    if (allowed[account.paymentStatus] !== next)
-      throw new Error(
-        `Invalid payment transition: ${account.paymentStatus} → ${next}`,
-      );
-    await ctx.db.patch(accountId, { paymentStatus: next });
-    const event =
-      next === "prepared"
-        ? [
-            "PAYMENT_PREPARED",
-            `${amount.toLocaleString("en-GB", { style: "currency", currency: "GBP" })} tuition payment prepared; no funds moved`,
-            "MoveWise",
-          ]
-        : next === "approved"
-          ? [
-              "PAYMENT_APPROVED",
-              `Explicit approval recorded for ${amount.toLocaleString("en-GB", { style: "currency", currency: "GBP" })} tuition payment`,
-              account.name,
-            ]
-          : [
-              "PAYMENT_EXECUTED",
-              `Sandbox transaction ${banking.transactionReference ?? "pending"} completed`,
-              `Sandbox ${route?.provider ?? "provider"}`,
-            ];
+  handler: async (ctx, { accountId, next, proposalId }) =>
+    paymentTransition(ctx, accountId, next, proposalId),
+});
+
+export const verifySandboxRecipient = mutation({
+  args: { accountId: v.id("accounts"), last4: v.string() },
+  handler: async (ctx, { accountId, last4 }) => {
+    const account = await requireAccount(ctx, accountId);
+    if (account.role !== "Student" || account.paymentStatus !== "not_started")
+      throw new Error("Reset payment before verifying recipient");
+    const config = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    const row = config.find((r) => r.key === "banking");
+    if (!row || last4 !== row.value.recipientAccountLast4)
+      throw new Error("Recipient account digits do not match");
+    await ctx.db.patch(row._id, {
+      value: { ...row.value, recipientVerified: true },
+    });
     await ctx.db.insert("auditEvents", {
       accountId,
-      type: event[0],
-      detail: event[1],
-      actor: event[2],
+      type: "RECIPIENT_VERIFIED",
+      detail:
+        "Owner checked the sandbox recipient account suffix; this is not real bank verification",
+      actor: account.name,
       timestamp: Date.now(),
     });
-    if (next === "completed")
-      await ctx.db.insert("notifications", {
-        accountId,
-        title: "Payment completed",
-        detail: `${amount.toLocaleString("en-GB", { style: "currency", currency: "GBP" })} was delivered in the sandbox.`,
-        read: false,
-        timestamp: Date.now(),
-      });
   },
 });
 
 export const chatContext = internalQuery({
   args: { accountId: v.id("accounts"), chatId: v.optional(v.string()) },
   handler: async (ctx, { accountId, chatId }) => {
-    await requireAccount(ctx, accountId);
-    const [costRows, fundingRows, routeRows, configRows] = await Promise.all([
+    const account = await requireAccount(ctx, accountId);
+    const [costRows, fundingRows, configRows] = await Promise.all([
       ctx.db
         .query("costs")
         .withIndex("by_account", (q) => q.eq("accountId", accountId))
@@ -808,34 +866,43 @@ export const chatContext = internalQuery({
         .withIndex("by_account", (q) => q.eq("accountId", accountId))
         .collect(),
       ctx.db
-        .query("paymentRoutes")
-        .withIndex("by_account", (q) => q.eq("accountId", accountId))
-        .collect(),
-      ctx.db
         .query("appConfig")
         .withIndex("by_account", (q) => q.eq("accountId", accountId))
         .collect(),
     ]);
     const totalCost = costRows.reduce((sum, item) => sum + item.amount, 0);
-    const totalFunding = fundingRows
-      .filter((item) => item.status === "confirmed")
-      .reduce((sum, item) => sum + item.amount, 0);
+    const profileFunding = configRows.find((row) => row.key === "profile")
+      ?.value?.fundingAmount;
+    const totalFunding =
+      typeof profileFunding === "number" &&
+      Number.isFinite(profileFunding) &&
+      profileFunding >= 0
+        ? profileFunding
+        : fundingRows
+            .filter((item) => item.status === "confirmed")
+            .reduce((sum, item) => sum + item.amount, 0);
     const gap = Math.max(0, totalCost - totalFunding);
     const coverage = totalCost
       ? Math.min(100, (totalFunding / totalCost) * 100)
       : 0;
-    const bestRoute = [...routeRows].sort(
-      (a, b) => a.sourceAmount + a.fee - (b.sourceAmount + b.fee),
-    )[0];
     const banking = (configRows.find((row) => row.key === "banking")?.value ??
       {}) as Record<string, any>;
-    const history = await ctx.db.query("messages")
-      .withIndex("by_chat", (q) => q.eq("accountId", accountId).eq("chatId", chatId))
-      .order("desc").take(20);
+    const history = await ctx.db
+      .query("messages")
+      .withIndex("by_chat", (q) =>
+        q.eq("accountId", accountId).eq("chatId", chatId),
+      )
+      .order("desc")
+      .take(20);
     return {
-      totalCost, totalFunding, gap, coverage,
+      totalCost,
+      totalFunding,
+      gap,
+      coverage,
       paymentAmount: Number(banking.paymentAmount ?? 0),
-      bestProvider: bestRoute?.provider ?? null,
+      bestProvider: null, // A recommendation requires fresh, deadline-aware tool evidence.
+      selectedRoute: account.selectedRoute || null,
+      recipientConfirmed: banking.recipientVerified === true,
       history: history.reverse().map((message) => ({
         role: message.from === "user" ? "user" : "assistant",
         content: message.text.slice(0, 4000),
@@ -845,23 +912,90 @@ export const chatContext = internalQuery({
 });
 
 export const saveChatExchange = internalMutation({
-  args: { accountId: v.id("accounts"), chatId: v.optional(v.string()), text: v.string(), reply: v.string() },
-  handler: async (ctx, { accountId, chatId, text, reply }) => {
-    await requireAccount(ctx, accountId);
+  args: {
+    accountId: v.id("accounts"),
+    chatId: v.optional(v.string()),
+    text: v.string(),
+    reply: v.string(),
+    toolResults: v.optional(
+      v.array(v.object({ name: v.string(), result: v.any() })),
+    ),
+  },
+  handler: async (ctx, { accountId, chatId, text, reply, toolResults }) => {
+    const account = await requireAccount(ctx, accountId);
+    if (!account.aiConsentAt)
+      throw new Error("AI processing consent has been revoked");
     const timestamp = Date.now();
-    await ctx.db.insert("messages", { accountId, ...(chatId ? { chatId } : {}), from: "user", text, timestamp });
-    await ctx.db.insert("messages", { accountId, ...(chatId ? { chatId } : {}), from: "agent", text: reply, timestamp: timestamp + 1 });
+    await ctx.db.insert("messages", {
+      accountId,
+      ...(chatId ? { chatId } : {}),
+      from: "user",
+      text,
+      timestamp,
+    });
+    await ctx.db.insert("messages", {
+      accountId,
+      ...(chatId ? { chatId } : {}),
+      from: "agent",
+      text: reply,
+      ...(toolResults?.length ? { toolResults } : {}),
+      timestamp: timestamp + 1,
+    });
   },
 });
 
 export const sendMessage = action({
-  args: { accountId: v.id("accounts"), chatId: v.optional(v.string()), text: v.string() },
+  args: {
+    accountId: v.id("accounts"),
+    chatId: v.optional(v.string()),
+    text: v.string(),
+  },
   handler: async (ctx, { accountId, chatId, text }): Promise<void> => {
     const value = text.trim();
-    if (!value || value.length > 4000) throw new Error("Message must contain 1–4000 characters");
-    const context = await ctx.runQuery(internal.accounts.chatContext, { accountId, chatId });
-    const reply = await requestReply(context, value);
-    await ctx.runMutation(internal.accounts.saveChatExchange, { accountId, ...(chatId ? { chatId } : {}), text: value, reply });
+    if (!value || value.length > 4000)
+      throw new Error("Message must contain 1–4000 characters");
+    const context = await ctx.runQuery(internal.accounts.chatContext, {
+      accountId,
+      chatId,
+    });
+    await ctx.runMutation(internal.accounts.reserveAIRequest, { accountId });
+    const toolResults: { name: string; result: unknown }[] = [];
+    let reply: string;
+    try {
+      reply = await requestReply(context, value, async (name, args) => {
+        // Tools have no model-selected account IDs or approval capabilities.
+        try {
+          const result = await ctx.runMutation(internal.accounts.runAgentTool, {
+            accountId,
+            name,
+            arguments: args,
+            requestText: value,
+          });
+          toolResults.push({ name, result });
+          return result;
+        } catch (error) {
+          const result = {
+            error:
+              error instanceof Error
+                ? error.message.slice(0, 1000)
+                : "Tool failed",
+          };
+          toolResults.push({ name, result });
+          return result;
+        }
+      });
+    } catch (error) {
+      if (!toolResults.length) throw error;
+      reply =
+        "The AI explanation could not complete. Review the recorded calculation details below. If a payment proposal was prepared, it remains available in Payments for your review. These tools cannot approve or execute a payment; no funds moved. Check the current proposal before trying preparation again.";
+    }
+    await ctx.runMutation(internal.accounts.saveChatExchange, {
+      accountId,
+      ...(chatId ? { chatId } : {}),
+      text: value,
+      reply,
+      toolResults,
+    });
   },
 });
 
@@ -869,11 +1003,21 @@ export const addCountryAccount = mutation({
   args: { accountId: v.id("accounts"), country: v.string(), label: v.string() },
   handler: async (ctx, { accountId, country, label }) => {
     await requireAccount(ctx, accountId);
-    if (!country.trim() || !label.trim()) throw new Error("Country and account name are required");
+    if (!country.trim() || !label.trim())
+      throw new Error("Country and account name are required");
     if (!(await ctx.db.get(accountId))) throw new Error("Account not found");
-    const rows = await ctx.db.query("appConfig").withIndex("by_account", (q) => q.eq("accountId", accountId)).collect();
+    const rows = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
     const row = rows.find((item) => item.key === "profile");
-    const value = { ...(row?.value ?? {}), countryAccounts: [...(row?.value?.countryAccounts ?? []), { country: country.trim(), label: label.trim() }] };
+    const value = {
+      ...(row?.value ?? {}),
+      countryAccounts: [
+        ...(row?.value?.countryAccounts ?? []),
+        { country: country.trim(), label: label.trim() },
+      ],
+    };
     if (row) await ctx.db.patch(row._id, { value });
     else await ctx.db.insert("appConfig", { accountId, key: "profile", value });
   },
@@ -885,8 +1029,21 @@ export const resetPayment = mutation({
     await requireAccount(ctx, accountId);
     const account = await ctx.db.get(accountId);
     if (!account) throw new Error("Account not found");
+    const proposals = await ctx.db
+      .query("paymentProposals")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    for (const proposal of proposals)
+      if (proposal.status === "prepared" || proposal.status === "approved")
+        await ctx.db.patch(proposal._id, { status: "cancelled" });
     await ctx.db.patch(accountId, { paymentStatus: "not_started" });
-    await ctx.db.insert("auditEvents", { accountId, type: "PAYMENT_RESET", detail: "Sandbox payment reset; fresh approval required", actor: account.name, timestamp: Date.now() });
+    await ctx.db.insert("auditEvents", {
+      accountId,
+      type: "PAYMENT_RESET",
+      detail: "Sandbox payment reset; fresh approval required",
+      actor: account.name,
+      timestamp: Date.now(),
+    });
   },
 });
 
@@ -894,8 +1051,421 @@ export const clearChat = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, { accountId }) => {
     await requireAccount(ctx, accountId);
-    if (!await ctx.db.get(accountId)) throw new Error("Account not found");
-    const messages = await ctx.db.query("messages").withIndex("by_account", (q) => q.eq("accountId", accountId)).collect();
+    if (!(await ctx.db.get(accountId))) throw new Error("Account not found");
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
     for (const message of messages) await ctx.db.delete(message._id);
+  },
+});
+
+export const runAgentTool = internalMutation({
+  args: {
+    accountId: v.id("accounts"),
+    name: v.union(
+      v.literal("compare_payment_routes"),
+      v.literal("simulate_budget"),
+      v.literal("prepare_tuition_payment"),
+      v.literal("stress_test_fx"),
+    ),
+    arguments: v.any(),
+    requestText: v.string(),
+  },
+  handler: async (ctx, { accountId, name, arguments: args, requestText }) => {
+    const account = await requireAccount(ctx, accountId);
+    if (account.role !== "Student") throw new Error("Student account required");
+    if (!account.aiConsentAt)
+      throw new Error("AI processing consent has been revoked");
+    if (!args || typeof args !== "object" || Array.isArray(args))
+      throw new Error("Invalid tool arguments");
+    const keys = Object.keys(args);
+    if (
+      keys.some(
+        (key) =>
+          !(
+            (name === "simulate_budget" && key === "monthlyRent") ||
+            (name === "stress_test_fx" && key === "adversePercent")
+          ),
+      )
+    )
+      throw new Error("Unexpected tool arguments");
+    if (name === "prepare_tuition_payment") {
+      // Preparation changes no funds; approval and execution remain separate public owner actions.
+      // Require a direct preparation verb in this turn rather than relying on the model alone.
+      if (!hasPreparationIntent(requestText))
+        throw new Error(
+          "Ask explicitly to prepare or draft a payment; approval is always separate",
+        );
+      const proposal = await paymentTransition(ctx, accountId, "prepared");
+      const result = {
+        sandbox: true,
+        proposal: proposal
+          ? {
+              proposalId: proposal._id,
+              recipient: proposal.recipient,
+              provider: proposal.provider,
+              amountGBP: proposal.amountMinor / 100,
+              totalUSD: proposal.totalMinor / 100,
+              status: proposal.status,
+              expiresAt: proposal.expiresAt,
+            }
+          : null,
+        nextStep:
+          "Open Payments, review the quote, approve and send. No funds moved.",
+      };
+      await ctx.db.insert("toolExecutions", {
+        accountId,
+        name,
+        arguments: args,
+        result,
+        timestamp: Date.now(),
+      });
+      return result;
+    }
+    const costs = await ctx.db
+      .query("costs")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    const wallets = await ctx.db
+      .query("wallets")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    const config = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    let result: unknown;
+    if (name === "compare_payment_routes") {
+      const banking = config.find((row) => row.key === "banking")?.value;
+      const amount = banking?.paymentAmount;
+      if (!Number.isFinite(amount) || amount <= 0)
+        throw new Error("Set a tuition amount in the sandbox first");
+      const routes = await ctx.db
+        .query("paymentRoutes")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .collect();
+      const security = config.find((row) => row.key === "security")?.value;
+      result = assessTuition({
+        amountGBP: amount,
+        reserveGBP: security?.protectedReserveGBP ?? 1000,
+        wallets,
+        routes,
+        deadline: banking?.tuitionDeadline,
+        bufferBusinessDays: banking?.bufferBusinessDays ?? 1,
+        now: Date.now(),
+      });
+    } else if (name === "stress_test_fx") {
+      const percent = args.adversePercent;
+      if (
+        typeof percent !== "number" ||
+        !Number.isFinite(percent) ||
+        percent < 0 ||
+        percent > 30
+      )
+        throw new Error("FX shock must be between 0% and 30%");
+      const currentGBP = wallets.reduce((sum, w) => sum + w.gbpValue, 0);
+      const stressedGBP = wallets.reduce(
+        (sum, w) =>
+          sum + w.gbpValue * (w.currency === "GBP" ? 1 : 1 - percent / 100),
+        0,
+      );
+      result = {
+        hypothetical: true,
+        adversePercent: percent,
+        currentGBP: Math.round(currentGBP * 100) / 100,
+        stressedGBP: Math.round(stressedGBP * 100) / 100,
+        lossGBP: Math.round((currentGBP - stressedGBP) * 100) / 100,
+        assumptions:
+          "Non-GBP wallet valuations fall by the requested percentage; GBP balances stay constant. Scenario only, not an FX forecast. No records changed.",
+      };
+    } else {
+      const rent = args.monthlyRent;
+      if (
+        typeof rent !== "number" ||
+        !Number.isFinite(rent) ||
+        rent < 0 ||
+        rent > 100000
+      )
+        throw new Error("Monthly rent must be between £0 and £100,000");
+      const monthly = costs.filter((c) =>
+        /monthly|living|rent|food|transport|utilities/i.test(
+          c.category + " " + c.name,
+        ),
+      );
+      const currentRent = monthly
+        .filter((c) => /rent|accommodation/i.test(c.name))
+        .reduce((sum, c) => sum + c.amount / 12, 0);
+      const otherMonthly = monthly
+        .filter((c) => !/rent|accommodation/i.test(c.name))
+        .reduce((sum, c) => sum + c.amount / 12, 0);
+      const liquidGBP = wallets.reduce((sum, w) => sum + w.gbpValue, 0);
+      result = {
+        hypothetical: true,
+        currency: "GBP",
+        monthlyRent: rent,
+        otherMonthly,
+        monthlyBurn: rent + otherMonthly,
+        liquidGBP,
+        runwayMonths:
+          rent + otherMonthly > 0 ? liquidGBP / (rent + otherMonthly) : null,
+        monthlyChange: rent - currentRent,
+        assumptions:
+          "Plan cost items matching rent/living/food/transport/utilities are annual totals divided by 12; wallet GBP valuations are sandbox estimates. No records changed.",
+      };
+    }
+    await ctx.db.insert("toolExecutions", {
+      accountId,
+      name,
+      arguments: args,
+      result,
+      timestamp: Date.now(),
+    });
+    await ctx.db.insert("auditEvents", {
+      accountId,
+      type: "AGENT_TOOL",
+      detail: `${name}: deterministic calculation completed; no funds moved`,
+      actor: "MoveWise",
+      timestamp: Date.now(),
+    });
+    return result;
+  },
+});
+
+export const initializePaymentSandbox = mutation({
+  args: { accountId: v.id("accounts") },
+  handler: async (ctx, { accountId }) => {
+    const account = await requireAccount(ctx, accountId);
+    if (account.role !== "Student") throw new Error("Student account required");
+    const config = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    if (config.some((row) => row.key === "banking"))
+      throw new Error("Payment sandbox already exists");
+    await ctx.db.insert("appConfig", {
+      accountId,
+      key: "banking",
+      value: {
+        recipient: "Example UK University",
+        recipientAccountLast4: "1842",
+        paymentAmount: 2000,
+        recipientVerified: false,
+        sandbox: true,
+        tuitionDeadline: new Date(Date.now() + 14 * 86400000)
+          .toISOString()
+          .slice(0, 10),
+        bufferBusinessDays: 1,
+      },
+    });
+    await ctx.db.insert("appConfig", {
+      accountId,
+      key: "security",
+      value: {
+        paymentLimit: 2500,
+        approvalExpiryMinutes: 10,
+        protectedReserveGBP: 1000,
+      },
+    });
+    const wallets = await ctx.db
+      .query("wallets")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    if (!wallets.some((w) => w.currency === "USD"))
+      await ctx.db.insert("wallets", {
+        accountId,
+        currency: "USD",
+        symbol: "$",
+        amount: 5000,
+        gbpValue: 3870,
+        label: "Sandbox USD balance · simulated",
+      });
+    const routes = [
+      {
+        key: "sandbox-standard",
+        provider: "Sandbox Standard",
+        fxRate: 0.774,
+        fee: 8.4,
+        delivery: "1–2 business days",
+        maxBusinessDays: 2,
+        recommended: true,
+      },
+      {
+        key: "sandbox-bank",
+        provider: "Sandbox Bank",
+        fxRate: 0.768,
+        fee: 34,
+        delivery: "3–5 business days",
+        maxBusinessDays: 5,
+        recommended: false,
+      },
+      {
+        key: "sandbox-fast",
+        provider: "Sandbox Express",
+        fxRate: 0.77,
+        fee: 26,
+        delivery: "Within 1 business day",
+        maxBusinessDays: 1,
+        recommended: false,
+      },
+    ];
+    for (const route of routes)
+      await ctx.db.insert("paymentRoutes", {
+        accountId,
+        ...route,
+        quotedAt: Date.now(),
+        quoteExpiresAt: Date.now() + 10 * 60 * 1000,
+        sourceAmount: Math.ceil(200000 / route.fxRate) / 100,
+      });
+    await ctx.db.patch(accountId, { selectedRoute: routes[0].key });
+    await ctx.db.insert("auditEvents", {
+      accountId,
+      type: "SANDBOX_INITIALIZED",
+      detail:
+        "Owner loaded illustrative tuition quotes and a simulated USD wallet; no real account connected",
+      actor: account.name,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const setAIConsent = mutation({
+  args: { accountId: v.id("accounts"), enabled: v.boolean() },
+  handler: async (ctx, { accountId, enabled }) => {
+    const account = await requireAccount(ctx, accountId);
+    await ctx.db.patch(accountId, {
+      aiConsentAt: enabled ? Date.now() : undefined,
+    });
+    await ctx.db.insert("auditEvents", {
+      accountId,
+      type: "AI_CONSENT",
+      detail: enabled
+        ? "Owner enabled external AI processing of chat and minimized financial summaries"
+        : "Owner revoked external AI processing",
+      actor: account.name,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const reserveAIRequest = internalMutation({
+  args: { accountId: v.id("accounts") },
+  handler: async (ctx, { accountId }) => {
+    const account = await requireAccount(ctx, accountId);
+    if (!account.aiConsentAt)
+      throw new Error("Enable AI processing before sending a message");
+    if (account.aiLastRequestAt && Date.now() - account.aiLastRequestAt < 10000)
+      throw new Error("Wait 10 seconds between AI requests");
+    const day = new Date().toISOString().slice(0, 10);
+    const count =
+      account.aiRequestDay === day ? (account.aiDailyRequests ?? 0) : 0;
+    if (count >= 100)
+      throw new Error(
+        "Daily AI limit reached (100 requests per UTC day). Use Payments for deterministic planning.",
+      );
+    await ctx.db.patch(accountId, {
+      aiLastRequestAt: Date.now(),
+      aiRequestDay: day,
+      aiDailyRequests: count + 1,
+    });
+  },
+});
+
+export const updateTuitionPlan = mutation({
+  args: {
+    accountId: v.id("accounts"),
+    deadline: v.string(),
+    bufferBusinessDays: v.number(),
+    protectedReserveGBP: v.number(),
+  },
+  handler: async (
+    ctx,
+    { accountId, deadline, bufferBusinessDays, protectedReserveGBP },
+  ) => {
+    const account = await requireAccount(ctx, accountId);
+    if (account.role !== "Student") throw new Error("Student account required");
+    if (account.paymentStatus !== "not_started")
+      throw new Error("Reset the active payment before changing its plan");
+    parseDeadline(deadline);
+    const today = new Date().toISOString().slice(0, 10);
+    if (deadline < today || Date.parse(deadline) > Date.now() + 366 * 86400000)
+      throw new Error("Deadline must be today or within the next year");
+    if (
+      !Number.isInteger(bufferBusinessDays) ||
+      bufferBusinessDays < 0 ||
+      bufferBusinessDays > 5 ||
+      !Number.isFinite(protectedReserveGBP) ||
+      protectedReserveGBP < 0 ||
+      protectedReserveGBP > 1000000 ||
+      !Number.isSafeInteger(Math.round(protectedReserveGBP * 100))
+    )
+      throw new Error("Invalid reserve or safety buffer");
+    const rows = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    const banking = rows.find((r) => r.key === "banking"),
+      security = rows.find((r) => r.key === "security");
+    if (!banking || !security)
+      throw new Error("Load the payment sandbox first");
+    await ctx.db.patch(banking._id, {
+      value: {
+        ...banking.value,
+        tuitionDeadline: deadline,
+        bufferBusinessDays,
+      },
+    });
+    await ctx.db.patch(security._id, {
+      value: {
+        ...security.value,
+        protectedReserveGBP: Math.round(protectedReserveGBP * 100) / 100,
+      },
+    });
+    await ctx.db.insert("auditEvents", {
+      accountId,
+      type: "TUITION_PLAN_UPDATED",
+      detail: `Deadline ${deadline}; ${bufferBusinessDays} business-day buffer; protected GBP ${protectedReserveGBP}`,
+      actor: account.name,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const refreshSandboxQuotes = mutation({
+  args: { accountId: v.id("accounts") },
+  handler: async (ctx, { accountId }) => {
+    const account = await requireAccount(ctx, accountId);
+    if (account.role !== "Student") throw new Error("Student account required");
+    if (account.paymentStatus !== "not_started")
+      throw new Error("Reset the active payment before refreshing quotes");
+    const routes = await ctx.db
+      .query("paymentRoutes")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    const windows: Record<string, number> = {
+      "sandbox-standard": 2,
+      "sandbox-bank": 5,
+      "sandbox-fast": 1,
+    };
+    let updated = 0;
+    for (const route of routes) {
+      // Only known fixtures can be refreshed; never invent current observations for other records.
+      if (windows[route.key] === undefined) continue;
+      await ctx.db.patch(route._id, {
+        quotedAt: Date.now(),
+        quoteExpiresAt: Date.now() + 600000,
+        maxBusinessDays: windows[route.key],
+      });
+      updated++;
+    }
+    if (!updated) throw new Error("No refreshable sandbox quotes");
+    await ctx.db.insert("auditEvents", {
+      accountId,
+      type: "SANDBOX_QUOTES_REFRESHED",
+      detail:
+        "Reissued illustrative fixture quotes for 10 minutes; no provider request or live rate",
+      actor: account.name,
+      timestamp: Date.now(),
+    });
   },
 });

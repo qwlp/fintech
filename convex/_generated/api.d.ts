@@ -13,7 +13,9 @@ import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as openrouter from "../openrouter.js";
 import type * as ownership from "../ownership.js";
+import type * as paymentEngine from "../paymentEngine.js";
 import type * as sponsorLinks from "../sponsorLinks.js";
+import type * as tuitionDecision from "../tuitionDecision.js";
 
 import type {
   ApiFromModules,
@@ -27,7 +29,9 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   openrouter: typeof openrouter;
   ownership: typeof ownership;
+  paymentEngine: typeof paymentEngine;
   sponsorLinks: typeof sponsorLinks;
+  tuitionDecision: typeof tuitionDecision;
 }>;
 
 /**

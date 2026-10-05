@@ -1,0 +1,101 @@
+{
+  "environment": "convex-test local transactional sandbox",
+  "sandbox": true,
+  "generatedAt": "2026-10-05T14:35:32.661Z",
+  "test": "Owner approval, atomic debit and idempotent retry",
+  "proposals": [
+    {
+      "_creationTime": 1791210932656,
+      "_id": "0000000000010010paymentProposals",
+      "accountId": "000000000000000000010001accounts",
+      "amountMinor": 200000,
+      "approvedAt": 1791210932658,
+      "approvedBy": "000000000000000000000010000users",
+      "bufferBusinessDays": 1,
+      "completedAt": 1791210932659,
+      "createdAt": 1791210932656,
+      "deadline": "2026-10-19",
+      "delivery": "1–2 business days",
+      "expiresAt": 1791211532655,
+      "feeMinor": 840,
+      "fxRate": 0.774,
+      "maxBusinessDays": 2,
+      "protectedReserveMinor": 100000,
+      "provider": "Sandbox Standard",
+      "recipient": "Example UK University",
+      "recipientLast4": "1842",
+      "reference": "SBX-8c5845c4-e160-4bde-bf87-b389dda4734f",
+      "remainingGBPMinor": 186350,
+      "routeKey": "sandbox-standard",
+      "sourceCurrency": "USD",
+      "sourceMinor": 258398,
+      "status": "completed",
+      "targetCurrency": "GBP",
+      "totalMinor": 259238
+    }
+  ],
+  "ledger": [
+    {
+      "_creationTime": 1791210932659,
+      "_id": "0000000000000010013ledgerEntries",
+      "accountId": "000000000000000000010001accounts",
+      "afterMinor": 240762,
+      "beforeMinor": 500000,
+      "currency": "USD",
+      "debitMinor": 259238,
+      "proposalId": "0000000000010010paymentProposals",
+      "receivedCurrency": "GBP",
+      "receivedMinor": 200000,
+      "recipient": "Example UK University",
+      "reference": "SBX-8c5845c4-e160-4bde-bf87-b389dda4734f",
+      "timestamp": 1791210932659
+    }
+  ],
+  "audit": [
+    {
+      "_creationTime": 1791210932659.002,
+      "_id": "000000000000000010015auditEvents",
+      "accountId": "000000000000000000010001accounts",
+      "actor": "Student",
+      "detail": "Proposal 0000000000010010paymentProposals: sandbox debit and receipt committed atomically",
+      "timestamp": 1791210932659,
+      "type": "PAYMENT_EXECUTED"
+    },
+    {
+      "_creationTime": 1791210932658,
+      "_id": "000000000000000010012auditEvents",
+      "accountId": "000000000000000000010001accounts",
+      "actor": "Student",
+      "detail": "Proposal 0000000000010010paymentProposals: owner approved the exact recipient and quote",
+      "timestamp": 1791210932658,
+      "type": "PAYMENT_APPROVED"
+    },
+    {
+      "_creationTime": 1791210932656.001,
+      "_id": "000000000000000010011auditEvents",
+      "accountId": "000000000000000000010001accounts",
+      "actor": "MoveWise",
+      "detail": "Proposal 0000000000010010paymentProposals: GBP 2000.00 to Example UK University; USD 2592.38 total. Sandbox quote expires in 10 minutes.",
+      "timestamp": 1791210932656,
+      "type": "PAYMENT_PREPARED"
+    },
+    {
+      "_creationTime": 1791210932655.0088,
+      "_id": "000000000000000010009auditEvents",
+      "accountId": "000000000000000000010001accounts",
+      "actor": "Student",
+      "detail": "Owner checked the sandbox recipient account suffix; this is not real bank verification",
+      "timestamp": 1791210932655,
+      "type": "RECIPIENT_VERIFIED"
+    },
+    {
+      "_creationTime": 1791210932655.0078,
+      "_id": "000000000000000010008auditEvents",
+      "accountId": "000000000000000000010001accounts",
+      "actor": "Student",
+      "detail": "Owner loaded illustrative tuition quotes and a simulated USD wallet; no real account connected",
+      "timestamp": 1791210932655,
+      "type": "SANDBOX_INITIALIZED"
+    }
+  ]
+}

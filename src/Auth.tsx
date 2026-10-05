@@ -1,6 +1,13 @@
 import SponsorDashboard from "./SponsorDashboard";
 import Brand from "./Brand";
-import { Component, type ReactNode, useEffect, useState } from "react";
+import {
+  Component,
+  type ReactNode,
+  useEffect,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
 import AppShowcase from "./AppShowcase";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
@@ -13,7 +20,7 @@ import {
   EyeOff,
   LogOut,
 } from "lucide-react";
-import App from "./App";
+const App = lazy(() => import("./App"));
 import Home from "./Home";
 import Setup from "./Setup";
 import { convexApi } from "./lib/convex";
@@ -369,7 +376,15 @@ function AccountWorkspace() {
           {error}
         </p>
       )}
-      <App onSignOut={logout} />
+      <Suspense
+        fallback={
+          <main className="connection-screen" role="status">
+            Loading your workspace…
+          </main>
+        }
+      >
+        <App onSignOut={logout} />
+      </Suspense>
     </>
   );
 }
