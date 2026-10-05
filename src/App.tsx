@@ -21,6 +21,7 @@ import {
   PencilSimple,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Activity,
   ArrowRight,
@@ -87,10 +88,14 @@ import {
 } from "./lib/finance";
 import type { AuditEvent, PaymentStatus } from "./types";
 import { convexApi, convexClient, demoEmail } from "./lib/convex";
-import { AnimatePresence, motion } from "motion/react";
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
+  Cell,
+  Pie,
+  PieChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -216,6 +221,7 @@ const burn = monthlyBurn(650, [250, 80, 70, 55, 120, 75]),
   baseRunway = runway(8900, burn);
 
 function App() {
+  const reducedMotion = useReducedMotion();
   const pageFromHash = (): Page =>
     nav.find(
       ({ page }) =>
@@ -540,7 +546,7 @@ function App() {
   if (!database)
     return (
       <main className="connection-screen">
-        <div className="card section-card">
+        <div className="connection-content">
           <span className="spinner" />
           <h1>Loading your financial passport…</h1>
           <p>
@@ -553,7 +559,7 @@ function App() {
     );
 
   return (
-    <div className={`app-shell variation-${variation}`}>
+    <div className={`app-shell app-clean variation-${variation}`}>
       <aside className={`sidebar sidebar-clean ${mobileNav ? "open" : ""}`}>
         <button
           className="mobile-close"
@@ -581,6 +587,14 @@ function App() {
                 aria-current={page === item ? "page" : undefined}
                 onClick={() => go(item)}
               >
+                {page === item && (
+                  <motion.span
+                    className="nav-motion-indicator"
+                    layoutId="active-navigation"
+                    transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
+                    aria-hidden="true"
+                  />
+                )}
                 <Icon size={19} />
                 <span>{item}</span>
               </button>
@@ -674,98 +688,95 @@ function App() {
       </button>
       <main className={page === "Dashboard" ? "dashboard-page" : ""}>
         <div className="content">
-          <AnimatePresence mode="wait">
-            <motion.div
-              className="page-view"
-              key={`${page}-${variation}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-            >
-              {page === "Dashboard" && (
-                <Dashboard
-                  paid={paid}
-                  go={go}
-                  variation={1}
-                  checklist={database?.checklist}
-                  toggleChecklist={toggleChecklist}
-                  database={database}
-                  onSponsorRequest={createSponsorRequest}
-                  onSponsorPermission={setSponsorPermission}
-                  onRateAlert={createRateAlert}
-                />
-              )}
-              {page === "Profile" && (
-                <Profile
-                  announce={announce}
-                  account={account}
-                  config={database?.config?.profile}
-                  totals={{
-                    funded: planFunded,
-                    gap: planGap,
-                    coverage: planCoverage,
-                  }}
-                  onSave={saveProfile}
-                  onAddCountry={(country, label) =>
-                    account
-                      ? mutate(convexApi.addCountryAccount, {
-                          accountId: account._id,
-                          country,
-                          label,
-                        })
-                      : Promise.resolve(false)
-                  }
-                />
-              )}
-              {page === "Move Planner" && (
-                <MovePlanner go={go} config={database?.config?.move} />
-              )}
-              {page === "AI Agent" && (
-                <Agent
-                  storedMessages={database?.messages}
-                  onSend={sendMessage}
-                  onClear={clearChat}
-                />
-              )}
-              {page === "Payments" && (
-                <Payments
-                  status={paymentStatus}
-                  paid={paid}
-                  prepare={prepare}
-                  approve={approve}
-                  execute={execute}
-                  reset={resetPayment}
-                  storedRoute={account?.selectedRoute}
-                  onSelectRoute={selectRoute}
-                  storedRoutes={database?.paymentRoutes}
-                  config={database?.config?.banking}
-                />
-              )}
-              {page === "Exchange" && (
-                <ExchangeWorkspace
-                  go={go}
-                  database={database}
-                  onRateAlert={createRateAlert}
-                />
-              )}
-              {page === "Sponsors" && (
-                <Sponsors
-                  announce={announce}
-                  requestSent={account?.sponsorRequestSent}
-                  onRequest={requestSponsor}
-                  storedSponsors={database?.sponsors}
-                  config={database?.config?.sponsorship}
-                />
-              )}
-              {page === "Wallet" && (
-                <Wallet storedWallets={database?.wallets} />
-              )}
-              {page === "Security" && (
-                <Security audit={audit} config={database?.config?.security} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            className="page-view"
+            key={`${page}-${variation}`}
+            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {page === "Dashboard" && (
+              <Dashboard
+                paid={paid}
+                go={go}
+                variation={1}
+                checklist={database?.checklist}
+                toggleChecklist={toggleChecklist}
+                database={database}
+                onSponsorRequest={createSponsorRequest}
+                onSponsorPermission={setSponsorPermission}
+                onRateAlert={createRateAlert}
+              />
+            )}
+            {page === "Profile" && (
+              <Profile
+                announce={announce}
+                account={account}
+                config={database?.config?.profile}
+                totals={{
+                  funded: planFunded,
+                  gap: planGap,
+                  coverage: planCoverage,
+                }}
+                onSave={saveProfile}
+                onAddCountry={(country, label) =>
+                  account
+                    ? mutate(convexApi.addCountryAccount, {
+                        accountId: account._id,
+                        country,
+                        label,
+                      })
+                    : Promise.resolve(false)
+                }
+              />
+            )}
+            {page === "Move Planner" && (
+              <MovePlanner go={go} config={database?.config?.move} />
+            )}
+            {page === "AI Agent" && (
+              <Agent
+                storedMessages={database?.messages}
+                onSend={sendMessage}
+                onClear={clearChat}
+              />
+            )}
+            {page === "Payments" && (
+              <Payments
+                status={paymentStatus}
+                paid={paid}
+                prepare={prepare}
+                approve={approve}
+                execute={execute}
+                reset={resetPayment}
+                storedRoute={account?.selectedRoute}
+                onSelectRoute={selectRoute}
+                storedRoutes={database?.paymentRoutes}
+                config={database?.config?.banking}
+              />
+            )}
+            {page === "Exchange" && (
+              <ExchangeWorkspace
+                go={go}
+                database={database}
+                onRateAlert={createRateAlert}
+              />
+            )}
+            {page === "Sponsors" && (
+              <Sponsors
+                announce={announce}
+                requestSent={account?.sponsorRequestSent}
+                onRequest={requestSponsor}
+                storedSponsors={database?.sponsors}
+                config={database?.config?.sponsorship}
+              />
+            )}
+            {page === "Wallet" && (
+              <Wallet storedWallets={database?.wallets} go={go} />
+            )}
+            {page === "Security" && (
+              <Security audit={audit} config={database?.config?.security} />
+            )}
+          </motion.div>
         </div>
       </main>
       {tourOpen && (
@@ -777,12 +788,22 @@ function App() {
           close={closeTour}
         />
       )}
-      {toast && (
-        <div className="toast" role="status">
-          <CheckCircle2 size={18} />
-          {toast}
-        </div>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key={toast}
+            className="toast"
+            role="status"
+            initial={reducedMotion ? false : { opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
+            transition={{ duration: reducedMotion ? 0 : 0.22 }}
+          >
+            <CheckCircle2 size={18} />
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1100,6 +1121,16 @@ function Dashboard({
   return <OverviewDashboard paid={paid} go={go} database={database} />;
 }
 
+const planChartColors = [
+  "#315c85",
+  "#4b8f8a",
+  "#d4a35b",
+  "#8c79ad",
+  "#649bc0",
+  "#c47e6a",
+  "#859b62",
+];
+
 function OverviewDashboard({
   paid,
   go,
@@ -1125,6 +1156,19 @@ function OverviewDashboard({
   const fundedTotal = confirmed.reduce((sum, item) => sum + item.amount, 0);
   const gap = fundingGap(planTotal, fundedTotal);
   const coverage = fundingCoverage(planTotal, fundedTotal);
+  const fundingChartData = [
+    ...planFunding.map((item, index) => ({
+      name: item.name,
+      amount: item.amount,
+      color:
+        item.status === "confirmed"
+          ? planChartColors[index % planChartColors.length]
+          : "#94a3b8",
+    })),
+    ...(gap > 0
+      ? [{ name: "Still to fund", amount: gap, color: "#c47e6a" }]
+      : []),
+  ];
   const monthlyEssentials =
     planCosts
       .filter(
@@ -1253,6 +1297,64 @@ function OverviewDashboard({
               Edit plan <ArrowRight size={15} />
             </button>
           </div>
+          <figure
+            className="spending-chart"
+            aria-label={`Spending breakdown. Total budget ${formatGBP(planTotal)}. Category amounts and percentages follow below.`}
+          >
+            <div className="spending-donut">
+              {planTotal > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={planCosts.filter((item) => item.amount > 0)}
+                      dataKey="amount"
+                      nameKey="name"
+                      innerRadius="70%"
+                      outerRadius="94%"
+                      paddingAngle={2}
+                      stroke="none"
+                      isAnimationActive={false}
+                    >
+                      {planCosts
+                        .filter((item) => item.amount > 0)
+                        .map((item) => (
+                          <Cell
+                            key={item.name}
+                            fill={
+                              planChartColors[
+                                planCosts.findIndex(
+                                  (cost) => cost.name === item.name,
+                                ) % planChartColors.length
+                              ]
+                            }
+                          />
+                        ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => formatGBP(Number(value))}
+                      contentStyle={{
+                        background: "var(--color-surface)",
+                        border: "1px solid var(--color-line)",
+                        borderRadius: 8,
+                        color: "var(--color-ink)",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="empty-donut" />
+              )}
+              <div className="donut-total">
+                <span>Total budget</span>
+                <strong>{formatGBP(planTotal)}</strong>
+                <span>Study plan</span>
+              </div>
+            </div>
+            <figcaption>
+              <strong>Where your money goes</strong>
+              <span>Each slice shows a category’s share of your plan.</span>
+            </figcaption>
+          </figure>
           <div
             className="budget-table"
             role="table"
@@ -1263,13 +1365,21 @@ function OverviewDashboard({
               <span role="columnheader">Share of plan</span>
               <span role="columnheader">Budget</span>
             </div>
-            {planCosts.map((item) => {
+            {planCosts.map((item, index) => {
               const Icon = categoryIcon(item.name);
               const share = planTotal > 0 ? (item.amount / planTotal) * 100 : 0;
               const isPaid = item.paid || (paid && item === tuition);
               return (
                 <div className="budget-table-row" role="row" key={item.name}>
                   <span className="budget-category" role="cell">
+                    <span
+                      className="chart-legend-dot"
+                      style={{
+                        background:
+                          planChartColors[index % planChartColors.length],
+                      }}
+                      aria-hidden="true"
+                    />
                     <Icon size={18} />
                     <span>{item.name}</span>
                     {isPaid && (
@@ -1281,9 +1391,6 @@ function OverviewDashboard({
                     )}
                   </span>
                   <span className="budget-distribution" role="cell">
-                    <span className="budget-share-track" aria-hidden="true">
-                      <i style={{ width: `${share}%` }} />
-                    </span>
                     <span>{Math.round(share)}%</span>
                   </span>
                   <strong role="cell">{formatGBP(item.amount)}</strong>
@@ -1303,19 +1410,79 @@ function OverviewDashboard({
               Manage <ArrowRight size={15} />
             </button>
           </div>
+          {fundingChartData.length > 0 && (
+            <figure
+              className="funding-comparison"
+              aria-label="Funding source amounts compared with the remaining funding gap. Exact amounts and confirmation statuses follow below."
+            >
+              <figcaption>
+                <strong>How your plan is funded</strong>
+                <span>Funding sources and the remaining gap · GBP</span>
+              </figcaption>
+              <div
+                className="funding-bar-chart"
+                style={{ height: Math.max(250, fundingChartData.length * 56 + 40) }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={fundingChartData}
+                    layout="vertical"
+                    margin={{ top: 12, right: 32, bottom: 16, left: 8 }}
+                    barSize={22}
+                  >
+                    <CartesianGrid
+                      horizontal={false}
+                      stroke="var(--color-line)"
+                      strokeDasharray="3 4"
+                    />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(value) => `£${Number(value) / 1000}k`}
+                      tick={{ fill: "var(--color-muted)", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={Math.max(130, ...fundingChartData.map((item) => item.name.length * 6.5 + 16))}
+                      tick={{ fill: "var(--color-muted)", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "var(--color-line)", fillOpacity: 0.25 }}
+                      formatter={(value) => [
+                        formatGBP(Number(value)),
+                        "Amount",
+                      ]}
+                      contentStyle={{
+                        background: "var(--color-surface)",
+                        border: "1px solid var(--color-line)",
+                        borderRadius: 8,
+                        color: "var(--color-ink)",
+                      }}
+                    />
+                    <Bar
+                      dataKey="amount"
+                      radius={[0, 5, 5, 0]}
+                      isAnimationActive={false}
+                    >
+                      {fundingChartData.map((item, index) => (
+                        <Cell key={`${item.name}-${index}`} fill={item.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </figure>
+          )}
           <div className="funding-source-list">
             {planFunding.map((item) => (
               <div className="funding-source" key={item.name}>
                 <div>
                   <span>{item.name}</span>
                   <strong>{formatGBP(item.amount)}</strong>
-                </div>
-                <div className="source-track" aria-hidden="true">
-                  <i
-                    style={{
-                      width: `${planTotal > 0 ? Math.min(100, (item.amount / planTotal) * 100) : 0}%`,
-                    }}
-                  />
                 </div>
                 <span className="source-availability">
                   {item.status === "confirmed"
@@ -1572,17 +1739,7 @@ function WorkspaceHeader({
     <>
       <section className="workspace-title">
         <div>
-          <span>
-            {number === 2
-              ? "Cash-flow planning"
-              : number === 3
-                ? "Sponsor coordination"
-                : number === 4
-                  ? "Currency planning"
-                  : "Departure readiness"}
-          </span>
           <h2>{title}</h2>
-          <p>{description}</p>
         </div>
       </section>
       <nav className="workspace-tabs" aria-label={`${title} views`}>
@@ -1979,11 +2136,7 @@ function ExchangeWorkspace({
             <Card className="fx-card">
               <CardHeader>
                 <div className="fx-card-heading">
-                  <CardTitle>
-                    <CircleDollarSign size={18} />
-                    Convert
-                  </CardTitle>
-                  <span className="fx-badge">USD → GBP</span>
+                  <CardTitle>USD to GBP</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
@@ -2084,7 +2237,7 @@ function ExchangeWorkspace({
                       className="fx-badge fx-demo"
                       title="Demo quote, not a live market rate"
                     >
-                      Demo
+                      Demo quote
                     </span>
                   </div>
                 </CardHeader>
@@ -2092,7 +2245,7 @@ function ExchangeWorkspace({
                   <div className="fx-rate">
                     {bestRoute ? rate.toFixed(4) : "—"}
                   </div>
-                  <p className="fx-hint">29 Sep 2026</p>
+                  <p className="fx-hint">Estimated provider quote</p>
                   <Button
                     variant="outline"
                     className="fx-secondary"
@@ -2108,7 +2261,7 @@ function ExchangeWorkspace({
                   <div>
                     <span className="fx-label">
                       <TrendingUp size={16} />
-                      USD −5%
+                      If USD falls 5%
                     </span>
                     <strong>−{gbp(received * 0.05)}</strong>
                   </div>
@@ -2280,7 +2433,9 @@ function DepartureWorkspace({
       {tab === "Checklist" && (
         <div className="departure-grid">
           <section className="departure-score">
-            <strong>{taskValues.filter(Boolean).length}/4</strong>
+            <strong>
+              {taskValues.filter(Boolean).length}/{taskValues.length}
+            </strong>
             <span>financial tasks complete</span>
             <div>
               {taskValues.map((done, i) => (
@@ -2726,7 +2881,6 @@ function Profile({
             <MapPin /> {profile.home} <ArrowRight /> {profile.study}
           </span>
         </div>
-        <b>{profile.status}</b>
       </section>
       <div className="profile-grid">
         <section className="profile-section">
@@ -2734,7 +2888,6 @@ function Profile({
             <div>
               <h3>Study details</h3>
             </div>
-            <GraduationCap />
           </div>
           <div className="field-grid">
             {(
@@ -2988,7 +3141,6 @@ function MovePlanner({
         ["Utilities", "Estimated", "£145 / mo"],
         ["Daily expenses", "Budgeted", "£425 / mo"],
       ];
-  const routeIcons = [Timer, PlannerWallet, AirplaneTilt, Path];
   const activeRoute = routes[Math.min(selectedRoute, routes.length - 1)];
   const costs = requirements.map(
     ([name, status, amount]: string[], index: number) => ({
@@ -3011,6 +3163,16 @@ function MovePlanner({
     .filter((cost: any) => cost.recurring)
     .reduce((sum: number, cost: any) => sum + cost.amount, 0);
   const totalBudget = upfrontTotal + monthlyTotal * months;
+  const arrivalBreakdown = includedCosts.map((cost: any, index: number) => ({
+    name: cost.name,
+    amount: cost.amount * (cost.recurring ? months : 1),
+    color: planChartColors[index % planChartColors.length],
+  }));
+  const budgetOutlook = Array.from({ length: months + 1 }, (_, month) => ({
+    month,
+    upfront: upfrontTotal,
+    living: monthlyTotal * month,
+  }));
   const toggleCost = (name: string) =>
     setExcludedCosts((current) =>
       current.includes(name)
@@ -3068,12 +3230,7 @@ function MovePlanner({
     <div className="move-board">
       <section className="move-board-header">
         <div>
-          <span>Move planning</span>
           <h2>Plan your arrival</h2>
-          <p>
-            Compare routes, prepare essential costs, and keep your arrival plan
-            on track.
-          </p>
         </div>
         <DatePicker
           className="planner-date-picker"
@@ -3111,20 +3268,176 @@ function MovePlanner({
         </Button>
       </section>
 
+      <section className="arrival-charts" aria-label="Arrival budget charts">
+        <figure className="arrival-breakdown-chart">
+          <figcaption>
+            <strong>What makes up your budget</strong>
+            <span>Included costs across your {months}-month stay</span>
+          </figcaption>
+          <div className="arrival-breakdown-body">
+            <div
+              className="spending-donut"
+              role="img"
+              aria-label={`Total estimated budget ${formatGBP(totalBudget)}. Breakdown listed alongside the chart.`}
+            >
+              {totalBudget > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={arrivalBreakdown.filter(
+                        (cost: any) => cost.amount > 0,
+                      )}
+                      dataKey="amount"
+                      nameKey="name"
+                      innerRadius="70%"
+                      outerRadius="94%"
+                      paddingAngle={2}
+                      stroke="none"
+                      isAnimationActive={false}
+                    >
+                      {arrivalBreakdown
+                        .filter((cost: any) => cost.amount > 0)
+                        .map((cost: any) => (
+                          <Cell key={cost.name} fill={cost.color} />
+                        ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => formatGBP(Number(value))}
+                      contentStyle={{
+                        background: "var(--color-surface)",
+                        border: "1px solid var(--color-line)",
+                        borderRadius: 8,
+                        color: "var(--color-ink)",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="empty-donut" />
+              )}
+              <div className="donut-total">
+                <span>Estimated total</span>
+                <strong>{formatGBP(totalBudget)}</strong>
+                <span>{months} months</span>
+              </div>
+            </div>
+            <ul className="arrival-chart-legend">
+              {arrivalBreakdown.map((cost: any) => (
+                <li key={cost.name}>
+                  <span
+                    className="chart-legend-dot"
+                    style={{ background: cost.color }}
+                    aria-hidden="true"
+                  />
+                  <span>{cost.name}</span>
+                  <strong>{formatGBP(cost.amount)}</strong>
+                </li>
+              ))}
+              {arrivalBreakdown.length === 0 && (
+                <li>Select costs below to build your budget.</li>
+              )}
+            </ul>
+          </div>
+        </figure>
+        <figure className="arrival-outlook-chart">
+          <figcaption>
+            <strong>Your budget over time</strong>
+            <span>
+              {formatGBP(upfrontTotal)} upfront, then {formatGBP(monthlyTotal)}{" "}
+              each month
+            </span>
+          </figcaption>
+          <div
+            className="arrival-outlook-plot"
+            role="img"
+            aria-label={`Cumulative estimated costs start at ${formatGBP(upfrontTotal)} on arrival and increase by ${formatGBP(monthlyTotal)} per month to ${formatGBP(totalBudget)} at month ${months}.`}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={budgetOutlook}
+                margin={{ top: 16, right: 16, bottom: 4, left: 0 }}
+              >
+                <CartesianGrid
+                  vertical={false}
+                  stroke="var(--color-line)"
+                  strokeDasharray="3 4"
+                />
+                <XAxis
+                  dataKey="month"
+                  type="number"
+                  domain={[0, months]}
+                  tickCount={Math.min(months + 1, 6)}
+                  allowDecimals={false}
+                  tickFormatter={(value) =>
+                    value === 0 ? "Arrival" : `Mo ${value}`
+                  }
+                  tick={{ fill: "var(--color-muted)", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tickFormatter={(value) => `£${Number(value) / 1000}k`}
+                  width={52}
+                  tick={{ fill: "var(--color-muted)", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  labelFormatter={(value) =>
+                    Number(value) === 0 ? "Arrival" : `Month ${value}`
+                  }
+                  formatter={(value, name) => [
+                    formatGBP(Number(value)),
+                    name === "upfront"
+                      ? "Upfront costs"
+                      : "Living costs to date",
+                  ]}
+                  contentStyle={{
+                    background: "var(--color-surface)",
+                    border: "1px solid var(--color-line)",
+                    borderRadius: 8,
+                    color: "var(--color-ink)",
+                  }}
+                />
+                <Area
+                  type="linear"
+                  dataKey="upfront"
+                  stackId="budget"
+                  stroke="#315c85"
+                  fill="#315c85"
+                  fillOpacity={0.18}
+                  isAnimationActive={false}
+                />
+                <Area
+                  type="linear"
+                  dataKey="living"
+                  stackId="budget"
+                  stroke="#4b8f8a"
+                  fill="#4b8f8a"
+                  fillOpacity={0.3}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="arrival-outlook-key">
+            <span>
+              <i style={{ background: "#315c85" }} />
+              Upfront costs
+            </span>
+            <span>
+              <i style={{ background: "#4b8f8a" }} />
+              Living costs to date
+            </span>
+          </div>
+        </figure>
+      </section>
       <div className="move-board-grid">
         <section className="route-choice-card">
-          <h3>
-            <span>
-              <AirplaneTilt weight="duotone" />
-            </span>
-            Mode
-          </h3>
-          <p className="move-help">
-            Pick a route. We’ll update your flight estimate.
-          </p>
+          <h3>Flight routes</h3>
+          <p className="move-help">Flight prices are estimates.</p>
           <div className="route-choices">
             {routes.slice(0, 4).map((route: any, index: number) => {
-              const Icon = routeIcons[index % routeIcons.length];
               return (
                 <Button
                   variant="outline"
@@ -3134,9 +3447,6 @@ function MovePlanner({
                   onClick={() => setSelectedRoute(index)}
                   key={`${route.name}-${index}`}
                 >
-                  <span className="route-kind">
-                    <Icon weight="duotone" />
-                  </span>
                   <span className="route-copy">
                     <strong>
                       {route.name}
@@ -3158,15 +3468,8 @@ function MovePlanner({
           <section className="cost-card">
             <div className="planner-cost-heading">
               <div>
-                <h3>
-                  <span>
-                    <PlannerWallet weight="duotone" />
-                  </span>
-                  Your costs
-                </h3>
-                <p className="move-help">
-                  Check the items you want to budget for.
-                </p>
+                <h3>Your costs</h3>
+                <p className="move-help">Choose which costs to include in your estimate.</p>
               </div>
               <Button
                 type="button"
@@ -3180,9 +3483,7 @@ function MovePlanner({
               </Button>
             </div>
             <div className="planner-duration">
-              <label htmlFor="arrival-months">
-                How long are you planning for?
-              </label>
+              <label htmlFor="arrival-months">Length of stay</label>
               <Select
                 value={String(months)}
                 onValueChange={(value) => setMonths(Number(value))}
@@ -3202,21 +3503,43 @@ function MovePlanner({
                 </SelectContent>
               </Select>
             </div>
-            <h4>
-              Before you arrive <span>{formatGBP(upfrontTotal)}</span>
-            </h4>
-            <div className="cost-list">
-              {costs.filter((cost: any) => !cost.recurring).map(renderCost)}
-            </div>
-            <h4>
-              Each month <span>{formatGBP(monthlyTotal)}/mo</span>
-            </h4>
-            <div className="cost-list recurring-costs">
-              {costs.filter((cost: any) => cost.recurring).map(renderCost)}
+            <div className="cost-groups">
+              <section className="cost-group" aria-labelledby="upfront-costs-heading">
+                <div className="cost-group-heading">
+                  <span className="cost-group-icon"><Plane size={18} /></span>
+                  <div>
+                    <h4 id="upfront-costs-heading">Before you arrive</h4>
+                    <span>One-time costs</span>
+                  </div>
+                </div>
+                <div className="cost-group-total">
+                  <strong>{formatGBP(upfrontTotal)}</strong>
+                  <span>Included upfront</span>
+                </div>
+                <div className="cost-list">
+                  {costs.filter((cost: any) => !cost.recurring).map(renderCost)}
+                </div>
+              </section>
+              <section className="cost-group" aria-labelledby="monthly-costs-heading">
+                <div className="cost-group-heading">
+                  <span className="cost-group-icon"><CalendarDays size={18} /></span>
+                  <div>
+                    <h4 id="monthly-costs-heading">Each month</h4>
+                    <span>Ongoing living costs</span>
+                  </div>
+                </div>
+                <div className="cost-group-total">
+                  <strong>{formatGBP(monthlyTotal)}<small>/mo</small></strong>
+                  <span>{formatGBP(monthlyTotal * months)} over {months} {months === 1 ? "month" : "months"}</span>
+                </div>
+                <div className="cost-list recurring-costs">
+                  {costs.filter((cost: any) => cost.recurring).map(renderCost)}
+                </div>
+              </section>
             </div>
 
             <p className="planner-estimate-note">
-              Estimates for planning. Final inclusions to be confirmed.
+              Estimates only. Confirm prices before booking.
             </p>
           </section>
         </div>
@@ -3579,27 +3902,7 @@ function Agent({
         <div className="agent-conversation" ref={conversationRef}>
           {visibleMessages.length <= 1 && (
             <div className="agent-welcome-state">
-              <span className="agent-welcome-icon">
-                <Sparkles />
-              </span>
-              <h2>How can I help with your plan?</h2>
-              <p>
-                Ask about funding, spending, payments, or your move to the UK.
-              </p>
-              <div className="agent-capabilities">
-                <span>
-                  <TrendingUp /> Plan
-                </span>
-                <span>
-                  <ReceiptText /> Explain
-                </span>
-                <span>
-                  <CircleDollarSign /> Compare
-                </span>
-                <span>
-                  <GraduationCap /> Prepare
-                </span>
-              </div>
+              <h2>Ask about your study plan</h2>
               <div className="agent-starters">
                 {starters.map((starter) => (
                   <button
@@ -3641,12 +3944,6 @@ function Agent({
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about your plan, runway, or payments…"
             />
-            <div className="agent-composer-meta">
-              <span>
-                <ShieldCheck /> Plan-aware
-              </span>
-              <span>Informational guidance</span>
-            </div>
             <button
               aria-label="Send"
               disabled={sending || clearing || !input.trim()}
@@ -3974,31 +4271,49 @@ function Sponsors({
   const sponsor = visibleSponsors[0];
   const totalCommitment = sponsor?.commitment ?? 0;
   const transferred = config?.transferred ?? 0;
-  const progress = totalCommitment
-    ? Math.round((transferred / totalCommitment) * 100)
-    : 0;
   const schedule = config?.schedule ?? [
     ["15 Nov 2026", "Living expenses", 1000],
     ["15 Jan 2027", "Tuition instalment", 2000],
   ];
+  const hasScheduleStatus = schedule.some((item: any[]) => Boolean(item[3]));
   return (
     <div className="sponsor-reference-page">
       <section className="sponsor-reference-header">
         <div>
-          <span>Sponsor coordination</span>
-          <h2>Sponsor workspace</h2>
-          <p>
-            Coordinate contributions without exposing private spending or
-            account balances.
-          </p>
+          <h2>Sponsors</h2>
         </div>
-        <div className="sponsor-reference-tabs" role="tablist">
+        <div
+          className="sponsor-reference-tabs"
+          role="tablist"
+          aria-label="Sponsor views"
+        >
           {(["Sponsors", "Requests", "Privacy"] as const).map((item) => (
             <button
               key={item}
               className={tab === item ? "active" : ""}
               onClick={() => setTab(item)}
               role="tab"
+              id={`sponsor-tab-${item}`}
+              aria-controls={`sponsor-panel-${item}`}
+              tabIndex={tab === item ? 0 : -1}
+              onKeyDown={(event) => {
+                const views = ["Sponsors", "Requests", "Privacy"] as const;
+                const index = views.indexOf(item);
+                const next =
+                  event.key === "ArrowRight"
+                    ? views[(index + 1) % views.length]
+                    : event.key === "ArrowLeft"
+                      ? views[(index + views.length - 1) % views.length]
+                      : event.key === "Home"
+                        ? views[0]
+                        : event.key === "End"
+                          ? views[2]
+                          : null;
+                if (!next) return;
+                event.preventDefault();
+                setTab(next);
+                document.getElementById(`sponsor-tab-${next}`)?.focus();
+              }}
               aria-selected={tab === item}
             >
               {item}
@@ -4008,80 +4323,84 @@ function Sponsors({
       </section>
 
       {tab === "Sponsors" && sponsor && (
-        <>
+        <div
+          className="sponsor-overview-content"
+          role="tabpanel"
+          id="sponsor-panel-Sponsors"
+          aria-labelledby="sponsor-tab-Sponsors"
+        >
           <section className="sponsor-reference-summary">
             <div className="sponsor-reference-person">
-              <div className="sponsor-reference-avatar">SC</div>
-              <div>
-                <small>Parent sponsor</small>
-                <h3>{sponsor.name}</h3>
-                <p>{sponsor.relationship} · Connected sponsor</p>
+              <div className="sponsor-reference-avatar">
+                {sponsor.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .slice(0, 2)
+                  .join("")}
               </div>
-              <button onClick={() => announce("Sponsor profile opened")}>
-                Open profile
-              </button>
+              <div>
+                <h3>{sponsor.name}</h3>
+                <p>{sponsor.relationship}</p>
+              </div>
             </div>
             <div className="sponsor-reference-commitment">
               <div className="commitment-total">
                 <span>Annual commitment</span>
                 <strong>{formatGBP(totalCommitment)}</strong>
-                <i
-                  style={
-                    {
-                      "--progress": `${progress * 3.6}deg`,
-                    } as React.CSSProperties
-                  }
-                />
               </div>
               <div className="commitment-row received">
                 <span>Received</span>
-                <b>
-                  <i style={{ width: `${progress}%` }} />
-                </b>
                 <strong>{formatGBP(transferred)}</strong>
               </div>
               <div className="commitment-row remaining">
                 <span>Remaining</span>
-                <b>
-                  <i style={{ width: `${100 - progress}%` }} />
-                </b>
                 <strong>
                   {formatGBP(Math.max(0, totalCommitment - transferred))}
                 </strong>
               </div>
             </div>
           </section>
-          <section className="sponsor-reference-schedule">
+          <section
+            className={`sponsor-reference-schedule ${hasScheduleStatus ? "" : "schedule-no-status"}`}
+          >
             <div className="schedule-title">
               <h3>Contribution schedule</h3>
-              <p>Upcoming Payments</p>
             </div>
             <div className="schedule-head">
               <span>Date</span>
               <span>Description</span>
               <span>Amount</span>
-              <span>Status</span>
+              {hasScheduleStatus && <span>Status</span>}
             </div>
-            {schedule.map((item: any[], index: number) => (
+            {schedule.map((item: any[]) => (
               <div className="schedule-line" key={`${item[0]}-${item[1]}`}>
                 <span>{item[0]}</span>
                 <span>{item[1]}</span>
                 <span>{formatGBP(Number(item[2]))}</span>
-                <em className={index === 0 ? "paid" : "pending"}>
-                  {index === 0 ? "Paid" : "Pending"}
-                </em>
+                {hasScheduleStatus && <em>{item[3] ?? "—"}</em>}
               </div>
             ))}
           </section>
-        </>
+        </div>
       )}
 
+      {tab === "Sponsors" && !sponsor && (
+        <section
+          role="tabpanel"
+          id="sponsor-panel-Sponsors"
+          aria-labelledby="sponsor-tab-Sponsors"
+        >
+          <p>No sponsors connected yet.</p>
+        </section>
+      )}
       {tab === "Requests" && (
-        <section className="sponsor-reference-panel">
-          <span>Contribution request</span>
-          <h3>
-            Ask {sponsor?.name ?? "your sponsor"} for the next contribution
-          </h3>
+        <section
+          className="sponsor-reference-panel"
+          role="tabpanel"
+          id="sponsor-panel-Requests"
+          aria-labelledby="sponsor-tab-Requests"
+        >
+          <h3>Request a contribution from {sponsor?.name ?? "your sponsor"}</h3>
           <p>
             The request shares its purpose and amount, but no private account
             activity.
@@ -4108,13 +4427,17 @@ function Sponsors({
       )}
 
       {tab === "Privacy" && (
-        <section className="sponsor-reference-panel privacy">
+        <section
+          className="sponsor-reference-panel privacy"
+          role="tabpanel"
+          id="sponsor-panel-Privacy"
+          aria-labelledby="sponsor-tab-Privacy"
+        >
           <LockKeyhole />
-          <span>Private by default</span>
-          <h3>Your sponsor sees contributions, not your finances.</h3>
+          <h3>What your sponsor can see</h3>
           <p>
-            Wallet balances, transaction history, and personal spending remain
-            hidden.
+            Contributions are shared. Wallet balances, transaction history, and
+            personal spending stay private.
           </p>
         </section>
       )}
@@ -4123,125 +4446,86 @@ function Sponsors({
 }
 function Wallet({
   storedWallets,
+  go,
 }: {
   storedWallets?: DatabaseState["wallets"];
+  go: (page: Page) => void;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [walletNotice, setWalletNotice] = useState("");
   const visibleWallets = storedWallets ?? wallets;
-  const totalValue = visibleWallets.reduce((s, w) => s + w.gbpValue, 0);
-  const exposure = visibleWallets.map((wallet) => ({
-    ...wallet,
-    percent: totalValue ? Math.round((wallet.gbpValue / totalValue) * 100) : 0,
-  }));
-  const foreignShare = exposure
-    .filter((wallet) => wallet.currency !== "GBP")
-    .reduce((sum, wallet) => sum + wallet.percent, 0);
+  const totalValue = visibleWallets.reduce(
+    (sum, wallet) => sum + wallet.gbpValue,
+    0,
+  );
   const usdBalance =
     visibleWallets.find((wallet) => wallet.currency === "USD")?.gbpValue ?? 0;
-  const flags: Record<string, string> = { USD: "🇺🇸", GBP: "🇬🇧", KHR: "🇰🇭" };
-  const notifyWallet = (message: string) => {
-    setWalletNotice(message);
-    window.setTimeout(() => setWalletNotice(""), 2400);
-  };
   return (
-    <div className="wallet-page-redesign">
-      <section className="wallet-redesign-intro">
-        <div>
-          <span className="eyebrow">Multi-currency wallet</span>
-          <h2>Your balances</h2>
-          <p>One view across accounts. Rates are demo estimates.</p>
-        </div>
-        <div className="wallet-allocation" aria-label="Currency allocation">
-          <i />
-          <div className="wallet-allocation-labels">
-            {exposure.map((wallet) => (
-              <span key={wallet.currency}>
-                <b className={`currency-${wallet.currency.toLowerCase()}`} />
-                {wallet.currency} {wallet.percent}%
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="total-balance">
-          <span>Total available</span>
-          <strong>{formatGBP(totalValue)} ↗</strong>
-        </div>
-      </section>
-      <section className="wallet-account-grid">
-        {visibleWallets.map((w) => (
-          <article className="wallet-account-card" key={w.currency}>
-            <div className="wallet-account-heading">
-              <strong>
-                <span>{flags[w.currency] ?? "◉"}</span> {w.currency} account
-              </strong>
-              <small>{w.label}</small>
-            </div>
-            <div className="wallet-account-balance">
-              <strong>
-                {w.symbol}
-                {w.amount.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </strong>
-              <span>≈ {formatGBP(w.gbpValue)}</span>
-            </div>
-            <div className="wallet-account-actions">
-              <button
-                onClick={() =>
-                  notifyWallet(`Add funds opened for ${w.currency}`)
-                }
-              >
-                Add funds
-              </button>
-              <button
-                onClick={() => notifyWallet(`Managing ${w.currency} account`)}
-              >
-                Manage
-              </button>
-            </div>
-          </article>
-        ))}
-      </section>
-      <div className="wallet-page-footer">
-        <span>Rates are demo estimates.</span>
-        <button onClick={() => setDetailsOpen((open) => !open)}>
-          {detailsOpen ? "Hide currency analysis" : "View currency analysis"}
-          <ChevronRight />
+    <div className="page-stack balance-workspace">
+      <section className="page-intro">
+        <h2>Your balances</h2>
+        <button className="primary" onClick={() => go("Exchange")}>
+          <CircleDollarSign size={16} /> Convert currency
         </button>
-      </div>
-      {detailsOpen && (
-        <section className="card section-card wallet-analysis-panel">
-          <div className="section-heading">
+      </section>
+      <section className="balance-total">
+        <span>Total in GBP</span>
+        <strong>{formatGBP(totalValue)}</strong>
+        <small>Converted values use demo rates.</small>
+      </section>
+      <section className="balance-accounts" aria-label="Currency accounts">
+        <div className="balance-table-head">
+          <span>Account</span>
+          <span>Balance</span>
+          <span>GBP equivalent</span>
+        </div>
+        {visibleWallets.map((wallet) => (
+          <div className="balance-account-row" key={wallet.currency}>
             <div>
-              <span className="eyebrow">Currency exposure</span>
-              <h3>Your study currency is GBP</h3>
+              <strong>{wallet.currency}</strong>
+              <span>{wallet.label}</span>
             </div>
-            <span className="status warning">{foreignShare}% held abroad</span>
+            <strong>
+              {wallet.symbol}
+              {wallet.amount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </strong>
+            <span>{formatGBP(wallet.gbpValue)}</span>
           </div>
-          <div className="exposure">
-            {exposure.map((wallet) => (
-              <div
-                key={wallet.currency}
-                style={{ width: `${wallet.percent}%` }}
-              >
-                {wallet.currency} {wallet.percent}%
+        ))}
+        {visibleWallets.length === 0 && <p>No currency accounts yet.</p>}
+      </section>
+      <button
+        className="disclosure-button"
+        aria-expanded={detailsOpen}
+        onClick={() => setDetailsOpen((open) => !open)}
+      >
+        {detailsOpen ? "Hide currency analysis" : "View currency analysis"}
+        <ChevronRight size={16} />
+      </button>
+      {detailsOpen && (
+        <section className="balance-analysis">
+          <h3>Currency exposure</h3>
+          <dl>
+            {visibleWallets.map((wallet) => (
+              <div key={wallet.currency}>
+                <dt>{wallet.currency}</dt>
+                <dd>
+                  {totalValue
+                    ? ((wallet.gbpValue / totalValue) * 100).toFixed(1)
+                    : "0"}
+                  % of total
+                </dd>
               </div>
             ))}
-          </div>
-          <div className="agent-note">
-            <Bot />
-            <p>
-              <strong>Exchange-rate sensitivity</strong>
-              <br />A 5% weakening of USD against GBP would add roughly{" "}
-              {formatGBP(usdBalance * 0.05)} to the GBP cost of converting your
-              current USD balance.
-            </p>
-          </div>
+          </dl>
+          <p>
+            A 5% fall in USD against GBP would reduce the value of your current
+            USD balance by approximately {formatGBP(usdBalance * 0.05)}.
+          </p>
         </section>
       )}
-      {walletNotice && <div className="wallet-notice">{walletNotice}</div>}
     </div>
   );
 }
@@ -4262,19 +4546,11 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
     URL.revokeObjectURL(link.href);
   };
   return (
-    <div className="page-stack">
+    <div className="page-stack security-workspace">
       <section className="page-intro">
         <div>
-          <span className="eyebrow">Controls & evidence</span>
           <h2>Security center</h2>
-          <p>
-            Review permissions, limits, approvals, and every consequential
-            action.
-          </p>
         </div>
-        <span className="status success">
-          <ShieldCheck /> All controls active
-        </span>
       </section>
       <section className="security-grid">
         <div className="card control">
@@ -4283,7 +4559,13 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
             <strong>Approval required</strong>
             <p>Every payment requires explicit student approval.</p>
           </div>
-          <span>{config?.approvalRequired ? "On" : "Off"}</span>
+          <span>
+            {config?.approvalRequired == null
+              ? "Unavailable"
+              : config.approvalRequired
+                ? "On"
+                : "Off"}
+          </span>
         </div>
         <div className="card control">
           <CircleDollarSign />
@@ -4304,6 +4586,7 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
       </section>
       <button
         className="disclosure-button"
+        aria-expanded={activityOpen}
         onClick={() => setActivityOpen((open) => !open)}
       >
         {activityOpen
@@ -4315,14 +4598,18 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
         <section className="card section-card">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">Immutable evidence</span>
               <h3>Activity log</h3>
             </div>
             <button className="secondary" onClick={exportAudit}>
               <History /> Export CSV
             </button>
           </div>
-          <div className="audit-table">
+          <div
+            className="audit-table"
+            role="region"
+            aria-label="Activity log"
+            tabIndex={0}
+          >
             <div className="audit-head">
               <span>Event</span>
               <span>Details</span>

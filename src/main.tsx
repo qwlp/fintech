@@ -16,6 +16,9 @@ import "./sidebar.css";
 import "./payment-simple.css";
 import "./tour.css";
 import "./dashboard-visual.css";
+import "./app-clean.css";
+import "./motion.css";
+import "./page-spacing.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

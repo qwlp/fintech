@@ -1,0 +1,299 @@
+/* Shared motion rhythm: quick feedback, gentle arrivals, no perpetual movement. */
+:root {
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-feedback: 180ms;
+}
+
+.app-clean
+  :is(button, a, input, textarea, select, [role="checkbox"], [role="tab"]) {
+  transition:
+    background-color var(--motion-feedback) ease,
+    color var(--motion-feedback) ease,
+    border-color var(--motion-feedback) ease,
+    box-shadow var(--motion-feedback) ease,
+    transform 240ms var(--motion-ease),
+    opacity var(--motion-feedback) ease;
+}
+.app-clean main button {
+  transition:
+    background-color var(--motion-feedback) ease,
+    color var(--motion-feedback) ease,
+    border-color var(--motion-feedback) ease,
+    box-shadow var(--motion-feedback) ease,
+    transform 240ms var(--motion-ease);
+}
+.app-clean button:not(:disabled):active {
+  transform: scale(0.97);
+}
+.app-clean :is(input, textarea, select):focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.app-clean button svg {
+  transition: transform 260ms var(--motion-ease);
+}
+.app-clean button[role="combobox"][aria-expanded="true"] svg:last-child {
+  rotate: 180deg;
+}
+.app-clean .sidebar nav button {
+  position: relative;
+  isolation: isolate;
+}
+.app-clean .sidebar nav button > .nav-motion-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  pointer-events: none;
+}
+.app-clean .sidebar.sidebar-clean nav button.active {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+  .app-clean .sidebar {
+    animation: motion-sidebar 500ms var(--motion-ease) both;
+  }
+  .app-clean
+    .page-view
+    > *
+    > :is(
+      section,
+      header,
+      .page-intro,
+      .workspace-grid,
+      .workspace-title,
+      .two-col,
+      .metrics,
+      .dashboard-primary,
+      .dashboard-shortcuts,
+      .consumer-welcome,
+      .fx-grid,
+      .pay-grid,
+      .planner-grid,
+      .move-board-grid,
+      .profile-grid,
+      .security-grid,
+      .sponsor-reference-panel
+    ),
+  .app-clean [role="tabpanel"][data-state="active"] {
+    animation: motion-arrive 460ms var(--motion-ease) both;
+  }
+  .app-clean .page-view > * > :nth-child(2) {
+    animation-delay: 45ms;
+  }
+  .app-clean .page-view > * > :nth-child(3) {
+    animation-delay: 90ms;
+  }
+  .app-clean .page-view > * > :nth-child(4) {
+    animation-delay: 135ms;
+  }
+  .app-clean .page-view > * > :nth-child(n + 5) {
+    animation-delay: 180ms;
+  }
+
+  .app-clean
+    :is(
+      .notification-popover,
+      .guide-card,
+      .pay-success,
+      .pay-done,
+      .fx-active-alert,
+      .profile-edit-actions,
+      .agent-send-status
+    ) {
+    animation: motion-pop 280ms var(--motion-ease) both;
+  }
+  .app-clean .scrim {
+    animation: motion-fade 200ms ease both;
+  }
+  .app-clean .messages > *,
+  .app-clean
+    :is(
+      .task-list,
+      .departure-tasks,
+      .funding-source-list,
+      .cost-list,
+      .transport-list,
+      .distance-list,
+      .document-list
+    )
+    > * {
+    animation: motion-arrive 360ms var(--motion-ease) both;
+  }
+  .app-clean
+    :is(
+      .task-list,
+      .departure-tasks,
+      .funding-source-list,
+      .cost-list,
+      .transport-list,
+      .distance-list,
+      .document-list
+    )
+    > :nth-child(2) {
+    animation-delay: 35ms;
+  }
+  .app-clean
+    :is(
+      .task-list,
+      .departure-tasks,
+      .funding-source-list,
+      .cost-list,
+      .transport-list,
+      .distance-list,
+      .document-list
+    )
+    > :nth-child(3) {
+    animation-delay: 70ms;
+  }
+  .app-clean
+    :is(
+      .task-list,
+      .departure-tasks,
+      .funding-source-list,
+      .cost-list,
+      .transport-list,
+      .distance-list,
+      .document-list
+    )
+    > :nth-child(n + 4) {
+    animation-delay: 105ms;
+  }
+  .app-clean
+    :is(
+      .funding-progress,
+      .progress,
+      .profile-funding-track,
+      .runway-track,
+      .deadline-track
+    )
+    > * {
+    transform-origin: left center;
+    animation: motion-fill 700ms var(--motion-ease) both;
+    transition:
+      width 500ms var(--motion-ease),
+      background-color 200ms ease;
+  }
+  .app-clean :is(.pay-radio, .route-radio, .check-circle, [role="checkbox"]) {
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      transform 220ms var(--motion-ease);
+  }
+  .app-clean :is(.pay-radio, .route-radio, .check-circle) svg,
+  .app-clean [role="checkbox"][data-state="checked"] svg {
+    animation: motion-check 240ms var(--motion-ease) both;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .app-clean main button:not(:disabled):hover {
+    transform: translateY(-2px);
+  }
+  .app-clean main button:not(:disabled):active {
+    transform: translateY(0) scale(0.97);
+  }
+  .app-clean .sidebar nav button:hover svg {
+    transform: translateX(2px);
+  }
+  .app-clean :is(.theme-toggle, .tour-trigger):hover svg {
+    transform: rotate(12deg);
+  }
+  .app-clean
+    :is(
+      .dashboard-shortcuts button,
+      .route-choice-card,
+      .pay-options button,
+      .agent-starters button,
+      .fx-wallet,
+      .metric,
+      .cost-card
+    ) {
+    transition:
+      transform 280ms var(--motion-ease),
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 280ms ease;
+  }
+  .app-clean :is(.fx-wallet, .metric, .cost-card):hover {
+    transform: translateY(-3px);
+  }
+  .app-clean
+    :is(.data-row, .budget-table-row, .audit-row, .balance-account-row) {
+    transition: background-color 180ms ease;
+  }
+  .app-clean
+    :is(.data-row, .budget-table-row, .audit-row, .balance-account-row):hover {
+    background-color: color-mix(in srgb, var(--color-accent) 4%, transparent);
+  }
+}
+@keyframes motion-arrive {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes motion-sidebar {
+  from {
+    opacity: 0;
+    translate: -10px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes motion-pop {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+    scale: 0.98;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes motion-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes motion-check {
+  from {
+    opacity: 0;
+    scale: 0.65;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

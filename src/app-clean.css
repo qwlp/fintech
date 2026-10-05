@@ -1,0 +1,1146 @@
+/* Shared application layout: content on one canvas, surfaces for review and input. */
+:root[data-theme] .app-clean .page-view {
+  animation: none;
+}
+.app-clean .page-stack,
+.app-clean .move-board,
+.app-clean .sponsor-reference-page {
+  gap: 28px;
+}
+.app-clean main button {
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+  box-shadow: none;
+}
+.app-clean main button:hover {
+  transform: none;
+}
+.app-clean main :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.app-clean main :is(.primary, .secondary, .ui-button) {
+  box-shadow: none;
+}
+.app-clean
+  :is(
+    .page-intro,
+    .move-board-header,
+    .sponsor-reference-header,
+    .workspace-title,
+    .fx-heading,
+    .pay-heading
+  ) {
+  padding: 0;
+  margin: 0 0 28px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.app-clean
+  :is(
+    .page-intro,
+    .move-board-header,
+    .sponsor-reference-header,
+    .workspace-title,
+    .fx-heading,
+    .pay-heading
+  )
+  h2 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+.app-clean main :is(.section-heading, .panel-head, .visual-card-head) h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.app-clean .eyebrow {
+  text-transform: none;
+  letter-spacing: 0 !important;
+}
+/* Tabs describe views rather than appearing as another boxed control group. */
+:root[data-theme]
+  .app-clean
+  :is(.fx-tabs, .sponsor-reference-tabs, .workspace-tabs) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding: 0;
+  margin: 0 0 28px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  border-radius: 0;
+  box-shadow: none;
+}
+:root[data-theme]
+  .app-clean
+  :is(.fx-tabs, .sponsor-reference-tabs, .workspace-tabs)
+  button {
+  height: 42px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 0 12px;
+  flex: 0 0 auto;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+:root[data-theme]
+  .app-clean
+  :is(.fx-tabs, .sponsor-reference-tabs, .workspace-tabs)
+  button:is(.active, [data-state="active"]) {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-accent);
+  background: transparent;
+}
+.app-clean .sponsor-reference-header {
+  display: block;
+}
+.app-clean .sponsor-reference-header .sponsor-reference-tabs {
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+/* Profile: fields and funding remain in their existing groups. */
+:root[data-theme]
+  .app-clean
+  .profile-page
+  :is(.profile-hero, .profile-section, .profile-summary) {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.app-clean .profile-page .profile-hero {
+  padding: 0 0 24px;
+  border-top: 0;
+}
+.app-clean .profile-page .profile-section {
+  padding: 0 0 24px;
+}
+.app-clean .profile-page .profile-grid {
+  gap: 32px;
+}
+.app-clean .profile-page .profile-summary {
+  padding: 20px 0 0;
+  margin-top: 8px;
+}
+.app-clean .profile-page .profile-summary > span > svg {
+  display: none;
+}
+.app-clean .profile-page .field-grid {
+  gap: 22px 24px;
+}
+.app-clean .profile-page .country-accounts .line-item {
+  background: transparent;
+  border-radius: 0;
+}
+/* Planner: route selections and costs are neighboring sections, not nested cards. */
+:root[data-theme] .app-clean .move-board .arrival-summary {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  border-radius: 0;
+  padding: 0 0 26px;
+  box-shadow: none;
+}
+.app-clean .move-board-header {
+  align-items: center;
+}
+.app-clean .move-board .planner-assist {
+  background: transparent;
+  border: 0;
+  color: var(--color-accent);
+  padding-right: 0;
+}
+.app-clean .move-board .arrival-summary > div:first-child > strong {
+  font-size: 38px;
+  letter-spacing: -0.025em;
+}
+.app-clean .move-board-grid {
+  gap: 36px;
+}
+:root[data-theme]
+  .app-clean
+  .move-board
+  :is(
+    .route-choice-card,
+    .cost-card,
+    .horizon-card,
+    .move-detail-drawer,
+    .timeline-card
+  ) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+.app-clean .move-board :is(.route-choice-card, .cost-card) h3 > span {
+  display: none;
+}
+.app-clean .move-board .move-help {
+  font-size: 12px;
+  margin: 7px 0 16px;
+}
+.app-clean .move-board .route-choices {
+  gap: 0;
+}
+:root[data-theme] .app-clean .move-board .route-choices > button {
+  min-height: 100px;
+  padding: 18px 10px;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:root[data-theme] .app-clean .move-board .route-choices > button.selected {
+  background: var(--color-primary-soft);
+  border-color: var(--color-line);
+}
+.app-clean .move-board .route-kind {
+  display: none;
+}
+.app-clean .move-board .route-copy {
+  font-weight: 400;
+}
+.app-clean .move-board .route-copy strong {
+  font-size: 14px;
+}
+.app-clean .move-board .route-copy small {
+  font-weight: 400;
+}
+.app-clean .move-board .planner-duration {
+  background: transparent;
+  padding: 16px 0;
+  margin: 14px 0;
+  border-radius: 0;
+  border-block: 1px solid var(--color-line);
+}
+.app-clean .move-board .cost-list > div {
+  padding: 14px 0;
+}
+.app-clean .move-board .cost-list span strong {
+  font-weight: 500;
+}
+.app-clean .move-board .cost-card h4 {
+  font-weight: 600;
+}
+.app-clean .move-board .planner-arrival-note {
+  padding-top: 20px;
+  border-top: 1px solid var(--color-line);
+}
+/* Payments: the provider list is flat; review retains a real grouping surface. */
+:root[data-theme] .app-clean .pay-simple .pay-card:not(.pay-review) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.app-clean .pay-card:not(.pay-review) > div {
+  padding-inline: 0;
+}
+.app-clean .pay-options {
+  gap: 0;
+}
+:root[data-theme] .app-clean .pay-simple .pay-option {
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  border-radius: 0;
+  padding: 18px 12px;
+  background: transparent;
+}
+:root[data-theme] .app-clean .pay-simple .pay-option.selected {
+  background: var(--color-primary-soft);
+}
+.app-clean .pay-provider em {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 11px;
+  color: var(--color-accent);
+}
+:root[data-theme] .app-clean .pay-simple .pay-review {
+  border-radius: 12px;
+  box-shadow: none;
+}
+.app-clean .pay-amount {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+:root[data-theme] .app-clean .pay-simple .pay-action,
+:root[data-theme] .app-clean .fx-desk .fx-primary {
+  background: var(--color-primary);
+  color: var(--color-alabaster-grey-50);
+}
+.app-clean .pay-provider-icon {
+  width: 20px;
+}
+/* Exchange: only the amount input needs an enclosure. */
+:root[data-theme] .app-clean .fx-desk .fx-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.app-clean .fx-card > div {
+  padding-inline: 0;
+}
+.app-clean .fx-grid {
+  gap: 48px;
+}
+.app-clean .fx-side {
+  padding-left: 28px;
+  border-left: 1px solid var(--color-line);
+}
+.app-clean .fx-receive {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+.app-clean .fx-between {
+  margin: 22px 0;
+}
+.app-clean .fx-badge {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  color: var(--color-muted);
+  font-weight: 400;
+}
+.app-clean .fx-rate {
+  font-size: 32px;
+}
+.app-clean .fx-side .fx-card + .fx-card {
+  border-top: 1px solid var(--color-line);
+}
+.app-clean .fx-side .fx-card > div:first-child {
+  padding-top: 0;
+}
+.app-clean .fx-side .fx-card + .fx-card .fx-risk {
+  padding-top: 22px;
+}
+.app-clean .fx-risk .fx-label {
+  font-size: 13px;
+}
+.app-clean .fx-desk .fx-secondary {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  padding: 0;
+  justify-content: flex-start;
+  gap: 12px;
+}
+.app-clean .fx-desk .fx-primary:hover:not(:disabled) {
+  filter: none;
+  background: var(--color-primary-hover);
+}
+.app-clean .fx-desk .fx-risk button {
+  color: var(--color-accent);
+  background: transparent;
+  box-shadow: none;
+}
+.app-clean .fx-active-alert {
+  background: transparent;
+  border-radius: 0;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--color-line);
+}
+/* Sponsors: identity, commitment figures and schedule share the same canvas. */
+:root[data-theme]
+  .app-clean
+  :is(
+    .sponsor-reference-summary,
+    .sponsor-reference-schedule,
+    .sponsor-reference-panel
+  ) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.app-clean .sponsor-reference-summary {
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr);
+  min-height: 0;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-line);
+}
+.app-clean .sponsor-reference-person {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  align-content: start;
+}
+.app-clean .sponsor-reference-person p {
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+.app-clean .sponsor-reference-avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 15px;
+}
+.app-clean .sponsor-reference-person {
+  grid-template-columns: 44px minmax(0, 1fr);
+}
+.app-clean .sponsor-reference-commitment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 32px;
+}
+.app-clean .commitment-total,
+.app-clean .commitment-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  min-height: 0;
+}
+.app-clean .commitment-row > b {
+  display: none;
+}
+.app-clean .commitment-total strong {
+  color: var(--color-ink);
+}
+.app-clean .commitment-row strong {
+  font-size: 22px;
+  color: var(--color-ink);
+}
+.app-clean .sponsor-reference-schedule .schedule-title {
+  padding: 0 0 18px;
+}
+.app-clean .schedule-head,
+.app-clean .schedule-line {
+  padding-inline: 0;
+  grid-template-columns: 22% minmax(0, 1fr) 18% 18%;
+  gap: 12px;
+}
+.app-clean .schedule-head {
+  background: transparent;
+  border-top: 0;
+  font-weight: 400;
+}
+.app-clean .schedule-line em {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+.app-clean .sponsor-reference-panel {
+  min-height: 0;
+  padding: 0;
+  max-width: 650px;
+}
+.app-clean .sponsor-reference-panel h3 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.app-clean .sponsor-reference-panel.privacy > svg {
+  margin-bottom: 12px;
+}
+/* Assistant: questions are actions, not decorative feature cards. */
+:root[data-theme] .app-clean .agent-chat-workspace {
+  background: var(--color-canvas);
+}
+.app-clean .agent-welcome-state {
+  max-width: 620px;
+  padding-top: 32px;
+}
+.app-clean .agent-welcome-state h2 {
+  font-size: 28px;
+  letter-spacing: -0.025em;
+  margin: 0 0 28px;
+}
+.app-clean .agent-starters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-top: 0;
+}
+:root[data-theme] .app-clean .agent-starters button {
+  min-height: 52px;
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-ink);
+}
+:root[data-theme] .app-clean .agent-starters button:hover {
+  background: transparent;
+  color: var(--color-accent);
+}
+.app-clean .agent-starters button > svg {
+  width: 16px;
+  height: 16px;
+}
+.app-clean .agent-composer-wrap form {
+  min-height: 58px;
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 14px 56px 14px 16px;
+}
+.app-clean .agent-composer-wrap form input {
+  margin: 0;
+  min-height: 28px;
+}
+.app-clean .agent-composer-wrap form > button {
+  bottom: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+/* Wallet balances use a table instead of independent oversized cards. */
+.app-clean .balance-workspace {
+  max-width: 1180px;
+  margin-inline: auto;
+}
+.app-clean .balance-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.app-clean .balance-total > span {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.app-clean .balance-total > strong {
+  font-size: 42px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.app-clean .balance-total small {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.app-clean .balance-table-head,
+.app-clean .balance-account-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 1fr) minmax(120px, 0.7fr);
+  gap: 24px;
+  align-items: center;
+}
+.app-clean .balance-table-head {
+  font-size: 12px;
+  color: var(--color-muted);
+  padding-bottom: 12px;
+}
+.app-clean .balance-table-head > :not(:first-child),
+.app-clean .balance-account-row > :not(:first-child) {
+  text-align: right;
+}
+.app-clean .balance-account-row {
+  padding: 22px 0;
+  border-top: 1px solid var(--color-line);
+}
+.app-clean .balance-account-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.app-clean .balance-account-row > div > strong {
+  font-size: 16px;
+}
+.app-clean .balance-account-row > div > span {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.app-clean .balance-account-row > strong {
+  font-size: 22px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.app-clean .balance-account-row > span {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.app-clean .balance-analysis {
+  padding-top: 24px;
+  border-top: 1px solid var(--color-line);
+}
+.app-clean .balance-analysis h3 {
+  font-size: 16px;
+}
+.app-clean .balance-analysis dl {
+  max-width: 420px;
+  margin: 20px 0;
+}
+.app-clean .balance-analysis dl > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 0;
+  font-size: 13px;
+}
+.app-clean .balance-analysis dd {
+  margin: 0;
+  color: var(--color-muted);
+}
+.app-clean .balance-analysis p {
+  font-size: 13px;
+  color: var(--color-muted);
+  max-width: 620px;
+}
+/* Security settings read as settings, without blanket reassurance. */
+.app-clean .security-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  max-width: 780px;
+}
+:root[data-theme] .app-clean .security-grid .control {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 22px 0;
+  min-height: 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  border-radius: 0;
+  box-shadow: none;
+}
+.app-clean .security-grid .control > svg {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  background: transparent;
+  color: var(--color-muted);
+}
+.app-clean .security-grid .control strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.app-clean .security-grid .control p {
+  margin: 5px 0 0;
+  font-size: 12px;
+}
+.app-clean .security-grid .control > span {
+  color: var(--color-ink);
+  background: transparent;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.app-clean .disclosure-button {
+  align-self: flex-start;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  min-height: 40px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-accent);
+  box-shadow: none;
+}
+.app-clean .disclosure-button[aria-expanded="true"] > svg {
+  transform: rotate(90deg);
+}
+:root[data-theme] .app-clean .security-workspace .section-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 22px 0 0;
+  border-top: 1px solid var(--color-line);
+}
+.app-clean .audit-table {
+  overflow-x: auto;
+}
+.app-clean .audit-head,
+.app-clean .audit-row {
+  min-width: 660px;
+  background: transparent;
+}
+/* Alternate workspaces follow the same grouping rules. */
+:root[data-theme]
+  .app-clean
+  .workspace
+  :is(
+    .workspace-primary,
+    .workspace-side,
+    .scenario-workspace,
+    .data-panel,
+    .sponsor-profile,
+    .commitment-board,
+    .schedule,
+    .request-builder,
+    .privacy-panel,
+    .departure-score,
+    .departure-tasks,
+    .document-list,
+    .deadline-track
+  ) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.app-clean
+  .workspace
+  :is(
+    .workspace-primary,
+    .workspace-side,
+    .scenario-workspace,
+    .data-panel,
+    .request-builder,
+    .privacy-panel,
+    .departure-score,
+    .departure-tasks,
+    .document-list,
+    .deadline-track
+  ) {
+  padding: 0;
+}
+.app-clean .workspace .signal {
+  background: transparent;
+  border-radius: 0;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+.app-clean .workspace .signal p {
+  font-size: 12px;
+}
+.app-clean .workspace .commitment-board > div {
+  background: transparent;
+  padding: 16px 0;
+}
+.app-clean
+  .workspace
+  :is(.schedule, .document-list, .deadline-track, .departure-tasks)
+  > :is(div, button) {
+  background: transparent;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+}
+.app-clean .workspace .privacy-panel button {
+  background: transparent;
+  border-radius: 0;
+}
+.app-clean .connection-screen {
+  background: var(--color-canvas);
+}
+@media (max-width: 980px) {
+  .app-clean .move-board-grid {
+    grid-template-columns: 1fr;
+  }
+  .app-clean .move-board .cost-card {
+    padding-top: 26px;
+    border-top: 1px solid var(--color-line);
+  }
+}
+@media (max-width: 800px) {
+  .app-clean > .menu {
+    top: 12px;
+    left: 12px;
+    width: 40px;
+    height: 40px;
+    transform: none;
+    border-radius: 8px;
+    box-shadow: none;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    border: 1px solid var(--color-line);
+  }
+  .app-clean > main .content {
+    padding-top: 66px;
+  }
+  .app-clean .sponsor-reference-summary {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .app-clean .sponsor-reference-person {
+    border: 0;
+  }
+  .app-clean .sponsor-reference-commitment {
+    gap: 24px;
+  }
+  .app-clean .agent-chat-toolbar {
+    padding: 0 16px 12px;
+  }
+  :root[data-theme] .app-clean .content:has(.agent-functional) {
+    padding-top: 66px;
+    height: 100dvh;
+    box-sizing: border-box;
+  }
+  .app-clean .agent-welcome-state {
+    padding: 24px 16px 0;
+  }
+  .app-clean .agent-welcome-state h2 {
+    font-size: 24px;
+  }
+  .app-clean .balance-table-head,
+  .app-clean .balance-account-row {
+    grid-template-columns: minmax(0, 1fr) minmax(145px, 1fr);
+    gap: 12px;
+  }
+  .app-clean .balance-table-head > :last-child {
+    display: none;
+  }
+  .app-clean .balance-account-row > span {
+    grid-column: 2;
+    font-size: 12px;
+  }
+  .app-clean .balance-account-row > span::before {
+    content: "≈ ";
+  }
+  .app-clean .balance-account-row > div {
+    grid-row: 1 / 3;
+  }
+  .app-clean .balance-account-row > strong {
+    font-size: 20px;
+  }
+}
+@media (max-width: 760px) {
+  .app-clean .fx-grid {
+    gap: 28px;
+  }
+  .app-clean .fx-side {
+    padding: 24px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--color-line);
+  }
+  .app-clean .fx-side .fx-card > div {
+    padding-inline: 0;
+  }
+}
+@media (max-width: 620px) {
+  .app-clean
+    :is(
+      .page-intro,
+      .move-board-header,
+      .sponsor-reference-header,
+      .workspace-title,
+      .fx-heading,
+      .pay-heading
+    )
+    h2 {
+    font-size: 27px;
+  }
+  .app-clean .page-intro {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .app-clean .move-board-header {
+    align-items: stretch;
+  }
+  .app-clean .move-board .arrival-summary {
+    gap: 20px;
+    padding-inline: 0;
+  }
+  .app-clean .arrival-summary-breakdown {
+    flex-basis: 100%;
+  }
+  .app-clean .schedule-head,
+  .app-clean .schedule-line {
+    grid-template-columns: 92px minmax(0, 1fr) 62px;
+    gap: 10px;
+    padding: 12px 0;
+  }
+  .app-clean .schedule-head {
+    height: auto;
+  }
+  .app-clean .schedule-head > span:nth-child(3),
+  .app-clean .schedule-line > span:nth-child(3) {
+    display: block;
+    text-align: right;
+  }
+  .app-clean .schedule-head > span:nth-child(4) {
+    display: none;
+  }
+  .app-clean .schedule-line > em {
+    grid-column: 2;
+    font-size: 11px;
+  }
+  .app-clean .sponsor-reference-commitment {
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .app-clean .commitment-total strong,
+  .app-clean .commitment-row strong {
+    font-size: 21px;
+  }
+  .app-clean .commitment-total span,
+  .app-clean .commitment-row span {
+    font-size: 11px;
+  }
+  .app-clean .balance-workspace .page-intro .primary {
+    min-height: 38px;
+    font-size: 12px;
+  }
+  .app-clean .balance-total > strong {
+    font-size: 36px;
+  }
+  .app-clean .fx-tabs {
+    gap: 20px;
+  }
+  .app-clean .security-grid .control {
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-clean main button,
+  .app-clean .sidebar {
+    transition: none;
+  }
+}
+
+/* Explicit corrections for older layout rules with higher priority. */
+:root[data-theme] .app-clean .agent-chat-workspace {
+  background: var(--color-canvas) !important;
+}
+:root[data-theme] .app-clean .agent-composer-wrap form {
+  display: block;
+  position: relative;
+  min-height: 58px;
+  padding: 14px 60px 14px 16px;
+  box-sizing: border-box;
+}
+:root[data-theme] .app-clean .agent-composer-wrap form input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0;
+}
+:root[data-theme] .app-clean .agent-composer-wrap form > button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  bottom: auto;
+  left: auto;
+  margin: 0;
+  transform: none;
+}
+:root[data-theme] .app-clean .security-grid {
+  border: 0;
+}
+:root[data-theme] .app-clean .security-grid .control {
+  padding: 22px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--color-line) !important;
+}
+:root[data-theme] .app-clean .security-workspace > .disclosure-button {
+  margin-left: 0;
+  max-width: none;
+  justify-content: flex-start;
+}
+:root[data-theme] .app-clean .sponsor-reference-header .sponsor-reference-tabs {
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+.app-clean .schedule-no-status :is(.schedule-head, .schedule-line) {
+  grid-template-columns: 22% minmax(0, 1fr) 18%;
+}
+.app-clean
+  .schedule-no-status
+  :is(.schedule-head, .schedule-line)
+  > :last-child {
+  text-align: right;
+}
+.app-clean .profile-avatar {
+  color: var(--color-alabaster-grey-50);
+  background: var(--color-primary);
+}
+.app-clean
+  :is(.profile-grid, .location-section, .security-grid + .disclosure-button) {
+  animation: none;
+}
+@media (max-width: 620px) {
+  .app-clean .schedule-no-status :is(.schedule-head, .schedule-line) {
+    grid-template-columns: 92px minmax(0, 1fr) 62px;
+  }
+}
+
+:root[data-theme] .app-clean .move-board .cost-list > div.paid {
+  background: transparent;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+}
+:root[data-theme] .app-clean .disclosure-button,
+:root[data-theme] .app-clean .disclosure-button:hover {
+  width: auto;
+  background: transparent;
+  border: 0;
+  color: var(--color-accent);
+  justify-content: flex-start;
+}
+.app-clean .sponsor-overview-content {
+  display: grid;
+  gap: 28px;
+}
+:root[data-theme] .app-clean .audit-row > span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.app-clean .audit-head,
+.app-clean .audit-row > strong {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+}
+@media (max-width: 620px) {
+  :root[data-theme] .app-clean .profile-edit-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+  }
+  :root[data-theme] .app-clean .profile-edit-actions > button {
+    width: auto;
+  }
+}
+
+:root[data-theme] .app-clean .sponsor-reference-person,
+:root[data-theme] .app-clean .schedule-head {
+  background: transparent;
+}
+:root[data-theme] .app-clean .agent-chat-workspace .agent-welcome-state h2 {
+  font-size: 28px;
+  letter-spacing: -0.025em;
+}
+:root[data-theme] .app-clean .page-view .page-intro {
+  border: 0;
+}
+:root[data-theme] .app-clean .page-view .page-intro h2 {
+  font-size: 30px;
+}
+@media (max-width: 620px) {
+  :root[data-theme] .app-clean .agent-chat-workspace .agent-welcome-state h2 {
+    font-size: 24px;
+  }
+  :root[data-theme] .app-clean .page-view .page-intro h2 {
+    font-size: 27px;
+  }
+}
+
+/* Leave room for the disclosure chevron when it rotates. */
+:root[data-theme] .app-clean .disclosure-button {
+  padding-right: 6px;
+}
+
+.arrival-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 36px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--color-line);
+}
+.arrival-charts figure {
+  margin: 0;
+  min-width: 0;
+}
+.arrival-charts figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.arrival-charts figcaption strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.arrival-charts figcaption > span {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.arrival-breakdown-body {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 16px;
+}
+.arrival-chart-legend {
+  flex: 1;
+  min-width: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+.arrival-chart-legend li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.arrival-chart-legend li > span:nth-child(2) {
+  flex: 1;
+}
+.arrival-chart-legend strong {
+  font-weight: 500;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+.arrival-outlook-plot {
+  height: 240px;
+  width: 100%;
+  margin-top: 16px;
+}
+.arrival-outlook-key {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-top: 12px;
+}
+.arrival-outlook-key span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.arrival-outlook-key i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+@media (max-width: 1100px) {
+  .arrival-charts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .arrival-breakdown-body {
+    gap: 28px;
+  }
+}
+@media (max-width: 480px) {
+  .arrival-breakdown-body {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .arrival-chart-legend {
+    width: 100%;
+  }
+  .arrival-outlook-plot {
+    height: 220px;
+  }
+}
