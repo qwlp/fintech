@@ -1,0 +1,686 @@
+.sponsor-connect {
+  --connect-ink: #172b43;
+  --connect-muted: #718096;
+  --connect-line: #e2e8f0;
+  background: #fff;
+  color: var(--connect-ink);
+  border: 1px solid var(--connect-line);
+  border-radius: 20px;
+  padding: 28px;
+  overflow: hidden;
+}
+.sponsor-connect .connect-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.sponsor-connect .connect-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: #eaf2fc;
+  color: #32669b;
+  flex-shrink: 0;
+}
+.sponsor-connect h2,
+.sponsor-connect h3,
+.sponsor-connect p {
+  margin: 0;
+}
+.sponsor-connect .connect-heading h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.sponsor-connect .connect-heading p {
+  font-size: 13px;
+  color: var(--connect-muted);
+  margin-top: 5px;
+}
+.sponsor-connect .invite-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border: 1px solid var(--connect-line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.sponsor-connect .invite-main {
+  padding: 20px 24px 0;
+  min-width: 0;
+}
+.sponsor-connect .invite-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sponsor-connect .invite-switch {
+  display: flex;
+  padding: 3px;
+  background: #f1f5f9;
+  border-radius: 9px;
+  gap: 3px;
+}
+.sponsor-connect .invite-switch button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 7px 12px;
+  background: transparent;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--connect-muted);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+}
+.sponsor-connect .invite-switch button.selected {
+  background: #fff;
+  color: var(--connect-ink);
+  box-shadow: 0 1px 4px #172b4312;
+}
+.sponsor-connect .invite-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #32669b;
+  white-space: nowrap;
+}
+.sponsor-connect .invite-live i {
+  width: 6px;
+  height: 6px;
+  background: #4c8bc9;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px #4c8bc912;
+}
+.sponsor-connect .invite-display {
+  min-height: 222px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 22px 0;
+}
+.sponsor-connect .invite-caption {
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  font-weight: 600;
+  color: var(--connect-muted);
+}
+.sponsor-connect .invite-digits {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+}
+.sponsor-connect .invite-digits span {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: clamp(18px, 2.4vw, 30px);
+  letter-spacing: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--connect-line);
+  border-radius: 10px;
+  background: #f7faff;
+}
+.sponsor-connect .invite-copy {
+  min-width: 138px;
+  background: #32669b;
+  color: #fff;
+  border-radius: 9px;
+  box-shadow: none;
+}
+.sponsor-connect .invite-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--connect-line);
+  padding: 14px 0;
+  font-size: 11px;
+  color: var(--connect-muted);
+}
+.sponsor-connect .invite-footer button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.sponsor-connect .invite-qr {
+  background: #fff;
+  padding: 6px;
+  border: 1px solid var(--connect-line);
+  border-radius: 12px;
+  line-height: 0;
+}
+.sponsor-connect .invite-start {
+  min-height: 275px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 0 35px;
+}
+.sponsor-connect .invite-start-symbol {
+  color: #6795c2;
+  margin-bottom: 18px;
+}
+.sponsor-connect .invite-start h3 {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+}
+.sponsor-connect .invite-start p {
+  font-size: 12px;
+  color: var(--connect-muted);
+  margin: 8px 0 22px;
+}
+.sponsor-connect .invite-start button {
+  background: #32669b;
+  color: #fff;
+  border-radius: 9px;
+}
+.sponsor-connect .connection-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.sponsor-connect form {
+  max-width: 540px;
+}
+.sponsor-connect label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.sponsor-connect .connection-list {
+  display: grid;
+  gap: 12px;
+  padding-top: 20px;
+  margin-top: 24px;
+  border-top: 1px solid var(--connect-line);
+}
+.sponsor-connect .connection-list h3 {
+  font-size: 14px;
+  font-weight: 500;
+}
+.sponsor-connect .connection-list p {
+  font-size: 12px;
+  color: var(--connect-muted);
+}
+.sponsor-connect .connection-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.sponsor-connect .connection-row strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.sponsor-connect .invite-camera {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 18px;
+  border-radius: 12px;
+}
+.sponsor-connect .connection-message {
+  font-size: 12px;
+  margin-top: 14px;
+  overflow-wrap: anywhere;
+  color: var(--connect-muted);
+  animation: connect-appear 0.2s ease-out;
+}
+.sponsor-connect button {
+  transition:
+    transform 0.18s,
+    background 0.18s;
+}
+.sponsor-connect button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.sponsor-connect button:focus-visible {
+  outline: 2px solid #4385c6;
+  outline-offset: 3px;
+}
+.connect-spin {
+  animation: connect-spin 0.8s linear infinite;
+}
+@keyframes connect-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes connect-appear {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+[data-theme="dark"] .sponsor-connect {
+  --connect-ink: #e2eaf5;
+  --connect-muted: #94a3b8;
+  --connect-line: #334155;
+  background: #172232;
+}
+[data-theme="dark"] .sponsor-connect :is(.invite-switch, .invite-digits span) {
+  background: #1e2d40;
+}
+[data-theme="dark"] .sponsor-connect .invite-switch button.selected {
+  background: #314b6b;
+}
+@media (max-width: 760px) {
+  .sponsor-connect {
+    padding: 20px;
+  }
+  .sponsor-connect .invite-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .sponsor-connect .invite-main {
+    padding: 16px 16px 0;
+  }
+  .sponsor-connect .invite-digits span {
+    font-size: 20px;
+    padding: 10px;
+    letter-spacing: 1px;
+  }
+  .sponsor-connect .invite-live {
+    font-size: 10px;
+  }
+  .sponsor-connect .connect-heading h2 {
+    font-size: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sponsor-connect *,
+  .sponsor-connect {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.sponsor-connect .invite-workspace {
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+/* Keep the invitation on one surface. */
+.sponsor-connect {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 0 24px;
+  overflow: visible;
+}
+.sponsor-connect .invite-workspace {
+  border: 0;
+  border-radius: 0;
+  margin-inline: 0;
+  max-width: 560px;
+  overflow: visible;
+}
+.sponsor-connect .invite-main {
+  padding: 0;
+}
+.sponsor-connect .invite-display {
+  align-items: flex-start;
+  min-height: 220px;
+  padding: 24px 0;
+}
+.sponsor-connect .invite-digits {
+  justify-content: flex-start;
+}
+.sponsor-connect .invite-digits span {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+.sponsor-connect .invite-digits span + span::before {
+  content: "–";
+  color: var(--connect-muted);
+  margin-right: 8px;
+}
+.sponsor-connect .invite-qr {
+  border: 0;
+  border-radius: 0;
+  padding: 8px;
+}
+.sponsor-connect .invite-start {
+  align-items: flex-start;
+  text-align: left;
+  min-height: 220px;
+}
+[data-theme="dark"] .sponsor-connect {
+  background: transparent;
+}
+[data-theme="dark"] .sponsor-connect .invite-digits span {
+  background: transparent;
+}
+@media (max-width: 760px) {
+  .sponsor-connect {
+    padding: 8px 0 20px;
+  }
+  .sponsor-connect .invite-main {
+    padding: 0;
+  }
+  .sponsor-connect .invite-digits span {
+    padding: 0;
+  }
+}
+
+.sponsor-connect .invite-copy {
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  gap: 7px;
+  border: 1px solid var(--connect-line);
+  border-radius: 6px;
+  background: transparent;
+  color: #32669b;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 500;
+}
+.sponsor-connect .invite-copy:hover:not(:disabled) {
+  background: #eaf2fc;
+  border-color: #c5d9ef;
+}
+[data-theme="dark"] .sponsor-connect .invite-copy {
+  color: #8db8e4;
+}
+[data-theme="dark"] .sponsor-connect .invite-copy:hover:not(:disabled) {
+  background: #20334a;
+  border-color: #45617e;
+}
+
+.sponsor-workspace > .sponsor-account-content {
+  width: min(100%, 760px);
+  margin: 56px auto 0;
+  padding: 0 24px;
+}
+.sponsor-workspace .sponsor-account-content > h1 {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  margin: 10px 0 36px;
+}
+.sponsor-accept .connect-icon {
+  display: none;
+}
+.sponsor-accept .connect-heading {
+  margin-bottom: 28px;
+}
+.sponsor-accept .connect-heading h2 {
+  font-size: 18px;
+}
+.sponsor-accept form {
+  max-width: 100%;
+}
+.sponsor-accept input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid #ccd8e5;
+  border-radius: 8px;
+  background: #fff;
+  color: #172b43;
+  box-shadow: none;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 16px;
+  letter-spacing: 1px;
+  outline: none;
+}
+.sponsor-accept input:focus {
+  border-color: #4385c6;
+  box-shadow: 0 0 0 3px #4385c615;
+  outline: none;
+}
+.sponsor-accept .connection-actions {
+  margin-top: 18px;
+  gap: 12px;
+}
+.sponsor-accept .connection-actions button {
+  height: 40px;
+  border-radius: 7px;
+  border: 1px solid #ccd8e5;
+  box-shadow: none;
+  background: transparent;
+  color: #32669b;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 16px;
+}
+.sponsor-accept .connection-actions button[type="submit"] {
+  background: #32669b;
+  color: #fff;
+  border-color: #32669b;
+}
+.sponsor-accept .connection-actions button:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+[data-theme="dark"] .sponsor-accept input {
+  background: #172232;
+  color: #e2eaf5;
+  border-color: #334155;
+}
+[data-theme="dark"] .sponsor-accept .connection-actions button[type="button"] {
+  color: #8db8e4;
+  border-color: #334155;
+}
+@media (max-width: 600px) {
+  .sponsor-workspace > .sponsor-account-content {
+    margin-top: 32px;
+    padding: 0 20px;
+  }
+  .sponsor-workspace .sponsor-account-content > h1 {
+    font-size: 28px;
+    margin-bottom: 28px;
+  }
+}
+
+.sponsor-connect .sponsor-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.sponsor-connect .sponsor-list-heading h2 {
+  font-size: 18px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sponsor-connect .sponsor-list-heading h2 span {
+  font-size: 11px;
+  color: var(--connect-muted);
+  background: #e5edf6;
+  border-radius: 20px;
+  padding: 3px 8px;
+}
+.sponsor-connect .sponsor-list-heading > button {
+  height: 36px;
+  padding: 0 12px;
+  background: transparent;
+  color: #32669b;
+  border: 1px solid #c5d5e8;
+  border-radius: 6px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+}
+.sponsor-connect .connection-list {
+  border: 0;
+  margin-top: 0;
+  padding-top: 0;
+  gap: 0;
+}
+.sponsor-connect .connection-row {
+  padding: 22px 0;
+  border-top: 1px solid var(--connect-line);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sponsor-connect .connection-avatar {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e3edf9;
+  color: #32669b;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.sponsor-connect .connection-identity {
+  display: grid;
+  gap: 5px;
+  flex: 1;
+  min-width: 120px;
+}
+.sponsor-connect .connection-identity strong {
+  font-size: 15px;
+}
+.sponsor-connect .connection-identity span {
+  font-size: 12px;
+  color: var(--connect-muted);
+}
+.sponsor-connect .connection-badge {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: #32669b;
+  font-size: 11px;
+  margin-right: 24px;
+}
+.sponsor-connect .disconnect-action,
+.sponsor-connect .disconnect-confirm button {
+  border: 0;
+  background: transparent;
+  padding: 6px 0;
+  color: var(--connect-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sponsor-connect .disconnect-action:hover {
+  color: #b44a4a;
+}
+.sponsor-connect .disconnect-confirm {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+}
+.sponsor-connect .disconnect-confirm button:first-of-type {
+  color: #b44a4a;
+}
+.sponsor-connect .invite-start {
+  min-height: 0;
+  padding: 4px 0 20px;
+}
+.sponsor-connect .invite-start-symbol,
+.sponsor-connect .invite-start h3,
+.sponsor-connect .invite-start p {
+  display: none;
+}
+[data-theme="dark"] .sponsor-connect .connection-avatar,
+[data-theme="dark"] .sponsor-connect .sponsor-list-heading h2 span {
+  background: #20334a;
+  color: #8db8e4;
+}
+@media (max-width: 600px) {
+  .sponsor-connect .connection-badge {
+    margin-right: 0;
+  }
+  .sponsor-connect .disconnect-action {
+    margin-left: 60px;
+  }
+}
+
+.invite-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: #10223866;
+  backdrop-filter: blur(4px);
+  animation: connect-appear 0.18s ease-out;
+}
+.sponsor-connect.invite-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 121;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 28px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 24px 80px #10223830;
+}
+.invite-modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.sponsor-connect .invite-modal-heading h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.sponsor-connect .invite-modal-heading p {
+  font-size: 13px;
+  color: var(--connect-muted);
+  margin-top: 6px;
+}
+.invite-modal-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #718096;
+  cursor: pointer;
+}
+.invite-modal-close:hover {
+  background: #f1f5f9;
+}
+.sponsor-connect.invite-modal .invite-display {
+  align-items: center;
+}
+.sponsor-connect.invite-modal .invite-digits {
+  justify-content: center;
+}
+[data-theme="dark"] .sponsor-connect.invite-modal {
+  background: #172232;
+  border-color: #334155;
+}

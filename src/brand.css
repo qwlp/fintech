@@ -1,0 +1,68 @@
+.passport-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--color-ink, #0c1927);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.passport-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--color-primary-soft, #dee5ed);
+  color: var(--ui-primary, #244b75);
+  border: 1px solid var(--color-line, #c0cad8);
+}
+.passport-brand-name {
+  display: grid;
+  gap: 3px;
+  line-height: 1.1;
+}
+.passport-brand-name strong {
+  font:
+    650 16px Manrope,
+    sans-serif;
+  letter-spacing: -0.025em;
+}
+.passport-brand-name > span {
+  font:
+    500 9px "DM Sans",
+    sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-muted, #4f637d);
+}
+.sidebar-clean .passport-brand {
+  padding: 4px 10px 30px;
+}
+.auth-story .passport-brand {
+  color: inherit;
+}
+.demo-sidebar .passport-brand {
+  padding: 0;
+  margin-bottom: 25px;
+}
+.demo-sidebar .passport-brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+.demo-sidebar .passport-brand-name strong {
+  font-size: 12px;
+}
+.demo-sidebar .passport-brand-name > span {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+@media (max-width: 680px) {
+  .home-header .passport-brand-name strong {
+    font-size: 14px;
+  }
+  .home-header .passport-brand-mark {
+    width: 32px;
+    height: 32px;
+  }
+}

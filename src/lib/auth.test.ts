@@ -1,0 +1,203 @@
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { convexTest } from "convex-test";
+import { decodeJwt, exportJWK, exportPKCS8, generateKeyPair } from "jose";
+import schema from "../../convex/schema";
+import { api } from "../../convex/_generated/api";
+
+const modules = import.meta.glob("../../convex/**/*.ts");
+beforeAll(async () => {
+  const keys = await generateKeyPair("RS256", { extractable: true });
+  vi.stubEnv("CONVEX_SITE_URL", "https://auth-test.convex.site");
+  vi.stubEnv(
+    "JWT_PRIVATE_KEY",
+    (await exportPKCS8(keys.privateKey)).trimEnd().replace(/\n/g, " "),
+  );
+  vi.stubEnv(
+    "JWKS",
+    JSON.stringify({
+      keys: [{ use: "sig", ...(await exportJWK(keys.publicKey)) }],
+    }),
+  );
+});
+async function accountFixture(role = "Student") {
+  const t = convexTest(schema, modules);
+  const account = await t.run(async (ctx) => {
+    const userId = await ctx.db.insert("users", {
+      email: "owner@example.com",
+      name: "Owner",
+    });
+    const accountId = await ctx.db.insert("accounts", {
+      userId,
+      email: "owner@example.com",
+      name: "Owner",
+      initials: "O",
+      role,
+      planName: "My Study Plan",
+      countryFrom: "",
+      countryTo: "",
+      university: "",
+      course: "",
+      paymentStatus: "not_started",
+      selectedRoute: "",
+      sponsorRequestSent: false,
+    });
+    return { userId, accountId };
+  });
+  return {
+    t,
+    owner: t.withIdentity({ subject: `${account.userId}|session` }),
+    ...account,
+  };
+}
+describe("account authorization", () => {
+  it("rejects anonymous reads and writes", async () => {
+    const { t, accountId } = await accountFixture();
+    await expect(t.query(api.accounts.bootstrap, {})).rejects.toThrow(
+      "Sign in",
+    );
+    await expect(
+      t.mutation(api.accounts.setRoute, { accountId, route: "wise" }),
+    ).rejects.toThrow("Sign in");
+  });
+  it("isolates a second user's reads and rejects writes to another account", async () => {
+    const { t, owner, accountId } = await accountFixture();
+    const otherUser = await t.run((ctx) =>
+      ctx.db.insert("users", { email: "other@example.com" }),
+    );
+    const other = t.withIdentity({ subject: `${otherUser}|session` });
+    await expect(other.query(api.accounts.bootstrap, {})).rejects.toThrow(
+      "Account access denied",
+    );
+    await expect(
+      other.mutation(api.accounts.resetPayment, { accountId }),
+    ).rejects.toThrow("Account access denied");
+    const result = await owner.query(api.accounts.bootstrap, {});
+    expect(result.account._id).toBe(accountId);
+    expect(result.costs).toEqual([]);
+    expect(result.funding).toEqual([]);
+  });
+  it("keeps new account configuration free from demo data", async () => {
+    const { owner, accountId } = await accountFixture();
+    await owner.mutation(api.accounts.ensureConfig, { accountId });
+    expect((await owner.query(api.accounts.bootstrap, {})).config).toEqual({});
+  });
+  it("persists the sponsor role separately from student accounts", async () => {
+    const { owner } = await accountFixture("Sponsor");
+    expect((await owner.query(api.accounts.bootstrap, {})).account.role).toBe(
+      "Sponsor",
+    );
+  });
+});
+
+describe("email registration and login", () => {
+  it.each(["Student", "Sponsor"])(
+    "registers and logs in a %s with normalized email",
+    async (role) => {
+      const t = convexTest(schema, modules);
+      const result = await t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signUp",
+          email: " Person@Example.com ",
+          name: "Test Person",
+          role,
+          password: "secure-password-123",
+        },
+      });
+      expect(result.tokens?.token).toBeTruthy();
+      const account = await t.run((ctx) => ctx.db.query("accounts").unique());
+      expect(account).toMatchObject({
+        email: "person@example.com",
+        name: "Test Person",
+        role,
+      });
+      expect(account?.userId).toBeTruthy();
+      const login = await t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signIn",
+          email: "PERSON@example.com",
+          password: "secure-password-123",
+          role: role === "Student" ? "Sponsor" : "Student",
+        },
+      });
+      expect(login.tokens?.token).toBeTruthy();
+      expect(
+        (await t.run((ctx) => ctx.db.query("accounts").unique()))?.role,
+      ).toBe(role);
+      await expect(
+        t.action(api.auth.signIn, {
+          provider: "password",
+          params: {
+            flow: "signIn",
+            email: "person@example.com",
+            password: "wrong-password",
+          },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        t.action(api.auth.signIn, {
+          provider: "password",
+          params: {
+            flow: "signUp",
+            email: "person@example.com",
+            name: "Duplicate",
+            role,
+            password: "different-password",
+          },
+        }),
+      ).rejects.toThrow();
+    },
+  );
+  it("rejects invalid roles and short passwords", async () => {
+    const t = convexTest(schema, modules);
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signUp",
+          email: "test@example.com",
+          name: "Test",
+          role: "Admin",
+          password: "secure-password",
+        },
+      }),
+    ).rejects.toThrow("Choose an account type");
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signUp",
+          email: "test@example.com",
+          name: "Test",
+          role: "Student",
+          password: "short",
+        },
+      }),
+    ).rejects.toThrow();
+    expect(await t.run((ctx) => ctx.db.query("accounts").collect())).toEqual(
+      [],
+    );
+  });
+});
+
+describe("session lifecycle", () => {
+  it("invalidates the authenticated session on sign-out", async () => {
+    const t = convexTest(schema, modules);
+    const result = await t.action(api.auth.signIn, {
+      provider: "password",
+      params: {
+        flow: "signUp",
+        email: "logout@example.com",
+        name: "Session Test",
+        role: "Student",
+        password: "secure-password-123",
+      },
+    });
+    const subject = decodeJwt(result.tokens!.token).sub!;
+    const signedIn = t.withIdentity({ subject });
+    const sessionId = subject.split("|")[1];
+    await signedIn.action(api.auth.signOut, {});
+    expect(await t.run((ctx) => ctx.db.get(sessionId as any))).toBeNull();
+  });
+});

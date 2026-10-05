@@ -147,3 +147,24 @@
     height: 100vh;
   }
 }
+
+/* Portal escapes the sidebar's clipping and transformed containing block. */
+.notification-popover.notification-overlay {
+  position: fixed;
+  top: auto;
+  right: auto;
+  bottom: 86px;
+  left: min(260px, max(12px, calc(100vw - 372px)));
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(480px, calc(100dvh - 110px));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+  border-radius: 12px;
+  z-index: 100;
+}
+@media (max-width: 800px) {
+  .notification-popover.notification-overlay { left: 12px; bottom: 24px; }
+}

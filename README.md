@@ -45,3 +45,42 @@ The frontend is React + TypeScript on Vite/Bun. Convex stores the account, plan 
 ## Scope note
 
 This remains a sandbox MVP. The seeded profile is intentionally passwordless for a frictionless product demo; production authentication, real provider connections, live FX rates, and compliance controls are still required before handling real financial data or funds.
+
+Email accounts use Convex Auth with email/password credentials. Registration
+creates either a Student or Sponsor account; role selection is immutable during
+login. Student accounts start with an empty study profile and financial records.
+Sponsors have a separate account home. Students can create single-use, 24-hour invitations in Sponsors and share a code, link, or QR. Sponsors enter the code or scan the QR to connect; either account can disconnect. Linking shares names only and does not grant access to balances, spending, or other sponsors. Camera scanning requires HTTPS (or localhost) and camera permission.
+The public home page includes a local budget estimate and links to both flows.
+
+To configure the development deployment with Bun:
+
+```sh
+bun install
+bun run auth:setup
+bunx convex dev --once
+bun run dev
+```
+
+`auth:setup` generates the JWT signing keys directly on the configured development
+deployment and preserves existing keys. Keep these keys out of `VITE_*` variables.
+Convex account functions require an authenticated owner, and the old demo seed
+is now internal. Email verification and emailed password recovery are not enabled;
+they require an email delivery provider. Payments remain sandbox simulations.
+
+## AI chatbot
+
+The authenticated AI Agent uses OpenRouter with MiniMax M2.5 and routes to the
+cheapest available provider. Replies include recent conversation history and
+server-calculated account totals. The model cannot execute or approve payments.
+
+Add `OPENROUTER_KEY` to `.env`, then configure and sync Convex:
+
+```sh
+bun run ai:setup
+bunx convex dev --once
+```
+
+The setup script sends the key to the configured development deployment through
+stdin. Keep it server-side; never add a `VITE_` prefix. To change models, set
+`OPENROUTER_MODEL` in the Convex deployment environment. Failed replies leave
+the conversation unchanged so you can retry.

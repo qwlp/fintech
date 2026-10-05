@@ -1,8 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
+import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  ...authTables,
   accounts: defineTable({
+    userId: v.optional(v.id("users")),
     email: v.string(),
     name: v.string(),
     initials: v.string(),
@@ -22,7 +25,7 @@ export default defineSchema({
     ),
     selectedRoute: v.string(),
     sponsorRequestSent: v.boolean(),
-  }).index("by_email", ["email"]),
+  }).index("by_email", ["email"]).index("by_user", ["userId"]),
   costs: defineTable({
     accountId: v.id("accounts"),
     key: v.string(),
@@ -41,7 +44,14 @@ export default defineSchema({
     status: v.string(),
     available: v.string(),
   }).index("by_account", ["accountId"]),
+  sponsorInvites: defineTable({
+    accountId: v.id("accounts"),
+    code: v.string(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+  }).index("by_code", ["code"]).index("by_account", ["accountId"]),
   sponsors: defineTable({
+    sponsorAccountId: v.optional(v.id("accounts")),
     accountId: v.id("accounts"),
     key: v.string(),
     name: v.string(),
@@ -49,7 +59,7 @@ export default defineSchema({
     commitment: v.number(),
     nextDate: v.string(),
     permissions: v.array(v.string()),
-  }).index("by_account", ["accountId"]),
+  }).index("by_account", ["accountId"]).index("by_sponsor", ["sponsorAccountId"]),
   wallets: defineTable({
     accountId: v.id("accounts"),
     currency: v.string(),
@@ -76,11 +86,12 @@ export default defineSchema({
     actor: v.string(),
   }).index("by_account", ["accountId"]),
   messages: defineTable({
+    chatId: v.optional(v.string()),
     accountId: v.id("accounts"),
     from: v.union(v.literal("agent"), v.literal("user")),
     text: v.string(),
     timestamp: v.number(),
-  }).index("by_account", ["accountId"]),
+  }).index("by_account", ["accountId"]).index("by_chat", ["accountId", "chatId"]),
   notifications: defineTable({
     accountId: v.id("accounts"),
     title: v.string(),

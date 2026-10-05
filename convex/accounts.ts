@@ -1,19 +1,22 @@
 import {
   mutationGeneric as mutation,
+  actionGeneric as action,
+  internalMutationGeneric as internalMutation,
   queryGeneric as query,
 } from "convex/server";
 import { v } from "convex/values";
 
+import { requireAccount } from "./ownership";
+import { internal } from "./_generated/api";
+import { internalQuery } from "./_generated/server";
+import { requestReply } from "./openrouter";
+
 const DEMO_EMAIL = "dara@financialpassport.demo";
 
 export const bootstrap = query({
-  args: { email: v.string() },
-  handler: async (ctx, { email }) => {
-    const account = await ctx.db
-      .query("accounts")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .unique();
-    if (!account) return null;
+  args: {},
+  handler: async (ctx) => {
+    const account = await requireAccount(ctx);
     const accountId = account._id;
     const [
       costs,
@@ -101,7 +104,7 @@ export const bootstrap = query({
   },
 });
 
-export const seedDemo = mutation({
+export const seedDemo = internalMutation({
   args: {},
   handler: async (ctx) => {
     const existing = await ctx.db
@@ -395,12 +398,15 @@ export const seedDemo = mutation({
 
 export const setRoute = mutation({
   args: { accountId: v.id("accounts"), route: v.string() },
-  handler: async (ctx, args) =>
-    ctx.db.patch(args.accountId, { selectedRoute: args.route }),
+  handler: async (ctx, args) => {
+    await requireAccount(ctx, args.accountId);
+    return ctx.db.patch(args.accountId, { selectedRoute: args.route });
+  },
 });
 export const toggleChecklist = mutation({
   args: { accountId: v.id("accounts"), key: v.string() },
   handler: async (ctx, args) => {
+    await requireAccount(ctx, args.accountId);
     const item = (
       await ctx.db
         .query("checklist")
@@ -413,6 +419,7 @@ export const toggleChecklist = mutation({
 export const markNotificationsRead = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, args) => {
+    await requireAccount(ctx, args.accountId);
     for (const item of await ctx.db
       .query("notifications")
       .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
@@ -423,6 +430,7 @@ export const markNotificationsRead = mutation({
 export const requestSponsor = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, args) => {
+    await requireAccount(ctx, args.accountId);
     await ctx.db.patch(args.accountId, { sponsorRequestSent: true });
     await ctx.db.insert("auditEvents", {
       accountId: args.accountId,
@@ -448,6 +456,7 @@ export const updateProfile = mutation({
     fundingAmount: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAccount(ctx, args.accountId);
     const {
       accountId,
       courseStart,
@@ -498,6 +507,7 @@ export const createSponsorRequest = mutation({
     neededBy: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAccount(ctx, args.accountId);
     if (!Number.isFinite(args.amount) || args.amount <= 0)
       throw new Error("Amount must be positive");
     await ctx.db.insert("sponsorRequests", {
@@ -524,6 +534,7 @@ export const setSponsorPermission = mutation({
     enabled: v.boolean(),
   },
   handler: async (ctx, args) => {
+    await requireAccount(ctx, args.accountId);
     const sponsor = (
       await ctx.db
         .query("sponsors")
@@ -547,6 +558,7 @@ export const createRateAlert = mutation({
     targetRate: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAccount(ctx, args.accountId);
     if (!Number.isFinite(args.targetRate) || args.targetRate <= 0)
       throw new Error("Target rate must be positive");
     for (const alert of await ctx.db
@@ -566,6 +578,8 @@ export const createRateAlert = mutation({
 export const ensureConfig = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, { accountId }) => {
+    const owner = await requireAccount(ctx, accountId);
+    if (owner.userId || owner.email !== DEMO_EMAIL) return;
     const existing = await ctx.db
       .query("appConfig")
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
@@ -688,6 +702,7 @@ export const transitionPayment = mutation({
     ),
   },
   handler: async (ctx, { accountId, next }) => {
+    await requireAccount(ctx, accountId);
     const account = await ctx.db.get(accountId);
     if (!account) throw new Error("Account not found");
     const configRow = (
@@ -752,17 +767,10 @@ export const transitionPayment = mutation({
   },
 });
 
-export const sendMessage = mutation({
-  args: { accountId: v.id("accounts"), text: v.string() },
-  handler: async (ctx, { accountId, text }) => {
-    const value = text.trim();
-    if (!value) return;
-    await ctx.db.insert("messages", {
-      accountId,
-      from: "user",
-      text: value,
-      timestamp: Date.now(),
-    });
+export const chatContext = internalQuery({
+  args: { accountId: v.id("accounts"), chatId: v.optional(v.string()) },
+  handler: async (ctx, { accountId, chatId }) => {
+    await requireAccount(ctx, accountId);
     const [costRows, fundingRows, routeRows, configRows] = await Promise.all([
       ctx.db
         .query("costs")
@@ -794,24 +802,46 @@ export const sendMessage = mutation({
     )[0];
     const banking = (configRows.find((row) => row.key === "banking")?.value ??
       {}) as Record<string, any>;
-    const q = value.toLowerCase();
-    const reply = q.includes("rent")
-      ? `Your current confirmed funding gap is ${gap.toLocaleString("en-GB", { style: "currency", currency: "GBP" })}. Compare any rent change against the recurring housing cost in your plan before committing.`
-      : q.includes("pay") || q.includes("tuition")
-        ? `Your ${Number(banking.paymentAmount ?? 0).toLocaleString("en-GB", { style: "currency", currency: "GBP" })} instalment is ready for review. ${bestRoute?.provider ?? "The selected provider"} currently has the lowest stored total cost. Execution still requires your explicit approval.`
-        : `Your plan is ${Math.round(coverage)}% funded with a ${gap.toLocaleString("en-GB", { style: "currency", currency: "GBP" })} gap. Review the next unpaid obligation and any pending sponsor request.`;
-    await ctx.db.insert("messages", {
-      accountId,
-      from: "agent",
-      text: reply,
-      timestamp: Date.now() + 1,
-    });
+    const history = await ctx.db.query("messages")
+      .withIndex("by_chat", (q) => q.eq("accountId", accountId).eq("chatId", chatId))
+      .order("desc").take(20);
+    return {
+      totalCost, totalFunding, gap, coverage,
+      paymentAmount: Number(banking.paymentAmount ?? 0),
+      bestProvider: bestRoute?.provider ?? null,
+      history: history.reverse().map((message) => ({
+        role: message.from === "user" ? "user" : "assistant",
+        content: message.text.slice(0, 4000),
+      })),
+    };
+  },
+});
+
+export const saveChatExchange = internalMutation({
+  args: { accountId: v.id("accounts"), chatId: v.optional(v.string()), text: v.string(), reply: v.string() },
+  handler: async (ctx, { accountId, chatId, text, reply }) => {
+    await requireAccount(ctx, accountId);
+    const timestamp = Date.now();
+    await ctx.db.insert("messages", { accountId, ...(chatId ? { chatId } : {}), from: "user", text, timestamp });
+    await ctx.db.insert("messages", { accountId, ...(chatId ? { chatId } : {}), from: "agent", text: reply, timestamp: timestamp + 1 });
+  },
+});
+
+export const sendMessage = action({
+  args: { accountId: v.id("accounts"), chatId: v.optional(v.string()), text: v.string() },
+  handler: async (ctx, { accountId, chatId, text }): Promise<void> => {
+    const value = text.trim();
+    if (!value || value.length > 4000) throw new Error("Message must contain 1–4000 characters");
+    const context = await ctx.runQuery(internal.accounts.chatContext, { accountId, chatId });
+    const reply = await requestReply(context, value);
+    await ctx.runMutation(internal.accounts.saveChatExchange, { accountId, ...(chatId ? { chatId } : {}), text: value, reply });
   },
 });
 
 export const addCountryAccount = mutation({
   args: { accountId: v.id("accounts"), country: v.string(), label: v.string() },
   handler: async (ctx, { accountId, country, label }) => {
+    await requireAccount(ctx, accountId);
     if (!country.trim() || !label.trim()) throw new Error("Country and account name are required");
     if (!(await ctx.db.get(accountId))) throw new Error("Account not found");
     const rows = await ctx.db.query("appConfig").withIndex("by_account", (q) => q.eq("accountId", accountId)).collect();
@@ -825,6 +855,7 @@ export const addCountryAccount = mutation({
 export const resetPayment = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, { accountId }) => {
+    await requireAccount(ctx, accountId);
     const account = await ctx.db.get(accountId);
     if (!account) throw new Error("Account not found");
     await ctx.db.patch(accountId, { paymentStatus: "not_started" });
@@ -835,6 +866,7 @@ export const resetPayment = mutation({
 export const clearChat = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, { accountId }) => {
+    await requireAccount(ctx, accountId);
     if (!await ctx.db.get(accountId)) throw new Error("Account not found");
     const messages = await ctx.db.query("messages").withIndex("by_account", (q) => q.eq("accountId", accountId)).collect();
     for (const message of messages) await ctx.db.delete(message._id);

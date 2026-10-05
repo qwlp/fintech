@@ -15,15 +15,28 @@ body {
   letter-spacing: 0;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: var(--font-sans);
   letter-spacing: 0;
 }
 
-button { font-weight: 600; }
-strong, b { font-weight: 600; }
+button {
+  font-weight: 600;
+}
+strong,
+b {
+  font-weight: 600;
+}
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-sans);
   font-weight: 650;
   line-height: 1.3;
@@ -43,7 +56,8 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.025em !important;
 }
 
-.section-heading h3, .panel-head h3,
+.section-heading h3,
+.panel-head h3,
 .profile-page .profile-hero h3,
 .payment-section-heading h3,
 .sponsor-reference-panel h3,
@@ -53,7 +67,9 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.35 !important;
 }
 
-.eyebrow, .category-labels, .agent-thread-label {
+.eyebrow,
+.category-labels,
+.agent-thread-label {
   font-weight: 600 !important;
   letter-spacing: 0.06em !important;
 }
@@ -78,12 +94,15 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.4;
 }
 
-.sidebar .brand strong, .sidebar .brand span {
+.sidebar .brand strong,
+.sidebar .brand span {
   font-family: var(--font-sans);
 }
 
-.metric > strong, .metric-value,
-.review-amount, .wallet-account-balance,
+.metric > strong,
+.metric-value,
+.review-amount,
+.wallet-account-balance,
 .profile-summary strong {
   font-family: var(--font-sans);
   font-weight: 650;
@@ -92,4 +111,184 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Chart labels need a compact scale rather than the body text size. */
-.recharts-text { font-size: var(--text-caption); }
+.recharts-text {
+  font-size: var(--text-caption);
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-Variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DM Sans";
+  src: url("/fonts/DMSans-Variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 1000;
+  font-display: swap;
+}
+:root,
+:root[data-theme] {
+  --font-sans: "DM Sans", sans-serif;
+  --font-ui: "DM Sans", sans-serif;
+}
+.public-home,
+.auth-shell {
+  font-family: "DM Sans", sans-serif;
+}
+.public-home :is(h1, h2, h3),
+.auth-shell :is(h1, h2, h3),
+.app-showcase
+  :is(
+    h3,
+    .demo-metrics strong,
+    .demo-payment strong,
+    .demo-contribution strong
+  ) {
+  font-family: "Manrope", sans-serif !important;
+  font-feature-settings: "ss01";
+}
+.public-home .home-intro h1 {
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+.public-home .home-intro h1 span {
+  font-weight: 450;
+}
+.public-home .home-description {
+  font-size: 17px;
+  line-height: 1.65;
+}
+.public-home .home-context {
+  font-size: 14px;
+}
+.auth-shell .auth-panel h2 {
+  font-weight: 600;
+  font-size: 30px;
+  letter-spacing: -0.045em;
+}
+.public-home .home-budget-results dd {
+  font-family: "Manrope", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 680px) {
+  .public-home .home-intro h1 {
+    font-size: 42px;
+  }
+  .public-home .home-description {
+    font-size: 15px;
+  }
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/IBMPlexMono-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+.public-home .home-budget-results dd,
+.app-showcase
+  :is(
+    .demo-metrics strong,
+    .demo-contribution strong,
+    .demo-payment strong,
+    .demo-bottom > strong
+  ) {
+  font-family: "IBM Plex Mono", monospace !important;
+  font-weight: 400;
+  letter-spacing: -0.055em;
+}
+.demo-chart strong,
+.demo-living-control strong,
+.planner-toolbar > span:last-child {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+}
+:root[data-theme] {
+  --font-display: "Manrope", sans-serif;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+.public-home .home-intro h1 {
+  font-family: Geist, sans-serif !important;
+  font-size: clamp(46px, 4.8vw, 66px);
+  font-weight: 550;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+  margin-bottom: 22px;
+}
+.public-home .home-intro h1 .hero-line,
+.public-home .home-intro h1 .hero-line > span {
+  font-weight: 550;
+}
+.public-home .home-intro h1 .hero-line-secondary {
+  color: var(--home-text);
+}
+.public-home .home-description {
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 330px;
+  margin-bottom: 28px;
+}
+.hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 22px;
+}
+.hero-actions .ui-button {
+  min-height: 48px;
+  padding: 0 22px;
+}
+.hero-preview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--home-muted) !important;
+}
+.home-intro .home-sponsor-link {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--home-muted);
+}
+.public-home .home-hero {
+  min-height: 520px;
+  padding-top: 45px;
+  padding-bottom: 45px;
+}
+.home-visual .study-globe {
+  height: 440px;
+}
+@media (max-width: 680px) {
+  .public-home .home-intro h1 {
+    font-size: 46px;
+  }
+  .public-home .home-hero {
+    min-height: auto;
+    padding-top: 40px;
+    padding-bottom: 28px;
+    gap: 12px;
+  }
+  .home-visual .study-globe {
+    height: 300px;
+  }
+  .hero-actions {
+    gap: 16px;
+  }
+  .hero-preview-link {
+    font-size: 12px;
+  }
+  .public-home .home-description {
+    font-size: 15px;
+  }
+}

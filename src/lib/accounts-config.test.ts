@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { ensureConfig, sendMessage, transitionPayment, resetPayment } from "../../convex/accounts";
+import { ensureConfig, sendMessage, chatContext, saveChatExchange, transitionPayment, resetPayment } from "../../convex/accounts";
+
+vi.mock("../../convex/ownership", () => ({ requireAccount: vi.fn(async () => ({ _id: "demo", email: "dara@financialpassport.demo", role: "Student" })) }));
+
+vi.mock("../../convex/openrouter", () => ({ requestReply: vi.fn(async () => "Review your tuition payment.") }));
 
 function configDatabase(rows: Array<{ _id: string; key: string; value: Record<string, unknown> }>) {
   return {
@@ -32,18 +36,21 @@ describe("demo configuration migration", () => {
 
 
 describe("payment and chat behavior", () => {
-  it("recognizes the pay-next prompt and persists both chat messages", async () => {
-    const insert = vi.fn();
-    const data: Record<string, unknown[]> = {
-      costs: [{ amount: 24600 }], funding: [{ amount: 21900, status: "confirmed" }],
-      paymentRoutes: [{ provider: "Provider A", sourceAmount: 2574.6, fee: 8.4 }],
-      appConfig: [{ key: "banking", value: { paymentAmount: 2000 } }],
-    };
-    const db = { insert, query: (table: string) => ({ withIndex: () => ({ collect: async () => data[table] }) }) };
-    await (sendMessage as any)._handler({ db }, { accountId: "demo", text: "What should I pay next?" });
-    expect(insert).toHaveBeenCalledTimes(2);
-    expect(insert.mock.calls[1][1]).toMatchObject({ from: "agent", text: expect.stringContaining("£2,000") });
-    expect(insert.mock.calls[1][1].text).toContain("Provider A");
+  it("calls the AI with authorized context and saves the completed exchange", async () => {
+    const runQuery = vi.fn(async () => ({ gap: 2700, history: [] }));
+    const runMutation = vi.fn();
+    await (sendMessage as any)._handler({ runQuery, runMutation }, { accountId: "demo", text: " What should I pay next? " });
+    expect(runQuery).toHaveBeenCalledWith(expect.anything(), { accountId: "demo" });
+    expect(runMutation).toHaveBeenCalledWith(expect.anything(), {
+      accountId: "demo", text: "What should I pay next?", reply: "Review your tuition payment.",
+    });
+  });
+
+  it("does not persist a chat exchange when account access is denied", async () => {
+    const runMutation = vi.fn();
+    const runQuery = vi.fn(async () => { throw new Error("Account access denied"); });
+    await expect((sendMessage as any)._handler({ runQuery, runMutation }, { accountId: "other", text: "Hello" })).rejects.toThrow("Account access denied");
+    expect(runMutation).not.toHaveBeenCalled();
   });
 
   it("rejects payment transitions with missing amounts", async () => {
@@ -77,5 +84,36 @@ describe("sandbox payment recovery", () => {
     expect(patch).toHaveBeenCalledWith("demo", { paymentStatus: "completed" });
     expect(insert).toHaveBeenCalledWith("auditEvents", expect.objectContaining({ type: "PAYMENT_EXECUTED" }));
     expect(insert).toHaveBeenCalledWith("notifications", expect.objectContaining({ title: "Payment completed" }));
+  });
+});
+
+
+describe("conversation isolation", () => {
+  it("queries recent history only for the selected conversation and account", async () => {
+    const eq = vi.fn();
+    const range = { eq: (...args: unknown[]) => { eq(...args); return range; } };
+    const db = {
+      query: (table: string) => ({
+        withIndex: (_index: string, filter: (q: typeof range) => unknown) => {
+          filter(range);
+          return { collect: async () => [], order: () => ({ take: async () => [
+            { from: "user", text: "Selected chat only" },
+          ] }) };
+        },
+      }),
+    };
+    const result = await (chatContext as any)._handler({ db }, { accountId: "demo", chatId: "selected" });
+    expect(eq).toHaveBeenCalledWith("accountId", "demo");
+    expect(eq).toHaveBeenCalledWith("chatId", "selected");
+    expect(result.history).toEqual([{ role: "user", content: "Selected chat only" }]);
+  });
+
+  it("saves both messages in the same conversation without deleting history", async () => {
+    const insert = vi.fn();
+    await (saveChatExchange as any)._handler({ db: { insert } }, {
+      accountId: "demo", chatId: "selected", text: "Hello", reply: "Hi",
+    });
+    expect(insert).toHaveBeenCalledTimes(2);
+    for (const call of insert.mock.calls) expect(call[1]).toMatchObject({ accountId: "demo", chatId: "selected" });
   });
 });

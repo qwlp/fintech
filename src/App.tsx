@@ -1,3 +1,10 @@
+import { createPortal } from "react-dom";
+import SponsorConnect from "./SponsorConnect";
+import { Assistant, ChatHistory } from "./Chat";
+import type { Id } from "../convex/_generated/dataModel";
+import BudgetDonut, {planChartColors, FundingSourcesChart} from "./BudgetDonut";
+import Brand from "./Brand";
+import TuitionPlanner from "./TuitionPlanner";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
@@ -87,7 +94,7 @@ import {
   sumCosts,
 } from "./lib/finance";
 import type { AuditEvent, PaymentStatus } from "./types";
-import { convexApi, convexClient, demoEmail } from "./lib/convex";
+import { convexApi, convexClient } from "./lib/convex";
 import {
   Area,
   AreaChart,
@@ -106,6 +113,7 @@ import {
 type DatabaseState = {
   account: {
     _id: string;
+    university: string;
     name: string;
     initials: string;
     role: string;
@@ -121,7 +129,7 @@ type DatabaseState = {
     timestamp: number;
     actor: string;
   }>;
-  messages: Array<{ _id: string; from: "agent" | "user"; text: string }>;
+  messages: Array<{ _id: string; from: "agent" | "user"; text: string; timestamp?: number; chatId?: string }>;
   notifications: Array<{
     _id: string;
     title: string;
@@ -220,7 +228,7 @@ const total = sumCosts(costs),
 const burn = monthlyBurn(650, [250, 80, 70, 55, 120, 75]),
   baseRunway = runway(8900, burn);
 
-function App() {
+function App({ onSignOut }: { onSignOut: () => void }) {
   const reducedMotion = useReducedMotion();
   const pageFromHash = (): Page =>
     nav.find(
@@ -236,9 +244,23 @@ function App() {
   const [syncState, setSyncState] = useState<
     "demo" | "connecting" | "synced" | "error"
   >(convexClient ? "connecting" : "demo");
-  const seeded = useRef(false);
   const configBackfillAttempted = useRef(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationButton = useRef<HTMLButtonElement>(null);
+  const notificationPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!notificationsOpen) return;
+    const closeOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!notificationPanel.current?.contains(target) && !notificationButton.current?.contains(target)) setNotificationsOpen(false);
+    };
+    const closeEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setNotificationsOpen(false); notificationButton.current?.focus(); }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeEscape);
+    return () => { document.removeEventListener("pointerdown", closeOutside); document.removeEventListener("keydown", closeEscape); };
+  }, [notificationsOpen]);
   const [executingPayment, setExecutingPayment] = useState(false);
   const [toast, setToast] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -246,9 +268,7 @@ function App() {
     if (initial === "light" || initial === "dark") return initial;
     const saved = localStorage.getItem("financial-passport-theme");
     if (saved === "light" || saved === "dark") return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    return "light";
   });
   const [tourOpen, setTourOpen] = useState(
     () => new URLSearchParams(location.search).get("tour") === "on",
@@ -278,20 +298,14 @@ function App() {
   useEffect(() => {
     const client = convexClient;
     if (!client) return;
-    const watch = client.watchQuery(convexApi.bootstrap, { email: demoEmail });
-    const unsubscribe = watch.onUpdate(() => {
+    const watch = client.watchQuery(convexApi.bootstrap, {});
+    const update = () => {
       try {
         const result = watch.localQueryResult();
-        if (result === null && !seeded.current) {
-          seeded.current = true;
-          void client
-            .mutation(convexApi.seedDemo, {})
-            .catch(() => setSyncState("error"));
-          return;
-        }
         if (result) {
           const state = result as DatabaseState;
           setDatabase(state);
+          if (!state.account.university && !configBackfillAttempted.current) setPage("Profile");
           setSyncState("synced");
           if (!configBackfillAttempted.current) {
             configBackfillAttempted.current = true;
@@ -305,7 +319,10 @@ function App() {
       } catch {
         setSyncState("error");
       }
-    });
+    };
+    const unsubscribe = watch.onUpdate(update);
+    // The authentication screen may have already populated this query cache.
+    update();
     return unsubscribe;
   }, []);
 
@@ -364,7 +381,7 @@ function App() {
     setVariation(value);
     if (page !== "Dashboard") go("Dashboard");
   };
-  const addAudit = (type: string, detail: string, actor = "Dara Chan") =>
+  const addAudit = (type: string, detail: string, actor = account?.name ?? "Student") =>
     setLocalAudit((a) => [
       {
         id: crypto.randomUUID(),
@@ -444,10 +461,6 @@ function App() {
     if (success) announce("Payment reset");
     return success;
   };
-  const clearChat = () =>
-    account
-      ? mutate(convexApi.clearChat, { accountId: account._id })
-      : Promise.resolve(false);
   const selectRoute = (route: string) =>
     account
       ? mutate(convexApi.setRoute, { accountId: account._id, route })
@@ -460,10 +473,19 @@ function App() {
     account
       ? void mutate(convexApi.requestSponsor, { accountId: account._id })
       : announce("Demo contribution request sent");
-  const sendMessage = (text: string) =>
-    account
-      ? mutate(convexApi.sendMessage, { accountId: account._id, text })
-      : Promise.resolve(false);
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const [activeChat, setActiveChat] = useState<string | undefined>(undefined);
+  const newChat = () => { setActiveChat(crypto.randomUUID()); setShowChatHistory(false); go("AI Agent"); };
+  const sendMessage = async (text: string) => {
+    if (!account || !convexClient) return false;
+    try {
+      await convexClient.action(convexApi.sendMessage, { accountId: account._id as Id<"accounts">, text, chatId: activeChat });
+      return true;
+    } catch {
+      announce("AI reply unavailable. Please try again.");
+      return false;
+    }
+  };
   const saveProfile = (profile: Record<string, string>) =>
     account
       ? mutate(convexApi.updateProfile, {
@@ -568,15 +590,7 @@ function App() {
         >
           <X />
         </button>
-        <div className="brand">
-          <div className="brand-mark">
-            <Plane size={19} />
-          </div>
-          <div>
-            <strong>Financial</strong>
-            <span>Passport</span>
-          </div>
-        </div>
+        <Brand />
         <nav aria-label="Main navigation">
           {nav
             .filter(({ page: item }) => item !== "Profile")
@@ -591,7 +605,11 @@ function App() {
                   <motion.span
                     className="nav-motion-indicator"
                     layoutId="active-navigation"
-                    transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
+                    transition={
+                      reducedMotion
+                        ? { duration: 0 }
+                        : { type: "spring", stiffness: 420, damping: 34 }
+                    }
                     aria-hidden="true"
                   />
                 )}
@@ -622,6 +640,8 @@ function App() {
             </button>
             <div className="notification-wrap">
               <button
+                ref={notificationButton}
+                aria-controls="notification-panel"
                 aria-label="Notifications"
                 title="Notifications"
                 aria-expanded={notificationsOpen}
@@ -635,8 +655,8 @@ function App() {
                   </b>
                 )}
               </button>
-              {notificationsOpen && (
-                <div className="notification-popover">
+              {notificationsOpen && createPortal(
+                <div ref={notificationPanel} id="notification-panel" role="region" aria-label="Notifications" className="notification-popover notification-overlay">
                   <strong>Notifications</strong>
                   {(database?.notifications ?? []).map((n) => (
                     <div key={n._id}>
@@ -653,10 +673,11 @@ function App() {
                       <span>Your £2,000 instalment is due in 12 days.</span>
                     </div>
                   )}
-                </div>
+                </div>, document.body
               )}
             </div>
           </div>
+          <button className="btn secondary" onClick={onSignOut}>Sign out</button>
           <button
             className={`profile ${page === "Profile" ? "active" : ""}`}
             aria-label="Open your profile"
@@ -734,11 +755,19 @@ function App() {
               <MovePlanner go={go} config={database?.config?.move} />
             )}
             {page === "AI Agent" && (
-              <Agent
-                storedMessages={database?.messages}
-                onSend={sendMessage}
-                onClear={clearChat}
-              />
+              showChatHistory ? (
+                <ChatHistory messages={database?.messages ?? []} onNew={newChat}
+                  onBack={() => setShowChatHistory(false)}
+                  onOpen={(id) => { setActiveChat(id); setShowChatHistory(false); }} />
+              ) : (
+                <Assistant
+                  key={activeChat ?? "legacy"}
+                  messages={(database?.messages ?? []).filter((message) => message.chatId === activeChat)}
+                  onSend={sendMessage}
+                  onNew={newChat}
+                  onHistory={() => setShowChatHistory(true)}
+                />
+              )
             )}
             {page === "Payments" && (
               <Payments
@@ -763,6 +792,7 @@ function App() {
             )}
             {page === "Sponsors" && (
               <Sponsors
+                connected={!!database}
                 announce={announce}
                 requestSent={account?.sponsorRequestSent}
                 onRequest={requestSponsor}
@@ -1121,16 +1151,6 @@ function Dashboard({
   return <OverviewDashboard paid={paid} go={go} database={database} />;
 }
 
-const planChartColors = [
-  "#315c85",
-  "#4b8f8a",
-  "#d4a35b",
-  "#8c79ad",
-  "#649bc0",
-  "#c47e6a",
-  "#859b62",
-];
-
 function OverviewDashboard({
   paid,
   go,
@@ -1303,44 +1323,7 @@ function OverviewDashboard({
           >
             <div className="spending-donut">
               {planTotal > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={planCosts.filter((item) => item.amount > 0)}
-                      dataKey="amount"
-                      nameKey="name"
-                      innerRadius="70%"
-                      outerRadius="94%"
-                      paddingAngle={2}
-                      stroke="none"
-                      isAnimationActive={false}
-                    >
-                      {planCosts
-                        .filter((item) => item.amount > 0)
-                        .map((item) => (
-                          <Cell
-                            key={item.name}
-                            fill={
-                              planChartColors[
-                                planCosts.findIndex(
-                                  (cost) => cost.name === item.name,
-                                ) % planChartColors.length
-                              ]
-                            }
-                          />
-                        ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value) => formatGBP(Number(value))}
-                      contentStyle={{
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-line)",
-                        borderRadius: 8,
-                        color: "var(--color-ink)",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <BudgetDonut costs={planCosts} />
               ) : (
                 <div className="empty-donut" />
               )}
@@ -1421,59 +1404,11 @@ function OverviewDashboard({
               </figcaption>
               <div
                 className="funding-bar-chart"
-                style={{ height: Math.max(250, fundingChartData.length * 56 + 40) }}
+                style={{
+                  height: Math.max(250, fundingChartData.length * 56 + 40),
+                }}
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={fundingChartData}
-                    layout="vertical"
-                    margin={{ top: 12, right: 32, bottom: 16, left: 8 }}
-                    barSize={22}
-                  >
-                    <CartesianGrid
-                      horizontal={false}
-                      stroke="var(--color-line)"
-                      strokeDasharray="3 4"
-                    />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(value) => `£${Number(value) / 1000}k`}
-                      tick={{ fill: "var(--color-muted)", fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={Math.max(130, ...fundingChartData.map((item) => item.name.length * 6.5 + 16))}
-                      tick={{ fill: "var(--color-muted)", fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "var(--color-line)", fillOpacity: 0.25 }}
-                      formatter={(value) => [
-                        formatGBP(Number(value)),
-                        "Amount",
-                      ]}
-                      contentStyle={{
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-line)",
-                        borderRadius: 8,
-                        color: "var(--color-ink)",
-                      }}
-                    />
-                    <Bar
-                      dataKey="amount"
-                      radius={[0, 5, 5, 0]}
-                      isAnimationActive={false}
-                    >
-                      {fundingChartData.map((item, index) => (
-                        <Cell key={`${item.name}-${index}`} fill={item.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <FundingSourcesChart data={fundingChartData} />
               </div>
             </figure>
           )}
@@ -3469,7 +3404,9 @@ function MovePlanner({
             <div className="planner-cost-heading">
               <div>
                 <h3>Your costs</h3>
-                <p className="move-help">Choose which costs to include in your estimate.</p>
+                <p className="move-help">
+                  Choose which costs to include in your estimate.
+                </p>
               </div>
               <Button
                 type="button"
@@ -3504,9 +3441,14 @@ function MovePlanner({
               </Select>
             </div>
             <div className="cost-groups">
-              <section className="cost-group" aria-labelledby="upfront-costs-heading">
+              <section
+                className="cost-group"
+                aria-labelledby="upfront-costs-heading"
+              >
                 <div className="cost-group-heading">
-                  <span className="cost-group-icon"><Plane size={18} /></span>
+                  <span className="cost-group-icon">
+                    <Plane size={18} />
+                  </span>
                   <div>
                     <h4 id="upfront-costs-heading">Before you arrive</h4>
                     <span>One-time costs</span>
@@ -3520,17 +3462,28 @@ function MovePlanner({
                   {costs.filter((cost: any) => !cost.recurring).map(renderCost)}
                 </div>
               </section>
-              <section className="cost-group" aria-labelledby="monthly-costs-heading">
+              <section
+                className="cost-group"
+                aria-labelledby="monthly-costs-heading"
+              >
                 <div className="cost-group-heading">
-                  <span className="cost-group-icon"><CalendarDays size={18} /></span>
+                  <span className="cost-group-icon">
+                    <CalendarDays size={18} />
+                  </span>
                   <div>
                     <h4 id="monthly-costs-heading">Each month</h4>
                     <span>Ongoing living costs</span>
                   </div>
                 </div>
                 <div className="cost-group-total">
-                  <strong>{formatGBP(monthlyTotal)}<small>/mo</small></strong>
-                  <span>{formatGBP(monthlyTotal * months)} over {months} {months === 1 ? "month" : "months"}</span>
+                  <strong>
+                    {formatGBP(monthlyTotal)}
+                    <small>/mo</small>
+                  </strong>
+                  <span>
+                    {formatGBP(monthlyTotal * months)} over {months}{" "}
+                    {months === 1 ? "month" : "months"}
+                  </span>
                 </div>
                 <div className="cost-list recurring-costs">
                   {costs.filter((cost: any) => cost.recurring).map(renderCost)}
@@ -3803,170 +3756,6 @@ function LegacyMovePlanner({
   );
 }
 
-function Agent({
-  storedMessages,
-  onSend,
-  onClear,
-}: {
-  storedMessages?: DatabaseState["messages"];
-  onSend: (text: string) => Promise<boolean>;
-  onClear: () => Promise<boolean>;
-}) {
-  const [messages, setMessages] = useState([
-    {
-      from: "agent",
-      text: "Good morning, Dara. I can explain your plan, simulate changes, or help prepare your upcoming tuition payment.",
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
-  const sendingRef = useRef(false);
-  const [clearing, setClearing] = useState(false);
-  const conversationRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = conversationRef.current;
-    if (container) container.scrollTop = container.scrollHeight;
-  }, [storedMessages?.length, messages.length, sending]);
-  const reply = async (question: string) => {
-    if (!question.trim() || sendingRef.current || clearing) return;
-    setError("");
-    if (storedMessages) {
-      sendingRef.current = true;
-      setSending(true);
-      try {
-        const success = await onSend(question.trim());
-        if (success) setInput("");
-        else {
-          setInput(question);
-          setError("Message failed. Try again.");
-        }
-      } catch {
-        setInput(question);
-        setError("Message failed. Try again.");
-      } finally {
-        sendingRef.current = false;
-        setSending(false);
-      }
-      return;
-    } else
-      setMessages((m) => [
-        ...m,
-        { from: "user", text: question },
-        {
-          from: "agent",
-          text: question.toLowerCase().includes("rent")
-            ? "A £900/month apartment adds £3,000 over 12 months. Your funding gap would rise from £2,700 to £5,700, and estimated runway would fall from 6.8 to 5.7 months. I would keep rent near £650 unless you confirm more funding."
-            : question.toLowerCase().includes("payment") ||
-                question.toLowerCase().includes("tuition")
-              ? "Your £2,000 instalment is due in 12 days. Provider A has the lowest estimated total cost and a verified recipient. I can take you to the review—execution still requires your explicit approval."
-              : "Your plan is 89% funded. The immediate priority is the £2,000 tuition instalment, followed by confirming your sponsor contribution for 15 November.",
-        },
-      ]);
-    setInput("");
-  };
-  const visibleMessages = storedMessages ?? messages;
-  const starters = [
-    "How much can I safely spend each month?",
-    "Explain my current funding gap",
-    "What should I pay next?",
-    "How will a £900 rent change my runway?",
-  ];
-  return (
-    <div className="agent-layout agent-functional">
-      <div className="agent-chat-toolbar">
-        <span>Plan assistant</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={sending || clearing}
-          onClick={async () => {
-            setClearing(true);
-            setError("");
-            try {
-              if (!(await onClear()))
-                setError("Could not reset chat. Try again.");
-              else setInput("");
-            } catch {
-              setError("Could not reset chat. Try again.");
-            } finally {
-              setClearing(false);
-            }
-          }}
-        >
-          <Plus size={16} />
-          New chat
-        </Button>
-      </div>
-      <section className="chat agent-chat-workspace">
-        <div className="agent-conversation" ref={conversationRef}>
-          {visibleMessages.length <= 1 && (
-            <div className="agent-welcome-state">
-              <h2>Ask about your study plan</h2>
-              <div className="agent-starters">
-                {starters.map((starter) => (
-                  <button
-                    key={starter}
-                    disabled={sending}
-                    onClick={() => void reply(starter)}
-                  >
-                    {starter}
-                    <ArrowRight />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {visibleMessages.length > 1 && (
-            <div className="messages">
-              {visibleMessages.map((m, i) => (
-                <div
-                  className={`message ${m.from}`}
-                  key={"_id" in m ? String(m._id) : i}
-                >
-                  {m.from === "agent" && <Bot size={17} />}
-                  <p>{m.text}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="agent-composer-wrap">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void reply(input);
-            }}
-          >
-            <input
-              aria-label="Ask your financial agent"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your plan, runway, or payments…"
-            />
-            <button
-              aria-label="Send"
-              disabled={sending || clearing || !input.trim()}
-            >
-              {sending ? <span className="spinner" /> : <Send />}
-            </button>
-          </form>
-          {sending && (
-            <small role="status" className="agent-send-status">
-              Replying…
-            </small>
-          )}
-          {error && (
-            <small role="alert" className="fx-error">
-              {error}
-            </small>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
 function Payments({
   status,
   paid,
@@ -3996,6 +3785,7 @@ function Payments({
     storedRoute ?? availableRoutes.find((r) => r.recommended)?.id ?? "wise",
   );
   const [consent, setConsent] = useState(false);
+  const [showSandbox, setShowSandbox] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
   const runAction = async (action: () => Promise<boolean>) => {
@@ -4036,222 +3826,254 @@ function Payments({
     status === "not_started" ? 1 : status === "prepared" ? 2 : 3;
   return (
     <div className="payments-page payment-checkout pay-simple">
-      <header className="pay-heading">
-        <h2>Tuition payment</h2>
-        <div className="pay-header-actions">
-          <span className="fx-badge">Sandbox</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={busy || status === "not_started"}
-            onClick={() => void runAction(reset)}
-          >
-            <RotateCcw size={14} />
-            Reset payment
-          </Button>
-        </div>
-      </header>
-      <div className="pay-progress" aria-label="Payment progress">
-        {["Choose", "Approve", "Send"].map((label, i) => (
-          <div
-            key={label}
-            className={i + 1 <= currentStep ? "active" : ""}
-            aria-current={i + 1 === currentStep ? "step" : undefined}
-          >
-            <span>{i + 1 < currentStep ? <Check size={12} /> : i + 1}</span>
-            {label}
-          </div>
-        ))}
-      </div>
-      {paid && (
-        <div className="pay-success" role="status">
-          <CheckCircle2 size={20} />
-          <strong>{amountLabel} sent</strong>
-          <span>{config?.transactionReference}</span>
-        </div>
-      )}
-      <div className="pay-grid">
-        <Card className="pay-card">
-          <CardHeader>
-            <CardTitle>Choose a provider</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="pay-options"
-              role="group"
-              aria-label="Payment providers"
-            >
-              {availableRoutes.map((r) => {
-                const RouteIcon =
-                  r.id.includes("swift") ||
-                  r.provider.toLowerCase().includes("bank")
-                    ? Landmark
-                    : r.id.includes("card") ||
-                        r.provider.toLowerCase().includes("card")
-                      ? CreditCard
-                      : Send;
-                return (
-                  <Button
-                    variant="outline"
-                    type="button"
-                    key={r.id}
-                    disabled={locked || busy}
-                    className={`pay-option ${route?.id === r.id ? "selected" : ""}`}
-                    aria-pressed={route?.id === r.id}
-                    onClick={() => void selectProvider(r.id)}
-                  >
-                    <span className="pay-provider-icon">
-                      <RouteIcon size={20} />
-                    </span>
-                    <span className="pay-provider">
-                      <strong>{r.provider}</strong>
-                      <span>
-                        <Clock3 size={13} />
-                        {r.delivery}
-                        {r.recommended && <em>Best value</em>}
-                      </span>
-                    </span>
-                    <strong
-                      className="pay-price"
-                      aria-label="Total cost in USD"
-                    >
-                      {formatUSD(routeEffectiveCost(r))}
-                    </strong>
-                    <span className="pay-radio" aria-hidden="true">
-                      {route?.id === r.id && <Check size={12} />}
-                    </span>
-                  </Button>
-                );
-              })}
-              {!availableRoutes.length && (
-                <p className="fx-hint">No providers available.</p>
-              )}
-            </div>
-            <div className="pay-recipient">
-              <Landmark size={20} />
-              <div>
-                <strong>{recipient}</strong>
-                <small>•••• {config?.recipientAccountLast4 ?? "1842"}</small>
-              </div>
-              <ShieldCheck size={20} aria-label="Verified recipient" role="img">
-                <title>Verified recipient</title>
-              </ShieldCheck>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="pay-card pay-review">
-          <CardHeader>
-            <CardTitle>Review</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="pay-amount">
-              <span>Recipient gets</span>
-              <strong>{amountLabel}</strong>
-            </div>
-            {!ready && (
-              <p className="fx-error" role="status">
-                Payment details unavailable.
-              </p>
-            )}
-            <dl className="pay-details">
-              <div>
-                <dt>
-                  <WalletCards size={16} />
-                  You pay
-                </dt>
-                <dd>{route ? formatUSD(routeEffectiveCost(route)) : "—"}</dd>
-              </div>
-              <div>
-                <dt>
-                  <ReceiptText size={16} />
-                  Fee included
-                </dt>
-                <dd>{route ? formatUSD(route.fee) : "—"}</dd>
-              </div>
-              <div>
-                <dt>
-                  <Activity size={16} />
-                  Rate
-                </dt>
-                <dd>{route ? `${route.fxRate} GBP / USD` : "—"}</dd>
-              </div>
-              <div>
-                <dt>
-                  <Clock3 size={16} />
-                  Arrival
-                </dt>
-                <dd>{route?.delivery ?? "—"}</dd>
-              </div>
-            </dl>
-            {status === "not_started" && (
-              <Button
-                className="pay-action"
-                disabled={!ready || busy}
-                onClick={() => void runAction(prepare)}
-              >
-                {busy ? "Saving…" : "Continue"}
-                <ArrowRight size={16} />
-              </Button>
-            )}
-            {status === "prepared" && (
-              <>
-                <label className="pay-consent">
-                  <Checkbox
-                    checked={consent}
-                    onCheckedChange={(checked) => setConsent(checked === true)}
-                    disabled={!ready}
-                  />
-                  <span>Recipient and total are correct</span>
-                </label>
+      <TuitionPlanner />
+      <div className="tuition-sandbox">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="tuition-demo-button"
+          aria-expanded={showSandbox}
+          aria-controls="sandbox-checkout"
+          onClick={() => setShowSandbox((value) => !value)}
+        >
+          <CreditCard size={16} />
+          {showSandbox ? "Close demo" : "Payment demo"}
+          <ChevronRight size={14} />
+        </Button>
+        {showSandbox && (
+          <div id="sandbox-checkout" className="tuition-sandbox-content">
+            <header className="pay-heading">
+              <h2>Sandbox payment</h2>
+              <div className="pay-header-actions">
+                <span className="fx-badge">Sandbox</span>
                 <Button
-                  className="pay-action"
-                  disabled={!consent || !ready || busy}
-                  onClick={() => void runAction(approve)}
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy || status === "not_started"}
+                  onClick={() => void runAction(reset)}
                 >
-                  {busy ? "Saving…" : "Approve"}
-                  <LockKeyhole size={16} />
+                  <RotateCcw size={14} />
+                  Reset payment
                 </Button>
-              </>
-            )}
-            {status === "approved" && (
-              <Button
-                className="pay-action"
-                disabled={!ready || busy}
-                onClick={() => void runAction(execute)}
-              >
-                Send {amountLabel}
-                <ArrowRight size={16} />
-              </Button>
-            )}
-            {status === "processing" && (
-              <Button className="pay-action" disabled>
-                <span className="spinner" />
-                Sending…
-              </Button>
-            )}
-            {status === "completed" && (
-              <div className="pay-done">
-                <CheckCircle2 size={18} />
-                Sent
+              </div>
+            </header>
+            <div className="pay-progress" aria-label="Payment progress">
+              {["Choose", "Approve", "Send"].map((label, i) => (
+                <div
+                  key={label}
+                  className={i + 1 <= currentStep ? "active" : ""}
+                  aria-current={i + 1 === currentStep ? "step" : undefined}
+                >
+                  <span>
+                    {i + 1 < currentStep ? <Check size={12} /> : i + 1}
+                  </span>
+                  {label}
+                </div>
+              ))}
+            </div>
+            {paid && (
+              <div className="pay-success" role="status">
+                <CheckCircle2 size={20} />
+                <strong>{amountLabel} sent</strong>
+                <span>{config?.transactionReference}</span>
               </div>
             )}
-            {actionError && (
-              <p className="fx-error" role="alert">
-                {actionError}
-              </p>
-            )}
-            <small className="pay-sandbox">
-              <ShieldCheck size={13} />
-              No real funds
-            </small>
-          </CardContent>
-        </Card>
+            <div className="pay-grid">
+              <Card className="pay-card">
+                <CardHeader>
+                  <CardTitle>Choose a provider</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className="pay-options"
+                    role="group"
+                    aria-label="Payment providers"
+                  >
+                    {availableRoutes.map((r) => {
+                      const RouteIcon =
+                        r.id.includes("swift") ||
+                        r.provider.toLowerCase().includes("bank")
+                          ? Landmark
+                          : r.id.includes("card") ||
+                              r.provider.toLowerCase().includes("card")
+                            ? CreditCard
+                            : Send;
+                      return (
+                        <Button
+                          variant="outline"
+                          type="button"
+                          key={r.id}
+                          disabled={locked || busy}
+                          className={`pay-option ${route?.id === r.id ? "selected" : ""}`}
+                          aria-pressed={route?.id === r.id}
+                          onClick={() => void selectProvider(r.id)}
+                        >
+                          <span className="pay-provider-icon">
+                            <RouteIcon size={20} />
+                          </span>
+                          <span className="pay-provider">
+                            <strong>{r.provider}</strong>
+                            <span>
+                              <Clock3 size={13} />
+                              {r.delivery}
+                              {r.recommended && <em>Best value</em>}
+                            </span>
+                          </span>
+                          <strong
+                            className="pay-price"
+                            aria-label="Total cost in USD"
+                          >
+                            {formatUSD(routeEffectiveCost(r))}
+                          </strong>
+                          <span className="pay-radio" aria-hidden="true">
+                            {route?.id === r.id && <Check size={12} />}
+                          </span>
+                        </Button>
+                      );
+                    })}
+                    {!availableRoutes.length && (
+                      <p className="fx-hint">No providers available.</p>
+                    )}
+                  </div>
+                  <div className="pay-recipient">
+                    <Landmark size={20} />
+                    <div>
+                      <strong>{recipient}</strong>
+                      <small>
+                        •••• {config?.recipientAccountLast4 ?? "1842"}
+                      </small>
+                    </div>
+                    <ShieldCheck
+                      size={20}
+                      aria-label="Verified recipient"
+                      role="img"
+                    >
+                      <title>Verified recipient</title>
+                    </ShieldCheck>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="pay-card pay-review">
+                <CardHeader>
+                  <CardTitle>Review</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="pay-amount">
+                    <span>Recipient gets</span>
+                    <strong>{amountLabel}</strong>
+                  </div>
+                  {!ready && (
+                    <p className="fx-error" role="status">
+                      Payment details unavailable.
+                    </p>
+                  )}
+                  <dl className="pay-details">
+                    <div>
+                      <dt>
+                        <WalletCards size={16} />
+                        You pay
+                      </dt>
+                      <dd>
+                        {route ? formatUSD(routeEffectiveCost(route)) : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <ReceiptText size={16} />
+                        Fee included
+                      </dt>
+                      <dd>{route ? formatUSD(route.fee) : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <Activity size={16} />
+                        Rate
+                      </dt>
+                      <dd>{route ? `${route.fxRate} GBP / USD` : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <Clock3 size={16} />
+                        Arrival
+                      </dt>
+                      <dd>{route?.delivery ?? "—"}</dd>
+                    </div>
+                  </dl>
+                  {status === "not_started" && (
+                    <Button
+                      className="pay-action"
+                      disabled={!ready || busy}
+                      onClick={() => void runAction(prepare)}
+                    >
+                      {busy ? "Saving…" : "Continue"}
+                      <ArrowRight size={16} />
+                    </Button>
+                  )}
+                  {status === "prepared" && (
+                    <>
+                      <label className="pay-consent">
+                        <Checkbox
+                          checked={consent}
+                          onCheckedChange={(checked) =>
+                            setConsent(checked === true)
+                          }
+                          disabled={!ready}
+                        />
+                        <span>Recipient and total are correct</span>
+                      </label>
+                      <Button
+                        className="pay-action"
+                        disabled={!consent || !ready || busy}
+                        onClick={() => void runAction(approve)}
+                      >
+                        {busy ? "Saving…" : "Approve"}
+                        <LockKeyhole size={16} />
+                      </Button>
+                    </>
+                  )}
+                  {status === "approved" && (
+                    <Button
+                      className="pay-action"
+                      disabled={!ready || busy}
+                      onClick={() => void runAction(execute)}
+                    >
+                      Send {amountLabel}
+                      <ArrowRight size={16} />
+                    </Button>
+                  )}
+                  {status === "processing" && (
+                    <Button className="pay-action" disabled>
+                      <span className="spinner" />
+                      Sending…
+                    </Button>
+                  )}
+                  {status === "completed" && (
+                    <div className="pay-done">
+                      <CheckCircle2 size={18} />
+                      Sent
+                    </div>
+                  )}
+                  {actionError && (
+                    <p className="fx-error" role="alert">
+                      {actionError}
+                    </p>
+                  )}
+                  <small className="pay-sandbox">
+                    <ShieldCheck size={13} />
+                    No real funds
+                  </small>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function Sponsors({
+  connected,
   announce,
   requestSent,
   onRequest,
@@ -4261,6 +4083,7 @@ function Sponsors({
   announce: (s: string) => void;
   requestSent?: boolean;
   onRequest: () => void;
+  connected?: boolean;
   storedSponsors?: DatabaseState["sponsors"];
   config?: any;
 }) {
@@ -4322,7 +4145,9 @@ function Sponsors({
         </div>
       </section>
 
-      {tab === "Sponsors" && sponsor && (
+      {tab === "Sponsors" && connected && <SponsorConnect role="Student" />}
+
+      {tab === "Sponsors" && sponsor && !connected && (
         <div
           className="sponsor-overview-content"
           role="tabpanel"
@@ -4384,7 +4209,7 @@ function Sponsors({
         </div>
       )}
 
-      {tab === "Sponsors" && !sponsor && (
+      {tab === "Sponsors" && !sponsor && !connected && (
         <section
           role="tabpanel"
           id="sponsor-panel-Sponsors"

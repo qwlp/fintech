@@ -10,12 +10,7 @@
         try {
           saved = localStorage.getItem("financial-passport-theme");
         } catch {}
-        const theme =
-          saved === "light" || saved === "dark"
-            ? saved
-            : matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light";
+        const theme = saved === "light" || saved === "dark" ? saved : "light";
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
         document.querySelector('meta[name="theme-color"]').content =
@@ -28,9 +23,9 @@
     />
     <link
       rel="preload"
-      href="/fonts/InterVariable.woff2"
+      href="/fonts/Manrope-Variable.ttf"
       as="font"
-      type="font/woff2"
+      type="font/ttf"
       crossorigin
     />
     <title>Financial Passport</title>

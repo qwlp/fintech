@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { AuthenticatedApp, AuthScreen } from "./Auth";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { convexClient } from "./lib/convex";
 import "./styles.css";
 import "./headerless.css";
 import "./payments.css";
@@ -19,9 +21,17 @@ import "./dashboard-visual.css";
 import "./app-clean.css";
 import "./motion.css";
 import "./page-spacing.css";
+import "./country-budget.css";
+import "./chat.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    {convexClient ? (
+      <ConvexAuthProvider client={convexClient}>
+        <AuthenticatedApp />
+      </ConvexAuthProvider>
+    ) : (
+      <AuthScreen configured={false} />
+    )}
   </React.StrictMode>,
 );

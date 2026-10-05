@@ -9,6 +9,11 @@
  */
 
 import type * as accounts from "../accounts.js";
+import type * as auth from "../auth.js";
+import type * as http from "../http.js";
+import type * as openrouter from "../openrouter.js";
+import type * as ownership from "../ownership.js";
+import type * as sponsorLinks from "../sponsorLinks.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +23,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
+  auth: typeof auth;
+  http: typeof http;
+  openrouter: typeof openrouter;
+  ownership: typeof ownership;
+  sponsorLinks: typeof sponsorLinks;
 }>;
 
 /**
