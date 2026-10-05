@@ -15,6 +15,7 @@ export default defineSchema({
     countryTo: v.string(),
     university: v.string(),
     course: v.string(),
+    setupComplete: v.optional(v.boolean()),
     paymentStatus: v.union(
       v.literal("not_started"),
       v.literal("prepared"),

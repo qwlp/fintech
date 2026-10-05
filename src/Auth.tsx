@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import App from "./App";
 import Home from "./Home";
+import Setup from "./Setup";
 import { convexApi } from "./lib/convex";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -53,7 +54,7 @@ export function AuthScreen({ configured = true }: { configured?: boolean }) {
     <main className="auth-shell">
       <section className="auth-panel">
         <Landmark size={32} />
-        <h1>Connect Financial Passport</h1>
+        <h1>Connect MoveWise</h1>
         <p>
           Configure VITE_CONVEX_URL and run the Convex backend to enable secure
           accounts.
@@ -218,7 +219,7 @@ function AuthForm({
           </Button>
         </form>
         <p className="auth-switch">
-          {register ? "Already have an account?" : "New to Financial Passport?"}{" "}
+          {register ? "Already have an account?" : "New to MoveWise?"}{" "}
           <button
             disabled={busy}
             onClick={() => {
@@ -304,9 +305,14 @@ function WorkspaceRecovery({ children }: { children: ReactNode }) {
   );
 }
 function AccountWorkspace() {
+  const hash = usePageHash();
   const accountData = useQuery(convexApi.bootstrap, {});
   const { signOut } = useAuthActions();
   const [error, setError] = useState("");
+  useEffect(() => {
+    if (accountData?.account.setupComplete === false && hash !== "#setup")
+      location.hash = "setup";
+  }, [accountData?.account.setupComplete, hash]);
   const logout = async () => {
     try {
       await signOut();
@@ -321,11 +327,30 @@ function AccountWorkspace() {
         Loading your account…
       </main>
     );
+  if (hash === "#setup" || accountData.account.setupComplete === false)
+    return (
+      <Setup
+        account={accountData.account}
+        config={accountData.config.profile}
+        onDone={() => {
+          location.hash = "workspace";
+        }}
+        onSignOut={logout}
+      />
+    );
   if (accountData.account.role === "Sponsor")
     return (
       <main className="sponsor-workspace">
         <header>
           <Brand href="/" />
+          <Button
+            variant="outline"
+            onClick={() => {
+              location.hash = "setup";
+            }}
+          >
+            Set up account
+          </Button>
           <Button variant="outline" onClick={logout}>
             <LogOut size={16} />
             Sign out

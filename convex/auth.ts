@@ -44,6 +44,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         countryTo: "",
         university: "",
         course: "",
+        setupComplete: false,
         paymentStatus: "not_started",
         selectedRoute: "",
         sponsorRequestSent: false,

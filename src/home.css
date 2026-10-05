@@ -15,8 +15,7 @@
   outline-offset: 5px;
 }
 .home-header,
-.public-home main,
-.home-footer {
+.public-home main {
   max-width: 1440px;
   margin: auto;
   padding-left: clamp(24px, 6vw, 90px);
@@ -349,29 +348,6 @@
   font-size: 12px;
   font-weight: 600;
 }
-.home-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  border-top: 1px solid var(--home-line);
-  padding-top: 25px;
-  padding-bottom: 25px;
-  font-size: 11px;
-}
-.home-footer > span {
-  font-weight: 600;
-}
-.home-footer p {
-  color: var(--home-muted);
-  line-height: 1.7;
-}
-.home-footer > a {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
 .home-skip {
   position: absolute;
   left: 20px;
@@ -474,15 +450,6 @@
   .home-accounts {
     padding: 24px;
     margin-bottom: 40px;
-  }
-  .home-footer {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .home-footer p {
-    flex-basis: 100%;
-    order: 3;
-    margin: 0;
   }
   .home-budget-results dd {
     font-size: 29px;

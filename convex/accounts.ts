@@ -239,7 +239,7 @@ export const seedDemo = internalMutation({
       [
         "RECIPIENT_VERIFIED",
         "University account matched verified directory",
-        "Financial Passport",
+        "MoveWise",
         1000,
       ],
     ] as const)
@@ -439,6 +439,33 @@ export const requestSponsor = mutation({
       actor: "Dara Chan",
       timestamp: Date.now(),
     });
+  },
+});
+
+export const completeSetup = mutation({
+  args: {
+    name: v.string(), countryFrom: v.string(), countryTo: v.string(),
+    university: v.string(), course: v.string(), courseStart: v.string(),
+    fundingAmount: v.number(), sponsorSupport: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const account = await requireAccount(ctx);
+    const name = args.name.trim();
+    if (!name || name.length > 100) throw new Error("Enter your name");
+    if (!args.countryFrom.trim()) throw new Error("Enter your home country");
+    if (account.role === "Student" && !args.countryTo.trim()) throw new Error("Enter your study country");
+    if (!Number.isFinite(args.fundingAmount) || args.fundingAmount < 0) throw new Error("Enter a valid funding amount");
+    if (args.courseStart && !/^\d{4}-\d{2}(?:-\d{2})?$/.test(args.courseStart)) throw new Error("Choose a start date");
+    const rows = await ctx.db.query("appConfig").withIndex("by_account", q => q.eq("accountId", account._id)).collect();
+    const row = rows.find(item => item.key === "profile");
+    const value = { ...(row?.value ?? {}), courseStart: args.courseStart, fundingAmount: args.fundingAmount, sponsorSupport: args.sponsorSupport };
+    await ctx.db.patch(account._id, {
+      name, initials: name.split(/\s+/).slice(0, 2).map(part => part[0].toUpperCase()).join(""),
+      countryFrom: args.countryFrom.trim(), countryTo: args.countryTo.trim(),
+      university: args.university.trim(), course: args.course.trim(), setupComplete: true,
+    });
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("appConfig", { accountId: account._id, key: "profile", value });
   },
 });
 
@@ -736,7 +763,7 @@ export const transitionPayment = mutation({
         ? [
             "PAYMENT_PREPARED",
             `${amount.toLocaleString("en-GB", { style: "currency", currency: "GBP" })} tuition payment prepared; no funds moved`,
-            "Financial Passport",
+            "MoveWise",
           ]
         : next === "approved"
           ? [

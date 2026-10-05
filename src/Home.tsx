@@ -168,16 +168,6 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="home-footer">
-        <span>Financial Passport</span>
-        <p>
-          Planning tools for your studies abroad. Payments currently use a
-          sandbox.
-        </p>
-        <a href="#login">
-          Sign in <ArrowRight size={15} />
-        </a>
-      </footer>
     </div>
   );
 }

@@ -407,7 +407,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       addAudit(
         "PAYMENT_PREPARED",
         "£2,000 tuition payment prepared; no funds moved",
-        "Financial Passport",
+        "MoveWise",
       );
     }
     announce("Payment prepared — approval is still required");
@@ -558,7 +558,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
           <h1>Database connection required</h1>
           <p>
             Set <code>VITE_CONVEX_URL</code> and run{" "}
-            <code>bun run convex:dev</code>. Financial Passport no longer
+            <code>bun run convex:dev</code>. MoveWise no longer
             substitutes hard-coded browser data when the database is
             unavailable.
           </p>
@@ -570,7 +570,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       <main className="connection-screen">
         <div className="connection-content">
           <span className="spinner" />
-          <h1>Loading your financial passport…</h1>
+          <h1>Loading MoveWise…</h1>
           <p>
             {syncState === "error"
               ? "The database could not be reached. Check the Convex deployment and retry."
@@ -677,6 +677,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               )}
             </div>
           </div>
+          <button className="btn secondary" onClick={() => { location.hash = "setup"; }}><Settings size={16} /> Set up account</button>
           <button className="btn secondary" onClick={onSignOut}>Sign out</button>
           <button
             className={`profile ${page === "Profile" ? "active" : ""}`}
@@ -4366,7 +4367,7 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
     ].join("\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    link.download = "financial-passport-audit.csv";
+    link.download = "movewise-audit.csv";
     link.click();
     URL.revokeObjectURL(link.href);
   };

@@ -50,6 +50,30 @@ async function accountFixture(role = "Student") {
   };
 }
 describe("account authorization", () => {
+  it("saves setup details and preserves existing profile preferences", async () => {
+    const { t, owner, accountId } = await accountFixture();
+    await t.run(ctx => ctx.db.insert("appConfig", { accountId, key: "profile", value: { financialStatus: "Planning" } }));
+    await owner.mutation(api.accounts.completeSetup, {
+      name: " Dara Chan ", countryFrom: "Cambodia", countryTo: "United Kingdom",
+      university: "", course: "", courseStart: "2027-09", fundingAmount: 12000, sponsorSupport: "Yes",
+    });
+    const result = await owner.query(api.accounts.bootstrap, {});
+    expect(result.account).toMatchObject({ name: "Dara Chan", initials: "DC", countryFrom: "Cambodia", countryTo: "United Kingdom", setupComplete: true });
+    expect(result.config.profile).toMatchObject({ financialStatus: "Planning", fundingAmount: 12000, courseStart: "2027-09" });
+  });
+  it("requires sign-in and valid details before completing setup", async () => {
+    const { t, owner } = await accountFixture();
+    const details = { name: "Owner", countryFrom: "Cambodia", countryTo: "UK", university: "", course: "", courseStart: "", fundingAmount: 0, sponsorSupport: "Not sure yet" };
+    await expect(t.mutation(api.accounts.completeSetup, details)).rejects.toThrow("Sign in");
+    await expect(owner.mutation(api.accounts.completeSetup, { ...details, fundingAmount: -1 })).rejects.toThrow("funding");
+    await expect(owner.mutation(api.accounts.completeSetup, { ...details, countryTo: " " })).rejects.toThrow("study country");
+    expect((await owner.query(api.accounts.bootstrap, {})).account.setupComplete).toBeUndefined();
+  });
+  it("lets sponsors finish without student details", async () => {
+    const { owner } = await accountFixture("Sponsor");
+    await owner.mutation(api.accounts.completeSetup, { name: "Sponsor", countryFrom: "Cambodia", countryTo: "", university: "", course: "", courseStart: "", fundingAmount: 0, sponsorSupport: "Not sure yet" });
+    expect((await owner.query(api.accounts.bootstrap, {})).account.setupComplete).toBe(true);
+  });
   it("rejects anonymous reads and writes", async () => {
     const { t, accountId } = await accountFixture();
     await expect(t.query(api.accounts.bootstrap, {})).rejects.toThrow(
@@ -110,6 +134,7 @@ describe("email registration and login", () => {
         email: "person@example.com",
         name: "Test Person",
         role,
+        setupComplete: false,
       });
       expect(account?.userId).toBeTruthy();
       const login = await t.action(api.auth.signIn, {

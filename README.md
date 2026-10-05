@@ -1,6 +1,6 @@
-# Financial Passport
+# MoveWise
 
-Financial Passport is a competition-ready cross-border finance assistant for international students. This MVP turns the PRD's Cambodia-to-UK demo into a complete interactive workflow: financial planning, sponsor coordination, multi-currency balances, deterministic what-if analysis, recipient validation, route comparison, explicit approval, sandbox execution, and auditable evidence.
+MoveWise is a competition-ready cross-border finance assistant for international students. This MVP turns the PRD's Cambodia-to-UK demo into a complete interactive workflow: financial planning, sponsor coordination, multi-currency balances, deterministic what-if analysis, recipient validation, route comparison, explicit approval, sandbox execution, and auditable evidence.
 
 ## Run locally
 

@@ -1,0 +1,521 @@
+﻿International Tuition Payments & Regulatory (US, UK, China)
+Section 1: 3-Route Payment Comparison ($50,000 USD Benchmark)
+This guide compares the three primary cross-border tuition payment channels across nine major universities in the United States, the United Kingdom, and China that support all three payment routes:
+* China: Tsinghua University, Peking University (PKU), Zhejiang University (ZJU)
+* United Kingdom: King's College London (KCL), University of Manchester, University of Edinburgh
+* United States: Columbia University, University of Southern California (USC), UCLA
+1.1 3-Route Comparison Table ($50,000 USD Tuition Benchmark)
+All third-party education payment processors (Flywire, Convera, EasyTransfer, and TransferMate) are grouped into a single platform category alongside Bank Transfers and Direct University Card/E-Wallet Checkouts[cite: 1, 2].
+
+
+Route
+	Cost (on $50,000 USD)
+	Speed
+	Notes
+	Route 1: Bank Transfer
+
+
+(Direct SWIFT Wire to University Bank OR Fintech/Local Account Routing via Wise, ACH, or UK Faster Payments)[cite: 1, 2]
+	• Direct SWIFT from China: $130 – $335 ($30–$85 flat wire fee + 0.2%–0.5% FX spread)
+
+
+
+
+• Direct SWIFT from US/UK Bank: $1,030 – $1,835 ($30–$85 flat wire fee + 2.0%–3.5% FX spread)
+
+
+
+
+• Fintech (Wise) to Local Account + Domestic Pay: $165 – $325 ($0 university fee + 0.33%–0.65% conversion fee at mid-market rate)
+
+
+	• Direct SWIFT: 3 – 7 business days (+2–5 days manual matching)
+
+
+
+
+• Local/Fintech Domestic Pay: Instant – 2 business days
+	For direct SWIFT wires, intermediary banks deduct $15–$35 in transit from the amount credited unless you select the "OUR" instruction code (or send slightly more)[cite: 1, 2]. Routing through a local US/UK/Chinese bank account or Wise avoids intermediary deductions completely.
+	Route 2: Education Payment Platform
+
+
+(Flywire, Convera, EasyTransfer, TransferMate)[cite: 1, 2]
+	$600 – $1,250
+
+
+(No upfront bank transfer fee; the 1.2% – 2.5% cost is built into the platform's exchange rate)[cite: 1, 2]
+	2 – 3 business days
+
+
+	Pay in your home currency by local bank transfer, card, or e-wallet (Alipay, WeChat Pay, UnionPay) with a 72-hour locked rate[cite: 1, 2]. Both Flywire ("Best Price Guarantee") and Convera ("Price Promise") match your local bank's exchange rate if you submit a same-day bank quote[cite: 1, 2]. Exempt from China's $50,000 annual SAFE personal FX quota[cite: 1, 3].
+	Route 3: Direct University Card & E-Wallet Checkout
+
+
+(Visa, Mastercard, Amex, UnionPay, Alipay Direct on University Portal)
+
+
+	• UK Universities: $250 – $500 (0% university surcharge + 0.5%–1.0% card network FX spread on a $0-FTF card)
+
+
+
+
+• US Universities: $1,375 – $3,625 (2.75%–4.25% university convenience fee + 0%–3.0% card FX spread)
+
+
+
+
+• Chinese Universities: $1,000 – $1,500 gateway fee (2.0%–3.0% on international cards; $0 for local UnionPay/Alipay)
+
+
+	Instant – 24 hours
+
+
+	Updates your student account balance immediately. Best for urgent registration/visa deadlines or earning credit card rewards at UK universities (which charge 0% card surcharges). Requires calling your card issuer to temporarily lift your daily transaction limit for a $50,000 charge.
+	1.2 Country-by-Country Route Tables ($50,000 Equivalent)
+A. Paying Chinese Universities (Tsinghua, Peking University, Zhejiang University)
+
+
+Route
+	Cost (on $50,000 Equivalent)
+	Speed
+	Notes
+	Bank: Direct transfer to University's Bank of China / Agricultural Bank of China account
+
+
+	• International SWIFT Wire: $1,030 – $1,835 from US/UK retail banks (wire fee + 2.0%–3.5% FX markup)
+
+
+
+
+• Local Chinese Bank Account: $0 domestic transfer fee (+$165–$325 if converted via Wise)
+
+
+	• SWIFT: 3 – 7 business days
+
+
+• Local Bank: Instant – 1 business day
+	Intermediary bank charges are deducted from the credited amount on SWIFT wires, so select the "OUR" code and include your Student ID and Passport Number[cite: 1, 2]. Opening a local Bank of China account on campus during registration week is the cheapest option.
+	Platform: EasyTransfer / SkyRemit
+
+
+	$600 – $1,250
+
+
+(Built into the platform's RMB exchange rate)[cite: 1, 2]
+	2 – 3 business days
+
+
+	Pay in USD or GBP from your home country; the platform converts and settles in RMB directly with the university's finance portal[cite: 1, 2].
+	Direct Portal: University Finance Checkout (UnionPay, Alipay, WeChat Pay, Visa/Mastercard)
+
+
+	$1,000 – $1,500 gateway fee for international Visa/Mastercard (2.0%–3.0%)
+
+
+
+
+$0 for domestic UnionPay / Alipay / WeChat Pay
+	Instant – 24 hours
+
+
+	International credit cards face a 2%–3% service fee and per-transaction caps; linking a local Chinese bank account to Alipay or WeChat Pay costs $0.
+	B. Paying UK Universities (King's College London, Manchester, Edinburgh)
+
+
+Route
+	Cost (on $50,000 Equivalent)
+	Speed
+	Notes
+	Bank: Direct transfer to University UK account (SWIFT or UK Faster Payments / Direct Debit)
+
+
+	• Direct SWIFT from China: $130 – $335
+
+
+• Direct SWIFT from US Bank: $1,030 – $1,835
+
+
+• Wise / UK Local Account via Faster Payments: $165 – $325
+	• SWIFT: 3 – 5 business days
+
+
+• Faster Payments: Instant – 24 hours
+	Traditional SWIFT wires deduct intermediary fees unless sent as "OUR"[cite: 1, 2]. Converting to GBP via Wise or a UK student bank account lets you pay via UK Faster Payments or set up 0% UK Direct Debit tuition instalments.
+	Platform: Flywire / Convera / EasyTransfer
+
+
+	$600 – $1,250
+
+
+(Built into the platform's exchange rate; price-match guarantee available)[cite: 1, 2]
+	2 – 3 business days
+
+
+	Pay in USD or RMB from your home bank or e-wallet[cite: 1, 2]. Submitting your admission letter exempts a $50,000 payment from China's SAFE personal FX quota[cite: 1, 3].
+	Direct Portal: University Card Checkout (MyEd / My Manchester / KCL Portal)
+
+
+	$0 university surcharge
+
+
+($250 – $500 in Visa/Mastercard network FX spread if paying in GBP with a $0-FTF card)
+
+
+	Instant – 24 hours
+
+
+	UK law bans merchant card surcharges on consumer cards. Always choose to be billed in GBP at checkout (decline Dynamic Currency Conversion) and use a card with no foreign transaction fees.
+	C. Paying US Universities (Columbia, USC, UCLA)
+
+
+Route
+	Cost (on $50,000 USD)
+	Speed
+	Notes
+	Bank: Direct Wire or US ACH eCheck (QuikPAY / USCe.pay / BruinBill)
+
+
+	• Direct SWIFT from China: $130 – $335
+
+
+• Direct SWIFT from UK Bank: $1,030 – $1,835
+
+
+• US ACH eCheck (via US Bank or Wise USD Account): $0 university fee (+$165–$325 Wise FX fee)
+
+
+	• SWIFT: 3 – 7 business days
+
+
+• US ACH eCheck: Instant – 2 business days
+	Entering a US checking or Wise USD routing and account number into Columbia, USC, or UCLA's billing portal processes the payment as a $0 domestic ACH eCheck. For direct SWIFT wires from China, bring the tuition invoice to the bank branch so it does not consume your $50,000 personal FX quota[cite: 1, 3].
+	Platform: Flywire / Convera / Transact International
+
+
+	$600 – $1,250
+
+
+(Built into the platform's exchange rate; best-price guarantee available)[cite: 1, 2]
+	2 – 3 business days
+
+
+	Pay in GBP or RMB locally[cite: 1, 2]. Automatically links to your student ID so no manual wire receipt matching is needed, and does not consume China's $50,000 personal FX limit[cite: 1, 3].
+	Direct Portal: Credit / Debit Card Checkout
+
+
+	$1,375 – $2,125 in university convenience fees (2.75% domestic card fee to 4.25% international card fee at UCLA) + $250 – $1,500 card FX fee
+	Instant – 24 hours
+
+
+	Expensive for full $50,000 tuition because US universities pass the 2.75%–4.25% merchant surcharge directly to the student. Best reserved for small initial admission deposits.
+	1.3 University-by-University Payment Route Matrix
+
+
+Country
+	University
+	Route 1: Direct Bank Transfer / Local Domestic Rails
+	Route 2: Education Payment Platforms
+	Route 3: Direct Card & E-Wallet Checkout
+	China
+	Tsinghua University
+
+
+	Direct SWIFT wire to Bank of China (Tsinghua Branch) or $0 local RMB transfer via on-campus Bank of China account
+	EasyTransfer / Cross-border tuition remittance partners
+	Direct checkout on Tsinghua Finance Portal via Visa, Mastercard, UnionPay, Alipay, WeChat Pay
+
+
+	China
+	Peking University (PKU)
+
+
+	Direct SWIFT wire to Bank of China (PKU Branch) or $0 local RMB transfer from a Chinese bank account
+	EasyTransfer / Cross-border education portals
+	Direct checkout on PKU portal via International Cards, UnionPay, Alipay, WeChat Pay
+
+
+	China
+	Zhejiang University (ZJU)
+
+
+	Direct SWIFT wire to Agricultural Bank of China (ZJU Branch) or $0 local RMB domestic transfer
+	EasyTransfer / SkyRemit cross-border tuition channels
+	Direct checkout on ZJU Finance system via Visa, Mastercard, UnionPay, Alipay
+
+
+	UK
+	King's College London (KCL)
+
+
+	Direct GBP Bank Transfer (Faster Payments/CHAPS/SWIFT in GBP) & UK Direct Debit instalments
+	Convera (GlobalPay for Students)
+	Direct card checkout via KCL portal (Visa, Mastercard, Apple Pay, Google Pay)
+	UK
+	University of Manchester
+
+
+	Direct UK Bank Transfer & 0% UK Direct Debit instalment plans
+	Flywire and EasyTransfer
+
+
+	Direct card payment via My Manchester portal (Visa, Mastercard, UnionPay)
+	UK
+	University of Edinburgh
+
+
+	Direct Bank Transfer & UK Direct Debit via MyEd Finance
+	Flywire
+
+
+	Direct online card payment via MyEd Finance channel or by phone
+	US
+	Columbia University
+
+
+	0% US ACH eCheck (via QuikPAY from any US checking/Wise USD account) or Direct Wire on request
+	Flywire and Convera
+
+
+	Direct card payment for deposits, summer/executive programs, or via third-party card processors
+	US
+	University of Southern California (USC)
+
+
+	Direct SWIFT Wire to USC's Bank of America account or 0% US ACH eCheck via USCe.pay
+	Flywire and Convera
+
+
+	Direct Visa, Mastercard, Discover, and UnionPay checkout on USCe.pay
+	US
+	UCLA
+
+
+	0% US ACH eCheck via BruinBill (using a US bank or Wise USD routing number)
+	Flywire, Convera, and Transact International
+
+
+	Direct Visa, Mastercard, Discover, Amex checkout on BruinBill (4.25% international card fee)
+	Section 2: Current Regulations by Jurisdiction (Audited for App Relevance)
+2.1 China (Outbound Student Payments & Foreign Exchange Controls)
+
+
+Regulation / Rule
+	What It Covers
+	Key Legal & Operational Details
+	How Students & the App Handle It (Legal Ways)
+	App Priority
+	SAFE Annual Foreign Exchange Quota
+
+
+	Personal purchase/conversion of foreign currency
+	USD $50,000 equivalent per person per calendar year (resets every January 1).
+	• Exceeding $50k legally: Tuition payments can exceed the $50k quota when wired in-branch with an Admission Letter, I-20/CAS, and official Tuition Invoice.
+
+
+• RMB Platforms: Paying in RMB via Flywire, Convera, EasyTransfer, or Alipay processes as cross-border service trade and does not consume the $50,000 personal quota[cite: 1, 3].
+
+
+• Family Pooling: Immediate family members can each use their own $50,000 quota for living expenses, provided they avoid illegal structuring ("smurfing" across unrelated accounts).
+	HIGH (Core App Logic)
+	SAFE Current Account vs. Capital Account Rules
+
+
+	Purpose of the cross-border transfer
+	Current Account (Allowed): Education fees, student living costs, medical, travel.
+
+
+Capital Account (Restricted): Overseas real estate, stocks/securities, corporate/LLC equity investment.
+	Always declare the transfer purpose as "Study Abroad / Tuition / Living Expenses" and retain admission and billing records.
+	HIGH (UI Warning)
+	Document Requirements for Large Payments
+
+
+	Transfers above the $50k quota or large single amounts
+	Banks require Chinese ID + Admission Letter / I-20 (US) / CAS (UK) + Official University Tuition Invoice.
+	Prepare documents early and use major banks' dedicated "Overseas Study Remittance" services.
+	MEDIUM (Checklist Feature)
+	Daily Processing & KYC Thresholds
+
+
+	Single-day transfers and AML reporting
+	Extra bank scrutiny often starts around USD $10,000 for single-day wires, while 2026 KYC verification rules apply reporting checks from RMB 5,000 / USD $1,000 upward.
+	Start the transfer process weeks before the university deadline or split tuition and living transfers if needed.
+	MEDIUM (Timeline Alert)
+	Amended PRC Anti-Money Laundering (AML) Law
+
+
+	Identity/purpose verification & record retention
+	Enhanced checks on large or unusual patterns and anti-structuring detection, with customer/transaction record retention extended up to 10 years.
+	Use only official bank channels or licensed platforms; strictly avoid underground banks or informal WeChat/P2P currency swaps.
+	LOW (FAQ Warning)
+	Outbound Investment Regulations (State Council Order No. 837, effective July 2026)
+
+
+	Broader outbound investment by resident individuals
+	Brings resident individuals into the formal outbound investment regulatory framework.
+	Pure tuition and student living payments are still treated as current-account transactions and are not restricted by Order No. 837.
+	LOW (FAQ Reassurance)
+	2.2 United Kingdom (FCA Conduct, Pricing Transparency & Student Visas)
+
+
+Regulation / Rule
+	What It Covers
+	Key Legal & Operational Details
+	How Students & the App Handle It
+	App Priority
+	Financial Promotions Rules (FSMA s.21 + FCA Handbook)
+
+
+	Anyvi comparison, ranking, or recommendation of payment serces
+	Must be "clear, fair, and not misleading". Promoting regulated payment services in the UK requires FCA authorization, approval by an authorized firm, or strict reliance on an information-only exemption.
+	Use accurate total-cost comparisons, timestamp all indicative exchange rates, and display clear affiliate/regulatory disclaimers.
+	CRITICAL (Legal Gatekeeper)
+	FCA Consumer Duty (PRIN 2A) & March 2026 International Payment Pricing Guidance
+
+
+	Retail customer outcomes and FX pricing transparency
+	Communications must help customers understand the true cost of the product. The FCA's March 2026 Good and Poor Practice on International Payment Pricing Transparency specifically scrutinizes hidden FX markups and misleading "0% fee" claims.
+	Always display the full cost (upfront fee + FX margin) and the exact "recipient gets" (university receives) amount side by side.
+	CRITICAL (UI Design)
+	Money Laundering Regulations (MLR) + 2026 Amendments
+
+
+	AML / KYC for payment firms and banks
+	Firms must identify customers, monitor transactions, and report suspicious activity (with GBP-denominated EDD thresholds effective mid-2026).
+	Use regulated providers (Wise, banks, Flywire, Convera) and keep student offer letters and tuition invoices ready if requested[cite: 1, 4].
+	LOW (Handled by Providers)
+	UK Immigration Rules – Appendix Finance
+
+
+	Proof of funds for UK Student Visas
+	Students must show they hold enough money for unpaid tuition + living costs held continuously for the required 28-day period prior to applying.
+	Keep clear bank statements and official tuition payment receipts, and ensure the university updates the CAS statement once tuition is paid.
+	HIGH (Visa Tracker Feature)
+	Funds Transfer Regulation (FTR) & UK Sanctions Screening
+
+
+	Wire transfer originator/beneficiary data & sanctions checks
+	Originator and beneficiary details must travel with every payment, and all transfers are screened against UK sanctions lists.
+	Handled automatically by licensed providers; rarely an issue for genuine student payments from non-sanctioned accounts.
+	LOW (Automated)
+	2.3 United States (Tax, FinCEN, Remittance Excise Tax & University Compliance)
+
+
+Regulation / Rule
+	What It Covers
+	Key Legal & Operational Details
+	How Students & the App Handle It
+	App Priority
+	1% US Federal Remittance Excise Tax (IRC § 4475, effective Jan 1, 2026)
+	Outbound transfers sent from the US to foreign countries (e.g., US students paying UK or Chinese tuition)
+	Imposes a 1% federal excise tax on outbound remittances over $15 only when funded with physical cash, money orders, or cashier's checks. Transfers funded via a US bank account (ACH/wire) or a US-issued debit/credit card are 100% exempt under IRC § 4475(d)(1).
+	Instruct US students paying UK or Chinese universities to fund transfers exclusively via a US checking/savings account or US debit/credit card (never cashier's checks or cash) to pay $0 tax.
+	HIGH (US Outbound Alert)
+	IRS Form 3520 (Foreign Gifts > $100,000) & IRC § 2503(e) Tuition Exemption
+
+
+	Large gifts/support received from foreign persons
+	A "US Person" for tax purposes receiving > $100,000 from a foreign individual in a calendar year must file informational Form 3520.
+
+
+• 5-Year F-1 Exemption: International students on F-1/J-1 visas are Non-Resident Aliens (exempt individuals) during their first 5 calendar years in the US and do not file Form 3520.
+
+
+• Direct Tuition Exemption (IRC § 2503(e)): Even for US citizens/residents or Year 6+ F-1 students, tuition paid directly to the university by a foreign parent is exempt from Form 3520.
+	If a student is a US citizen, green card holder, or in Year 6+ on an F-1 visa and receives >$100,000/year in total parental support, advise parents to pay tuition directly to the university (via Flywire, Convera, or direct wire) rather than wiring >$100,000 into the student's personal US bank account[cite: 1, 5].
+	HIGH (Smart Tax Routing)
+	FATCA & FinCEN FBAR (FinCEN Form 114)
+
+
+	Reporting of foreign bank accounts by US persons
+	US tax residents holding > $10,000 in aggregate foreign bank accounts at any point during the year must file an FBAR (and potentially Form 8938 for FATCA). F-1/J-1 students in their first 5 calendar years are exempt.
+	Warn US students studying in the UK or China who open a local UK or Chinese bank account to pay $50,000 tuition (Route 1B) that holding >$10,000 in a foreign account triggers a free annual FBAR filing[cite: 1, 5].
+	HIGH (US-to-UK/China Alert)
+	Bank Secrecy Act (BSA), FinCEN & OFAC Screening
+
+
+	AML/KYC monitoring and US sanctions screening
+	Banks monitor large transfers, file Currency Transaction Reports (for physical cash > $10,000) and Suspicious Activity Reports (SARs), and screen all USD payments against OFAC sanctions lists.
+	Use regulated services and include clear purpose ("Tuition" + Student ID) alongside student documents[cite: 1, 5].
+	LOW (Automated)
+	Source of Funds / University Compliance
+
+
+	University due diligence on incoming international wires
+	Universities perform AML checks on large incoming wires and enforce strict "return-to-source" refund rules.
+	Paying via Flywire, Convera, or official university portals reduces manual cashier holds and keeps a clean paper trail[cite: 1, 5].
+	MEDIUM (Reconciliation Note)
+	Section 3: Upcoming & Newly Enacted Laws (Late 2026–2028 Pipeline) Affecting Your App
+1. China PBoC Announcement [2026] No. 9 on Unlicensed Overseas Financial Marketing (Effective September 30, 2026)
+* The Rule: Effective September 30, 2026, Announcement [2026] No. 9 (公告〔2026〕第9号) explicitly classifies "an overseas institution providing financial-product services to domestic residents without a licence" as an illegal financial activity that no institution or individual may market or facilitate online inside Mainland China. Furthermore, providers such as Payoneer, Airwallex, PayPal, PingPong, and LianLian hold domestic entities on the PBoC payment-institution register, whereas offshore-only fintech accounts (like Wise or WorldFirst) are not listed as domestic PBoC payment institutions.
+* Impact on Your App: If your app is marketed to users located inside Mainland China, do not actively market or provide direct onboarding referral links for unlicensed offshore bank/fintech accounts to Chinese domestic residents. For users inside Mainland China, display PBoC-compliant/university-authorized education channels (Flywire, Convera, EasyTransfer, Alipay, UnionPay, and Chinese commercial bank SWIFT wires)[cite: 1, 3], and reserve Wise/Revolut local-account routing recommendations for corridors between the UK and US (or for students who have already arrived overseas and hold valid foreign visas/residency).
+2. Global SWIFT ISO 20022 Structured Address Mandate (Effective November 2026)
+* The Rule: In November 2026, SWIFT is retiring unstructured free-text address fields (MT format) for cross-border payments and enforcing strict ISO 20022 structured/hybrid postal addresses (StreetName, BuildingNumber, PostCode, TownName, Country) alongside standardized Purpose Codes.
+* Impact on Your App: If your app displays or generates downloadable SWIFT wire instruction sheets (Route 1A) for universities, any beneficiary address formatted as an unstructured block of text risks automatic wire rejection or intermediary repair deductions ($25–$50) after November 2026. Store all university bank details in strict ISO 20022 structured fields.
+3. UK FCA CASS 15 Safeguarding Rules (May 2026) & Open Banking Variable Recurring Payments (2026–2027)
+* The Rules:
+   * CASS 15 Safeguarding Regime (May 2026 FCA Approach Document): The FCA introduced strengthened safeguarding, statutory trust, resolution pack (CASS 10A), and monthly regulatory return requirements (SUP) for UK payment and e-money institutions.
+   * UK Open Finance & Variable Recurring Payments (VRPs) (2026–2027 Roadmap): Under the UK's Data (Use and Access) framework, the FCA and HM Treasury are expanding Open Banking VRPs into lower-cost commercial payment rails ahead of a full Open Finance framework by late 2027.
+   * FCA BNPL Regulation (Mid-2026 onward): Third-party deferred tuition instalment credit in the UK now requires FCA consumer credit authorization.
+* Impact on Your App: UK Open Banking VRPs will allow your app to help students set up automated, $0-fee GBP tuition instalment payments directly from UK bank accounts. Avoid offering or promoting unregulated "split-tuition credit/BNPL" products in the UK without an FCA-authorized credit partner.
+4. US CFPB Section 1033 Open Banking Rulemaking (2026–2027 Revision)
+* The Rule: Following its August 2026 submission to OIRA, the CFPB is finalizing revised Dodd-Frank Section 1033 (Personal Financial Data Rights) rules governing how fintech apps access US consumer bank accounts via APIs (such as Plaid or Stripe) to verify balances and trigger 0% US ACH eChecks. The rule enforces strict data minimization, annual re-authorization, and bans using payment data for targeted cross-selling.
+* Impact on Your App: If you integrate Plaid or Open Banking to verify student funds or initiate ACH tuition payments, restrict data collection strictly to the payment workflow and build an automatic 12-month consent renewal prompt.
+5. China PIPL & CAC Cross-Border Data Transfer Rules (Ongoing Enforcement)
+* The Rule: Under China's Personal Information Protection Law (PIPL) and Cyberspace Administration of China (CAC) cross-border data rules, financial account numbers, National ID cards, passports, and tuition invoices are classified as Sensitive Personal Information.
+* Impact on Your App: Never upload or store Chinese students' KYC documents (National IDs, Passports, Bank Statements, I-20s) on overseas cloud servers. Keep your document checklist generator 100% client-side (local to the user's phone/browser) and let students upload their documents directly inside the university portal, Flywire, Convera, or their bank's app[cite: 1, 3].
+Section 4: App Feature & Legal Implementation Checklist
+
+
+App Module
+	Governing Law / Rule
+	Concrete Implementation Requirement
+	1. Fee & FX Comparison Engine
+	UK FCA Consumer Duty (PRIN 2A), March 2026 FX Transparency Guidance & FSMA s.21
+
+
+	• Display three explicit numbers for every route: Upfront Fee ($) + Estimated FX Margin ($) = Total Estimated Cost ($), plus "Exact Amount University Receives"[cite: 1, 4].
+
+
+• Never badge a payment platform as "Free / $0 Fee" if an FX spread is embedded in the exchange rate[cite: 1, 2, 4].
+
+
+• Timestamp all exchange rate quotes and disclose any referral commissions.
+	2. China Corridor Smart Router
+	SAFE $50k Annual Quota, Current Account Rules & PBoC Announcement [2026] No. 9
+
+
+	• When Origin = China and Amount $\ge$ $50,000, highlight Route 2 (Flywire / Convera / EasyTransfer / Alipay) as "SAFE Quota-Exempt (RMB Education Trade)"[cite: 1, 3] and Route 1A (In-Branch Bank Wire with Admission Letter + I-20/CAS + Invoice).
+
+
+• Do not market unlicensed offshore fintech accounts to domestic users inside Mainland China per Announcement [2026] No. 9.
+	3. US Outbound Payment Filter
+	US 1% Remittance Excise Tax (IRC § 4475, eff. Jan 1, 2026)
+	• When Origin = US, display a banner: "Fund your transfer via a US bank account (ACH/Wire) or US debit/credit card to qualify for the 100% exemption from the 1% US Federal Remittance Excise Tax. Never fund with cash, money orders, or cashier's checks."
+	4. US Tax & FBAR Alert System
+	IRS Form 3520, IRC § 2503(e) & FinCEN FBAR
+
+
+	• Ask US-bound or US-citizen users: "Are you a US Citizen/Green Card holder, or an F-1/J-1 student in your 6th+ calendar year in the US?"
+
+
+
+
+• If Yes and routing >$10,000 through a foreign UK/Chinese student bank account (Route 1B): Trigger an FBAR (FinCEN Form 114) reminder[cite: 1, 5].
+
+
+• If Yes and receiving >$100,000/yr from foreign parents: Recommend paying tuition directly to the university (IRC § 2503(e) exemption) rather than wiring >$100k to the student's personal US account to avoid IRS Form 3520.
+	5. UK Student Visa Balance Guardrail
+	UK Immigration Rules – Appendix Finance
+
+
+	• When Destination = UK, remind visa applicants to maintain their required tuition + living funds untouched for 28 consecutive days prior to their visa application date, or confirm their CAS is updated immediately after paying tuition.
+	6. SWIFT Wire Sheet Generator
+	SWIFT ISO 20022 (Nov 2026 Mandate) & "OUR" Code[cite: 1, 2]
+	• Instruct users to select the "OUR" charge code so intermediary fees ($15–$35) are not deducted from the tuition amount[cite: 1, 2].
+
+
+• Format all beneficiary bank addresses using structured ISO 20022 fields (StreetName, PostCode, TownName, Country).
+	7. Zero-Storage Document Checklist
+	China PIPL, UK GDPR & US CFPB Section 1033
+	• Generate interactive document checklists (Passport, Student ID, I-20/CAS, Invoice) locally on the user's device without storing sensitive identity or financial PDFs on your backend servers[cite: 1, 3].

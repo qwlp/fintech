@@ -156,6 +156,20 @@ test("registration opens the workspace, restores the session, and signs in again
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
+  await expect(page.locator(".setup-page")).toBeVisible({ timeout: 15000 });
+  await page.getByRole("combobox", { name: "Home country" }).click();
+  await page.getByRole("option", { name: "Cambodia", exact: true }).click();
+  await page.getByRole("combobox", { name: "Study country" }).click();
+  await page
+    .getByRole("option", { name: "United Kingdom", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page
+    .getByRole("heading", { name: "A little about your studies." })
+    .waitFor();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Finish setup" }).click();
+  await page.getByRole("button", { name: "Open workspace" }).click();
   await expect(page.locator(".app-shell")).toBeVisible({ timeout: 15000 });
   await expect(page.locator("body")).toContainText("Registration Smoke Test");
   await page.reload();

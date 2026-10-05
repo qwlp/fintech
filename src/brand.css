@@ -6,6 +6,26 @@
   text-decoration: none;
   flex-shrink: 0;
 }
+.movewise-wordmark {
+  font: 750 24px Manrope, sans-serif;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.demo-sidebar .movewise-wordmark {
+  font-size: 15px;
+}
+.showcase-compact .demo-sidebar .movewise-wordmark {
+  font-size: 11px;
+}
+@media (max-width: 680px) {
+  .home-header .movewise-wordmark {
+    font-size: 22px;
+  }
+  .demo-sidebar .movewise-wordmark {
+    font-size: 11px;
+  }
+}
 .passport-brand-mark {
   display: grid;
   place-items: center;
