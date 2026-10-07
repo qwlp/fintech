@@ -509,7 +509,7 @@ describe("sandbox payment authorization and accounting", () => {
     });
     const state = await owner.query(api.accounts.bootstrap, {});
     expect(state.ledgerEntries[0].receivedMinor).toBe(200000);
-    expect(state.ledgerEntries[0].recipient).toBe("Example UK University");
+    expect(state.ledgerEntries[0].recipient).toBe("Example");
   });
   it("protects living funds at preparation and again at execution", async () => {
     const { t, owner, accountId, proposal } = await prepared();
@@ -737,7 +737,7 @@ describe("editable tuition and shared quote", () => {
       n.title.startsWith("Tuition due "),
     );
     expect(reminders).toHaveLength(1);
-    expect(reminders[0].detail).toContain("£2000.00");
+    expect(reminders[0].detail).toContain("GBP 2000.00");
     await t.run((ctx) =>
       ctx.db.patch(accountId, { paymentStatus: "completed" }),
     );

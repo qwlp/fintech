@@ -2,16 +2,16 @@ import { CircleHelp, X } from "lucide-react";
 import { Popover } from "radix-ui";
 const explanations: Record<string, string> = {
   "Exchange rate":
-    "How many GBP one USD buys. Sandbox quotes are estimates, not live provider rates.",
+    "How much study currency one unit of the source currency buys. Sandbox quotes are estimates, not live provider rates.",
   "Provider quote":
     "A provider's rate and fee, valid until the displayed expiry. Expired quotes need an explicit refresh and fresh approval.",
-  Fees: "The provider fee is included in your total USD cost. This sandbox does not model additional card or SWIFT charges.",
+  Fees: "The provider fee is included in your total source-currency cost. This sandbox does not model additional card or SWIFT charges.",
   Availability:
     "A route must cover tuition, preserve your living funds and meet your deadline before it can be selected.",
   "Arrival estimate":
     "Estimated business days, with your safety buffer. Bank holidays, cutoffs and university processing may add time.",
   "Balance valuation":
-    "GBP equivalents use stored sandbox valuations. They are estimates and are not live exchange rates.",
+    "Study-currency equivalents use stored sandbox valuations. They are estimates and are not live exchange rates.",
   "Local account":
     "An account in the destination country that may support domestic transfers.",
   SWIFT:

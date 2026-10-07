@@ -1,3 +1,5 @@
+import { useWorkspaceCurrency } from "./WorkspaceCurrency";
+import { studyCurrency } from "../shared/currency";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -40,6 +42,7 @@ export default function PaymentEstimate({
   recipient?: string;
   data?: EstimateData;
 }) {
+  const workspaceCurrency = useWorkspaceCurrency();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -70,8 +73,11 @@ export default function PaymentEstimate({
         </p>
       </section>
     );
-  const source = proposal?.sourceCurrency ?? "USD",
-    target = proposal?.targetCurrency ?? "GBP";
+  const source = proposal?.sourceCurrency ?? selected?.sourceCurrency ?? "USD",
+    target =
+      proposal?.targetCurrency ??
+      selected?.targetCurrency ??
+      (data.countryTo ? studyCurrency(data.countryTo) : workspaceCurrency);
   const received = proposal?.amountMinor ?? quote.amountMinor;
   const expiresAt = proposal?.expiresAt ?? selected?.quoteExpiresAt;
   const expired =

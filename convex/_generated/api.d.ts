@@ -16,6 +16,7 @@ import type * as ownership from "../ownership.js";
 import type * as paymentEngine from "../paymentEngine.js";
 import type * as sponsorLinks from "../sponsorLinks.js";
 import type * as tuitionDecision from "../tuitionDecision.js";
+import type * as workspaceCurrency from "../workspaceCurrency.js";
 
 import type {
   ApiFromModules,
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   paymentEngine: typeof paymentEngine;
   sponsorLinks: typeof sponsorLinks;
   tuitionDecision: typeof tuitionDecision;
+  workspaceCurrency: typeof workspaceCurrency;
 }>;
 
 /**

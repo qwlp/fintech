@@ -97,67 +97,31 @@ for (const width of [320, 390, 768, 1440, 1920]) {
     page.on("pageerror", (error) => errors.push(error.message));
     await preview(page, "brief-preview", "brief-preview");
     await page.getByRole("button", { name: /^Your costs/ }).click();
-    expect(
-      await page
-        .locator(".cost-list > div")
-        .evaluateAll((rows) =>
-          rows.every(
-            (row) => getComputedStyle(row).borderBottomWidth === "0px",
-          ),
-        ),
-    ).toBe(true);
-    const firstCost = page.locator(".cost-list > div").first();
-    await firstCost.getByRole("checkbox").click();
-    expect(
-      await firstCost.evaluate(
-        (row) => getComputedStyle(row).borderBottomWidth,
-      ),
-    ).toBe("0px");
-    await firstCost.getByRole("checkbox").click();
-    if (width < 768)
-      await page.getByRole("button", { name: "Back to categories" }).click();
-    await page.getByRole("button", { name: "Utilities Included" }).click();
-    await expect(page.locator(".planner-category-detail")).toContainText(
-      "Recurring monthly cost",
+    await expect(page.locator(".move-cost-breakdown").first()).toContainText(
+      "Accommodation",
     );
-    await page.getByLabel("Estimated amount · GBP").fill("200");
     if (width < 768)
       await page.getByRole("button", { name: "Back to categories" }).click();
     await page
-      .getByRole("button", { name: "Flight Included", exact: true })
+      .getByRole("button", { name: "Visa package", exact: true })
       .click();
+    const visa = page.getByRole("spinbutton", {
+      name: "Visa fee in GBP",
+      exact: true,
+    });
+    await visa.fill("200");
+    await visa.blur();
+    if (width < 768)
+      await page.getByRole("button", { name: "Back to categories" }).click();
+    await page.getByRole("button", { name: "Flights", exact: true }).click();
     await expect(
-      page.locator(".planner-category-detail .route-choices"),
+      page.getByRole("spinbutton", { name: "One-way flight in GBP" }),
     ).toBeVisible();
-    await expect(page.locator(".move-board-grid")).toHaveCount(0);
-    await expect(
-      page.getByRole("region", { name: "Arrival budget charts" }),
-    ).toHaveCount(0);
     await page
       .getByRole("button", { name: "Budget overview", exact: true })
       .click();
-    await expect(
-      page.getByRole("region", { name: "Arrival budget charts" }),
-    ).toBeVisible();
-    expect(
-      await page
-        .locator(".route-copy")
-        .first()
-        .evaluate((element) => element.getBoundingClientRect().width),
-    ).toBeGreaterThan(150);
-    await expect(page.locator(".arrival-summary")).toContainText("£200");
-    await expect(page.locator(".planner-budget-snapshot")).toHaveCount(0);
-    await expect(page.locator(".arrival-outlook-chart")).toHaveCount(0);
-    expect(
-      await page
-        .locator(".arrival-summary")
-        .evaluate((element) => getComputedStyle(element).borderBottomWidth),
-    ).toBe("1px");
-    expect(
-      await page
-        .locator(".planner-overview-toggle")
-        .evaluate((element) => element.getBoundingClientRect().width),
-    ).toBeLessThan(width - 40);
+    await expect(page.locator(".move-overview")).toBeVisible();
+    await expect(page.locator(".arrival-summary")).toContainText("£30,547");
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

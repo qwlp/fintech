@@ -144,6 +144,7 @@ describe("sponsor invitations", () => {
     expect(Object.keys(updated).sort()).toEqual(
       [
         "commitment",
+        "currency",
         "financialOverview",
         "id",
         "name",

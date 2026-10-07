@@ -17,7 +17,8 @@ const descriptions: Record<string, string> = {
     "Manage account protection, privacy settings and access to your account.",
   Profile:
     "Update your personal and study details, connect with sponsors and open your security settings.",
-  Wallet: "Review your currency balances and their estimated value in GBP.",
+  Wallet:
+    "Review your currency balances and their estimated value in your study currency.",
   Exchange:
     "Compare currencies and explore how exchange rate changes affect your funds.",
 };

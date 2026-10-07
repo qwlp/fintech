@@ -1,5 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { Security } from "../src/App";
+import "../src/app-clean.css";
+import "../src/dark-mode.css";
 import PaymentEvidence from "../src/PaymentEvidence";
 import "../src/styles.css";
 import "../src/components/ui/ui.css";
@@ -31,12 +34,13 @@ const ledger = {
   timestamp: Date.now(),
 };
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <main style={{ padding: 20 }}>
+  <main className="app-clean" style={{ padding: 20 }}>
+    <Security audit={[]} receipts={
     <PaymentEvidence
       banking={{ recipientVerified: true }}
       proposals={[proposal]}
       ledger={[ledger]}
       audit={[]}
-    />
+    />} />
   </main>,
 );

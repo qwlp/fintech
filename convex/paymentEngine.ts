@@ -1,3 +1,4 @@
+import { convertMoney, studyCurrency, walletValue } from "../shared/currency";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireAccount } from "./ownership";
@@ -16,6 +17,7 @@ export async function paymentTransition(
   expectedQuote?: string,
 ) {
   const account = await requireAccount(ctx, accountId);
+  const currency = studyCurrency(account.countryTo);
   if (account.role !== "Student") throw new Error("Student account required");
   if (next === "completed" && expectedProposalId) {
     const previous = await ctx.db.get(expectedProposalId);
@@ -53,6 +55,11 @@ export async function paymentTransition(
         .collect()
     ).find((row) => row.key === account.selectedRoute);
     const amount = banking?.paymentAmount;
+    if (route && (route.targetCurrency ?? "GBP") !== currency)
+      throw new Error("Refresh quotes for your study currency");
+    if (banking?.currency && banking.currency !== currency)
+      throw new Error("Payment currency does not match study currency");
+    const sourceCurrency = route?.sourceCurrency ?? "USD";
     if (
       expectedQuote &&
       (!route ||
@@ -83,7 +90,7 @@ export async function paymentTransition(
       banking.recipientVerified !== true
     )
       throw new Error("Verify the sandbox university recipient first");
-    const limit = security?.paymentLimit ?? 2500;
+    const limit = security?.paymentLimit ?? convertMoney(2500, "GBP", currency);
     if (!Number.isFinite(limit) || amount > limit)
       throw new Error("Payment exceeds the sandbox transaction limit");
     const { amountMinor, sourceMinor, feeMinor, totalMinor } = tuitionQuote(
@@ -94,15 +101,18 @@ export async function paymentTransition(
       .query("wallets")
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
       .collect();
-    const reserveMinor = cents(security?.protectedReserveGBP ?? 1000);
+    const reserveMinor = cents(
+      security?.protectedReserveGBP ?? convertMoney(1000, "GBP", currency),
+    );
     if (!Number.isSafeInteger(reserveMinor) || reserveMinor < 0)
       throw new Error("Invalid protected reserve");
-    const wallet = wallets.find((w) => w.currency === "USD");
+    const wallet = wallets.find((w) => w.currency === sourceCurrency);
     if (!wallet || cents(wallet.amount) < sourceMinor + feeMinor)
-      throw new Error("Insufficient sandbox USD funds");
+      throw new Error(`Insufficient sandbox ${sourceCurrency} funds`);
     const remainingGBPMinor = cents(
-      wallets.reduce((sum, w) => sum + w.gbpValue, 0) -
-        ((sourceMinor + feeMinor) / 100) * (wallet.gbpValue / wallet.amount),
+      wallets.reduce((sum, w) => sum + walletValue(w, currency), 0) -
+        ((sourceMinor + feeMinor) / 100) *
+          (walletValue(wallet, currency) / wallet.amount),
     );
     if (!Number.isSafeInteger(remainingGBPMinor))
       throw new Error("Wallet valuations unavailable");
@@ -110,6 +120,7 @@ export async function paymentTransition(
       throw new Error("Payment would use your protected living-cost reserve");
     const now = Date.now();
     const decision = assessTuition({
+      currency,
       amountGBP: amount,
       reserveGBP: reserveMinor / 100,
       wallets,
@@ -126,8 +137,8 @@ export async function paymentTransition(
       routeKey: route.key,
       provider: route.provider,
       fxRate: route.fxRate,
-      sourceCurrency: "USD",
-      targetCurrency: "GBP",
+      sourceCurrency,
+      targetCurrency: currency,
       amountMinor,
       sourceMinor,
       feeMinor,
@@ -146,7 +157,7 @@ export async function paymentTransition(
     await ctx.db.insert("auditEvents", {
       accountId,
       type: "PAYMENT_PREPARED",
-      detail: `Proposal ${id}: GBP ${(amountMinor / 100).toFixed(2)} to ${banking.recipient}; USD ${((sourceMinor + feeMinor) / 100).toFixed(2)} total. Sandbox quote expires in 10 minutes.`,
+      detail: `Proposal ${id}: ${currency} ${(amountMinor / 100).toFixed(2)} to ${banking.recipient}; ${sourceCurrency} ${((sourceMinor + feeMinor) / 100).toFixed(2)} total. Sandbox quote expires in 10 minutes.`,
       actor: "MoveWise",
       timestamp: now,
     });
@@ -154,6 +165,8 @@ export async function paymentTransition(
   }
   if (!proposal || proposal.expiresAt <= Date.now())
     throw new Error("Quote expired. Reset and prepare a fresh payment");
+  if (proposal.targetCurrency !== currency)
+    throw new Error("Study currency changed. Prepare a new payment");
   if (account.selectedRoute !== proposal.routeKey)
     throw new Error("Payment route changed. Fresh approval required");
   if (next === "approved") {
@@ -184,20 +197,24 @@ export async function paymentTransition(
       !Number.isSafeInteger(cents(wallet.amount)) ||
       cents(wallet.amount) < proposal.totalMinor
     )
-      throw new Error("Insufficient sandbox USD funds. No money was debited");
+      throw new Error(
+        `Insufficient sandbox ${proposal.sourceCurrency} funds. No money was debited`,
+      );
     const wallets = await ctx.db
       .query("wallets")
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
       .collect();
     const remainingGBPMinor = cents(
-      wallets.reduce((sum, w) => sum + w.gbpValue, 0) -
-        (proposal.totalMinor / 100) * (wallet.gbpValue / wallet.amount),
+      wallets.reduce((sum, w) => sum + walletValue(w, currency), 0) -
+        (proposal.totalMinor / 100) *
+          (walletValue(wallet, currency) / wallet.amount),
     );
     if (!Number.isSafeInteger(remainingGBPMinor))
       throw new Error("Wallet valuations unavailable");
     if (remainingGBPMinor < (proposal.protectedReserveMinor ?? 100000))
       throw new Error("Payment would use your protected living-cost reserve");
     const decision = assessTuition({
+      currency,
       amountGBP: proposal.amountMinor / 100,
       reserveGBP: (proposal.protectedReserveMinor ?? 100000) / 100,
       wallets,
@@ -206,6 +223,8 @@ export async function paymentTransition(
       now: Date.now(),
       routes: [
         {
+          sourceCurrency: proposal.sourceCurrency,
+          targetCurrency: proposal.targetCurrency,
           key: proposal.routeKey,
           provider: proposal.provider,
           fxRate: proposal.fxRate,
@@ -248,7 +267,7 @@ export async function paymentTransition(
     await ctx.db.insert("notifications", {
       accountId,
       title: "Sandbox payment completed",
-      detail: `${reference}: £${(proposal.amountMinor / 100).toFixed(2)} delivered to ${proposal.recipient}. No real funds moved.`,
+      detail: `${reference}: ${proposal.targetCurrency} ${(proposal.amountMinor / 100).toFixed(2)} delivered to ${proposal.recipient}. No real funds moved.`,
       read: false,
       timestamp: Date.now(),
     });

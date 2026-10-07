@@ -1,3 +1,4 @@
+import { convertMoney, studyCurrency } from "../shared/currency";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAccount } from "./ownership";
@@ -137,6 +138,7 @@ export const dashboard = query({
     return Promise.all(
       links.map(async (link) => {
         const student = await ctx.db.get(link.accountId);
+        const currency = studyCurrency(student?.countryTo ?? "");
         const requests = link.permissions.includes("Funding requests")
           ? (
               await ctx.db
@@ -175,16 +177,22 @@ export const dashboard = query({
                 amountGBP: banking.paymentAmount,
                 deadline: banking.tuitionDeadline ?? null,
                 status: student?.paymentStatus ?? "not_started",
-                paidGBP:
-                  ledger
-                    .filter((row) => row.receivedCurrency === "GBP")
-                    .reduce((sum, row) => sum + row.receivedMinor, 0) / 100,
+                paidGBP: ledger.reduce(
+                  (sum, row) =>
+                    sum +
+                    convertMoney(
+                      row.receivedMinor / 100,
+                      row.receivedCurrency,
+                      currency,
+                    ),
+                  0,
+                ),
                 recentPayments: ledger
-                  .filter((row) => row.receivedCurrency === "GBP")
                   .sort((a, b) => b.timestamp - a.timestamp)
                   .slice(0, 5)
                   .map((row) => ({
                     amountGBP: row.receivedMinor / 100,
+                    currency: row.receivedCurrency,
                     timestamp: row.timestamp,
                   })),
               }
@@ -227,6 +235,7 @@ export const dashboard = query({
             }
           : null;
         return {
+          currency,
           financialOverview,
           tuition,
           requestSummary,
@@ -253,12 +262,15 @@ export const updateCommitment = mutation({
     )
       throw new Error("Connection access denied");
     if (!Number.isFinite(amount) || amount < 0 || amount > 1e9)
-      throw new Error("Enter a valid commitment between £0 and £1 billion");
+      throw new Error(
+        "Enter a valid commitment between 0 and 1 billion in the student’s study currency",
+      );
+    const student = await ctx.db.get(link.accountId);
     await ctx.db.patch(id, { commitment: Math.round(amount * 100) / 100 });
     await ctx.db.insert("notifications", {
       accountId: link.accountId,
       title: "Commitment updated",
-      detail: `${account.name} committed £${amount.toLocaleString("en-GB")}.`,
+      detail: `${account.name} committed ${studyCurrency(student?.countryTo ?? "")} ${amount.toLocaleString("en-GB")}.`,
       read: false,
       timestamp: Date.now(),
     });

@@ -1,0 +1,162 @@
+.move-planner-complete .move-plan-settings,
+.move-planner-complete .move-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.move-planner-complete .move-plan-settings {
+  padding: 24px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+.move-planner-complete .move-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-ink);
+  font-size: 14px;
+}
+.move-planner-complete .move-field > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.move-planner-complete .move-alternatives {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.move-planner-complete .move-alternatives article {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  min-width: 0;
+}
+.move-planner-complete .move-alternatives p,
+.move-planner-complete .move-help,
+.move-planner-complete .planner-estimate-note {
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+.move-planner-complete .move-alternatives button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.move-planner-complete .move-cost-breakdown {
+  margin: 20px 0;
+}
+.move-planner-complete .move-cost-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--color-line);
+  padding: 12px 0;
+}
+.move-planner-complete dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.move-planner-complete .move-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+}
+.move-planner-complete .move-donut {
+  height: 300px;
+}
+.move-planner-complete .planner-category-detail > button {
+  margin-top: 16px;
+}
+.move-planner-complete .planner-category-detail {
+  min-width: 0;
+}
+@media (max-width: 767px) {
+  .move-planner-complete .move-plan-settings,
+  .move-planner-complete .move-fields,
+  .move-planner-complete .move-alternatives,
+  .move-planner-complete .move-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .move-planner-complete .move-plan-settings {
+    padding: 16px;
+  }
+  .move-planner-complete .arrival-summary-breakdown {
+    flex-wrap: wrap;
+  }
+}
+.app-clean .move-board.move-planner-complete {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.app-clean .move-board.move-planner-complete .move-board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.app-clean .move-board.move-planner-complete .arrival-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 24px;
+}
+.app-clean
+  .move-board.move-planner-complete
+  .arrival-summary
+  > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.app-clean
+  .move-board.move-planner-complete
+  .arrival-summary
+  > div:first-child
+  > strong {
+  font-size: 36px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.app-clean .move-board.move-planner-complete .arrival-summary-breakdown {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.app-clean .move-board.move-planner-complete .arrival-summary-breakdown > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.app-clean .move-board.move-planner-complete .arrival-summary-breakdown small {
+  color: var(--color-muted);
+}
+.app-clean .move-board.move-planner-complete input,
+.app-clean .move-board.move-planner-complete button[role="combobox"],
+.app-clean .move-board.move-planner-complete button[data-variant="outline"] {
+  color: var(--color-ink);
+}
+@media (max-width: 767px) {
+  .app-clean .move-board.move-planner-complete .arrival-summary {
+    padding: 18px;
+    gap: 16px;
+  }
+  .app-clean
+    .move-board.move-planner-complete
+    .arrival-summary
+    > div:first-child
+    > strong {
+    font-size: 28px;
+  }
+}

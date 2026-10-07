@@ -1,3 +1,5 @@
+import { useWorkspaceCurrency } from "./WorkspaceCurrency";
+import { formatCurrency } from "../shared/currency";
 import { Dialog } from "radix-ui";
 import InfoHelp from "./InfoHelp";
 import { useEffect, useMemo, useState } from "react";
@@ -8,6 +10,9 @@ import {
   CheckCircle2,
   CircleAlert,
   Landmark,
+  CalendarDays,
+  ChevronDown,
+  CreditCard,
 } from "lucide-react";
 import { assessTuition, type DecisionRoute } from "../convex/tuitionDecision";
 import { convexApi, convexClient } from "./lib/convex";
@@ -37,14 +42,15 @@ type Props = {
   onRefresh?: () => Promise<void>;
   onSelect?: (key: string) => Promise<boolean>;
 };
-const usd = (value: number | null) =>
+const sourceMoney = (value: number | null, currency = "USD") =>
   value === null
     ? "Unavailable"
     : new Intl.NumberFormat("en-US", {
         style: "currency",
-        currency: "USD",
+        currency,
       }).format(value);
 export default function TuitionDecision(props: Props) {
+  const currency = useWorkspaceCurrency();
   const { banking, reserveGBP, paymentStatus } = props;
   const [deadline, setDeadline] = useState(banking.tuitionDeadline ?? "");
   const [buffer, setBuffer] = useState(String(banking.bufferBusinessDays ?? 1));
@@ -68,6 +74,7 @@ export default function TuitionDecision(props: Props) {
     try {
       return {
         decision: assessTuition({
+          currency,
           amountGBP: banking.paymentAmount ?? 0,
           reserveGBP,
           wallets: props.wallets,
@@ -85,6 +92,7 @@ export default function TuitionDecision(props: Props) {
       };
     }
   }, [
+    currency,
     banking.paymentAmount,
     banking.tuitionDeadline,
     banking.bufferBusinessDays,
@@ -110,7 +118,7 @@ export default function TuitionDecision(props: Props) {
     } catch (e) {
       setError(
         e instanceof Error
-          ? e.message.replace(/\[.*?\]/g, "")
+          ? e.message.replace(/\[.*?\]/g, "").replace(/^.*?Uncaught Error:\s*/, "").replace(/\s+at handler[\s\S]*$/, "").replace(/\s+Called by client[\s\S]*$/, "")
           : "Could not update tuition plan",
       );
     } finally {
@@ -137,9 +145,10 @@ export default function TuitionDecision(props: Props) {
         <div>
           <h2 id="tuition-decision-heading">Choose a route</h2>
         </div>
-        <span className="tuition-sandbox">USD → GBP</span>
+        <span className="tuition-sandbox">USD → {currency}</span>
       </div>
-      <div className="payment-plan-settings">
+      <details className="payment-plan-settings" open={!banking.tuitionDeadline || dirty}>
+        <summary className="payment-plan-summary"><span><CalendarDays size={17} /> Payment plan</span><span>{banking.tuitionDeadline || "Set deadline"}<ChevronDown size={16} /></span></summary>
         <form
           className="tuition-plan-form"
           onSubmit={(e) => {
@@ -184,9 +193,9 @@ export default function TuitionDecision(props: Props) {
               />
             </label>
             <label>
-              Living reserve · GBP
+              Living reserve · {currency}
               <Input
-                aria-label="Protected living funds in GBP"
+                aria-label={`Protected living funds in ${currency}`}
                 type="number"
                 min={0}
                 max={1000000}
@@ -205,7 +214,7 @@ export default function TuitionDecision(props: Props) {
             Save plan
           </Button>
         </form>
-      </div>
+      </details>
       {dirty && (
         <p className="tuition-plan-note">
           Save your changes to update the comparison and the AI’s
@@ -227,7 +236,7 @@ export default function TuitionDecision(props: Props) {
               aria-label="Route recommendation"
             >
               <CircleAlert size={18} />
-              <strong>Check availability below</strong>
+              <strong>{!banking.tuitionDeadline ? "Choose a deadline and save your plan" : "Refresh quotes or check route details"}</strong>
             </div>
           )}
           <div className="tuition-route-list">
@@ -238,7 +247,7 @@ export default function TuitionDecision(props: Props) {
               >
                 <div className="tuition-route-title">
                   <strong>
-                    <Landmark size={17} />
+                    {route.routeKey.includes("card") ? <CreditCard size={18} /> : <Landmark size={18} />}
                     {route.provider}
                   </strong>
                   <span>
@@ -255,12 +264,14 @@ export default function TuitionDecision(props: Props) {
                   </span>
                 </div>
                 <div className="tuition-route-summary">
-                  <strong>{usd(route.totalUSD)}</strong>
+                  <strong>
+                    {sourceMoney(route.totalUSD, route.sourceCurrency)}
+                  </strong>
                   <span>
                     <Clock3 size={14} />
                     {route.estimatedArrival
                       ? route.delivery
-                      : "Arrival unavailable"}
+                      : route.delivery}
                   </span>
                   <Button
                     variant="outline"
@@ -291,6 +302,7 @@ export default function TuitionDecision(props: Props) {
                     <ArrowRight size={15} />
                   </Button>
                 </div>
+                {!route.eligible && <p className="tuition-route-blocker">{route.blockers[0]}</p>}
                 <Dialog.Root
                   open={detailRoute === route.routeKey}
                   onOpenChange={(open) =>
@@ -319,13 +331,18 @@ export default function TuitionDecision(props: Props) {
                           <dt>
                             Rate <InfoHelp term="Exchange rate" />
                           </dt>
-                          <dd>{route.rateGBPPerUSD} GBP / USD</dd>
+                          <dd>
+                            {route.rateGBPPerUSD} {route.targetCurrency} /{" "}
+                            {route.sourceCurrency}
+                          </dd>
                         </div>
                         <div>
                           <dt>
                             Fees <InfoHelp term="Fees" />
                           </dt>
-                          <dd>{usd(route.feeUSD)}</dd>
+                          <dd>
+                            {sourceMoney(route.feeUSD, route.sourceCurrency)}
+                          </dd>
                         </div>
                       </dl>
                       <div className="tuition-route-facts">
@@ -341,7 +358,11 @@ export default function TuitionDecision(props: Props) {
                           <strong>
                             {route.remainingGBP === null
                               ? "Unknown"
-                              : `£${route.remainingGBP.toFixed(2)}`}
+                              : formatCurrency(
+                                  route.remainingGBP,
+                                  route.targetCurrency,
+                                  2,
+                                )}
                           </strong>
                         </div>
                       </div>
@@ -355,7 +376,12 @@ export default function TuitionDecision(props: Props) {
                       {route.minimumTopUpUSD !== null &&
                         route.minimumTopUpUSD > 0 && (
                           <p className="tuition-funding-gap">
-                            At least {usd(route.minimumTopUpUSD)} additional USD
+                            At least{" "}
+                            {sourceMoney(
+                              route.minimumTopUpUSD,
+                              route.sourceCurrency,
+                            )}{" "}
+                            additional {route.sourceCurrency}
                             is needed to cover this payment and protect your
                             reserve, using the current sandbox valuation. A
                             sponsor promise does not count until funds arrive.

@@ -14,6 +14,9 @@ import { useMutation } from "convex/react";
 import type { Doc } from "../convex/_generated/dataModel";
 import { convexApi } from "./lib/convex";
 import Brand from "./Brand";
+import UniversitySelect from "./UniversitySelect";
+import { convertMoney, studyCurrency } from "../shared/currency";
+import { getCountry } from "../shared/study";
 import SetupCountrySelect from "./SetupCountrySelect";
 import { DatePicker } from "./components/ui/date-picker";
 import { Button } from "./components/ui/button";
@@ -52,8 +55,8 @@ export default function Setup({
       : "";
   const [values, setValues] = useState({
     name: account.name,
-    countryFrom: account.countryFrom,
-    countryTo: account.countryTo,
+    countryFrom: getCountry(account.countryFrom)?.name ?? account.countryFrom,
+    countryTo: getCountry(account.countryTo)?.name ?? account.countryTo,
     university: account.university,
     course: account.course,
     courseStart: startValue,
@@ -64,7 +67,22 @@ export default function Setup({
   const reduced = useReducedMotion();
   const heading = useRef<HTMLHeadingElement>(null);
   const update = (key: keyof typeof values, value: string) =>
-    setValues((prev) => ({ ...prev, [key]: value }));
+    setValues((prev) => ({
+      ...prev,
+      [key]: value,
+      ...(key === "countryTo" && value !== prev.countryTo
+        ? {
+            university: "",
+            fundingAmount: String(
+              convertMoney(
+                Number(prev.fundingAmount),
+                studyCurrency(prev.countryTo),
+                studyCurrency(value),
+              ),
+            ),
+          }
+        : {}),
+    }));
   const field = (
     key: keyof typeof values,
     label: string,
@@ -231,11 +249,16 @@ export default function Setup({
                   )}
                   {!sponsor && step === 1 && (
                     <>
-                      {field(
-                        "university",
-                        "University · optional",
-                        "University name",
-                      )}
+                      <UniversitySelect
+                        country={values.countryTo}
+                        value={values.university}
+                        onChange={(value) => update("university", value)}
+                        disabled={busy}
+                      />
+                      <p className="setup-directory-note">
+                        Study currency: {getCountry(values.countryTo)?.currency}
+                        . Your budgets and payments use this currency.
+                      </p>
                       {field(
                         "course",
                         "Course · optional",
@@ -256,7 +279,7 @@ export default function Setup({
                     <>
                       {field(
                         "fundingAmount",
-                        "Confirmed funding (£)",
+                        `Confirmed funding (${studyCurrency(values.countryTo)})`,
                         "0",
                         "number",
                         true,

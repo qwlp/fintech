@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { convexTest } from "convex-test";
 import { decodeJwt, exportJWK, exportPKCS8, generateKeyPair } from "jose";
 import schema from "../../convex/schema";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 beforeAll(async () => {
@@ -59,7 +59,32 @@ describe("account authorization", () => {
     });
     const result = await owner.query(api.accounts.bootstrap, {});
     expect(result.account).toMatchObject({ name: "Dara Chan", initials: "DC", countryFrom: "Cambodia", countryTo: "United Kingdom", setupComplete: true });
-    expect(result.config.profile).toMatchObject({ financialStatus: "Planning", fundingAmount: 12000, courseStart: "2027-09" });
+    expect(result.config.profile).toMatchObject({ financialStatus: "Planning", fundingAmount: 12000, courseStart: "2027-09", homeCurrency: "KHR", studyCurrency: "GBP", fundingCurrency: "GBP" });
+  });
+  it("keeps currencies synchronized on profile edits and country account saves", async () => {
+    const { owner, accountId } = await accountFixture();
+    const details = { accountId, name: "Owner", countryFrom: "Cambodia", countryTo: "Canada", university: "University of Waterloo", course: "Computing", courseStart: "", financialStatus: "Planning", sponsorSupport: "Yes", fundingAmount: 1000 };
+    await owner.mutation(api.accounts.updateProfile, details);
+    let result = await owner.query(api.accounts.bootstrap, {});
+    expect(result.config.profile).toMatchObject({ homeCurrency: "KHR", studyCurrency: "CAD", fundingCurrency: "CAD" });
+    await expect(owner.mutation(api.accounts.updateProfile, { ...details, countryTo: "Germany" })).rejects.toThrow("study country");
+    await owner.mutation(api.accounts.updateProfile, { ...details, countryTo: "Germany", university: "" });
+    await owner.mutation(api.accounts.addCountryAccount, { accountId, country: "AU", label: "Study account" });
+    result = await owner.query(api.accounts.bootstrap, {});
+    expect(result.account).toMatchObject({ countryTo: "Germany", university: "" });
+    expect(result.config.profile).toMatchObject({ studyCurrency: "EUR", fundingAmount: 1000, countryAccounts: [{ country: "Australia", currency: "AUD", label: "Study account" }] });
+    await expect(owner.mutation(api.accounts.addCountryAccount, { accountId, country: "Unknown", label: "Account" })).rejects.toThrow("supported country");
+  });
+  it("provides only saved profile fields to the assistant and refreshes them after editing", async () => {
+    const { owner, accountId } = await accountFixture();
+    await owner.mutation(api.accounts.completeSetup, { name: "Dara", countryFrom: "Cambodia", countryTo: "Canada", university: "University of Waterloo", course: "Computing", courseStart: "2027-09", fundingAmount: 1000, sponsorSupport: "Yes" });
+    const summary = await owner.query(internal.accounts.chatContext, { accountId });
+    expect(summary.profile).toEqual({ name: "Dara", role: "Student", homeCountry: "Cambodia", studyCountry: "Canada", university: "University of Waterloo", course: "Computing", courseStart: "2027-09" });
+    expect(summary.profile).not.toHaveProperty("email");
+    expect(summary.profile).not.toHaveProperty("userId");
+    await owner.mutation(api.accounts.updateProfile, { accountId, name: "Dara Chan", countryFrom: "Cambodia", countryTo: "Germany", university: "", course: "Engineering", courseStart: "", fundingAmount: 1000, sponsorSupport: "Yes", financialStatus: "Planning" });
+    const updated = await owner.query(internal.accounts.chatContext, { accountId });
+    expect(updated.profile).toMatchObject({ name: "Dara Chan", studyCountry: "Germany", course: "Engineering", university: "", courseStart: "" });
   });
   it("requires sign-in and valid details before completing setup", async () => {
     const { t, owner } = await accountFixture();

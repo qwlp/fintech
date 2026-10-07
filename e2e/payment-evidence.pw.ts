@@ -9,7 +9,7 @@ for (const width of [1440, 390]) {
     await page.route("**/payment-preview", (route) =>
       route.fulfill({
         contentType: "text/html",
-        body: `<html><body><div id="root"></div><script type="module">
+        body: `<html data-theme="light"><head><meta name="viewport" content="width=device-width,initial-scale=1"/></head><body><div id="root"></div><script type="module">
       import RefreshRuntime from "/@react-refresh"; RefreshRuntime.injectIntoGlobalHook(window);
       window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type;
       window.__vite_plugin_react_preamble_installed__ = true;
@@ -17,9 +17,13 @@ for (const width of [1440, 390]) {
       }),
     );
     await page.goto("/payment-preview");
-    await page.getByText("Payment activity & receipts", { exact: true }).click();
-    await expect(page.getByRole("status")).toContainText("US$2592.38");
-    await expect(page.getByRole("status")).toContainText("£2000.00");
+    await expect(page.getByRole("heading", { name: "Security center" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Receipts", exact: true })).toBeVisible();
+    await page
+      .getByText("Payment activity & receipts", { exact: true })
+      .click();
+    await expect(page.getByRole("status")).toContainText("US$2,592.38");
+    await expect(page.getByRole("status")).toContainText("£2,000.00");
     await expect(page.locator("main")).toContainText("5000.00 → 2407.62");
     const download = page.waitForEvent("download");
     await page

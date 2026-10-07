@@ -23,11 +23,13 @@ export default function AgentTour({ accountId }: { accountId?: string }) {
       <div className="agent-tour-toolbar">
         <Button
           className="agent-tour-trigger"
+          aria-label="How the agent works"
+          title="How the agent works"
           variant="ghost"
           onClick={() => setOpen(true)}
         >
           <CircleHelp aria-hidden="true" />
-          How the agent works
+          <span className="agent-tour-label">How the agent works</span>
         </Button>
       </div>
       <Dialog.Root

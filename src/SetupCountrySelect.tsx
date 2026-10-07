@@ -1,14 +1,8 @@
 import { useState } from "react";
 import { Popover } from "radix-ui";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
 
-const countries = [
-  { name: "China", flag: "🇨🇳" },
-  { name: "United Kingdom", flag: "🇬🇧" },
-  { name: "Cambodia", flag: "🇰🇭" },
-  { name: "United States", flag: "🇺🇸" },
-  { name: "Australia", flag: "🇦🇺" },
-];
+import { countries } from "../shared/study";
 
 export default function SetupCountrySelect({
   label,
@@ -22,6 +16,7 @@ export default function SetupCountrySelect({
   disabled: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const selectedCountry = countries.find((country) => country.name === value);
   return (
     <div className="setup-field">
@@ -30,6 +25,7 @@ export default function SetupCountrySelect({
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
+          setQuery("");
         }}
       >
         <Popover.Trigger asChild>
@@ -60,6 +56,24 @@ export default function SetupCountrySelect({
             align="start"
             collisionPadding={16}
           >
+            <div className="setup-country-search">
+              <Search size={16} />
+              <input
+                aria-label={`Search ${label.toLowerCase()}`}
+                placeholder="Search countries…"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    event.currentTarget
+                      .closest(".setup-country-menu")
+                      ?.querySelector<HTMLButtonElement>('[role="option"]')
+                      ?.focus();
+                  }
+                }}
+              />
+            </div>
             <div
               role="listbox"
               aria-label={label}
@@ -88,26 +102,38 @@ export default function SetupCountrySelect({
                 }
               }}
             >
-              {countries.map((country) => (
-                <button
-                  key={country.name}
-                  type="button"
-                  role="option"
-                  aria-selected={country.name === value}
-                  onClick={() => {
-                    onChange(country.name);
-                    setOpen(false);
-                  }}
-                >
-                  <span className="setup-country-option-label">
-                    <span className="setup-country-flag" aria-hidden="true">
-                      {country.flag}
+              {countries
+                .filter((country) =>
+                  `${country.name} ${country.currency}`
+                    .toLowerCase()
+                    .includes(query.toLowerCase().trim()),
+                )
+                .map((country) => (
+                  <button
+                    key={country.name}
+                    type="button"
+                    role="option"
+                    aria-label={country.name}
+                    aria-selected={country.name === value}
+                    onClick={() => {
+                      onChange(country.name);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="setup-country-option-label">
+                      <span className="setup-country-flag" aria-hidden="true">
+                        {country.flag}
+                      </span>
+                      {country.name} <small>{country.currency}</small>
                     </span>
-                    {country.name}
-                  </span>
-                  {country.name === value && <Check size={16} />}
-                </button>
-              ))}
+                    {country.name === value && <Check size={16} />}
+                  </button>
+                ))}
+              {!countries.some((country) =>
+                `${country.name} ${country.currency}`
+                  .toLowerCase()
+                  .includes(query.toLowerCase().trim()),
+              ) && <p>No countries found.</p>}
             </div>
           </Popover.Content>
         </Popover.Portal>

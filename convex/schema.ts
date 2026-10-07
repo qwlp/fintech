@@ -80,6 +80,8 @@ export default defineSchema({
     label: v.string(),
   }).index("by_account", ["accountId"]),
   paymentRoutes: defineTable({
+    sourceCurrency: v.optional(v.string()),
+    targetCurrency: v.optional(v.string()),
     accountId: v.id("accounts"),
     key: v.string(),
     provider: v.string(),

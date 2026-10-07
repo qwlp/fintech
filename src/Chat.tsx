@@ -11,9 +11,9 @@ import { Textarea } from "./components/ui/textarea";
 export type ChatMessage = { _id: string; from: "agent" | "user"; text: string; timestamp?: number; chatId?: string; toolResults?: ToolResult[] };
 const prompts = [
   { icon: Wallet, label: "Everyday spending", text: "How much can I safely spend each month?" },
-  { icon: ChartNoAxesCombined, label: "Currency stress test", text: "What happens to my available funds if my home currencies fall 10% against GBP?" },
+  { icon: ChartNoAxesCombined, label: "Currency stress test", text: "What happens to my available funds if my home currencies fall 10% against my study currency?" },
   { icon: GraduationCap, label: "Tuition routes", text: "Compare my tuition payment routes against my saved deadline. Explain the safest eligible route, living-cost reserve and any funding gap." },
-  { icon: House, label: "Explore a change", text: "How will a £900 rent change my runway?" },
+  { icon: House, label: "Explore a change", text: "How will a monthly rent of 900 in my study currency change my runway?" },
 ];
 
 export function Assistant({ messages, onSend, onNew, onHistory, aiEnabled = true, onConsent, tour }: {
@@ -30,6 +30,7 @@ export function Assistant({ messages, onSend, onNew, onHistory, aiEnabled = true
   const busy = useRef(false);
   const scroll = useRef<HTMLDivElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { if (!input && textarea.current) textarea.current.style.height = "auto"; }, [input]);
   useEffect(() => { if (scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight; }, [messages.length, pending]);
   const send = async (text: string) => {
     text = text.trim();
@@ -44,7 +45,7 @@ export function Assistant({ messages, onSend, onNew, onHistory, aiEnabled = true
   return <div className="assistant-page">
     <div className="assistant-toolbar">
       <div className="assistant-identity"><span className="assistant-mark"><Bot size={19} /></span><div><strong>Plan assistant</strong><small>Study plan, budget & tuition tools</small></div></div>
-      <div className="assistant-toolbar-actions">{tour}{onConsent && <Button variant="ghost" size="sm" aria-label="AI privacy settings" onClick={() => setPrivacyOpen(true)}><ShieldCheck /><span className="assistant-privacy-label">AI privacy</span></Button>}<Button variant="ghost" size="sm" onClick={onHistory} disabled={!!pending}><Clock /> History</Button><Button variant="outline" size="sm" onClick={onNew} disabled={!!pending}><Plus /> New chat</Button></div>
+      <div className="assistant-toolbar-actions">{tour}{onConsent && <Button variant="ghost" size="sm" aria-label="AI privacy settings" onClick={() => setPrivacyOpen(true)}><ShieldCheck /><span className="assistant-privacy-label">AI privacy</span></Button>}<Button variant="ghost" size="sm" aria-label="History" title="Chat history" onClick={onHistory} disabled={!!pending}><Clock /><span className="assistant-action-label">History</span></Button><Button className="assistant-new-chat" variant="outline" size="sm" aria-label="New chat" title="New chat" onClick={onNew} disabled={!!pending}><Plus /><span className="assistant-action-label">New chat</span></Button></div>
     </div>
     {onConsent && <Dialog.Root open={privacyOpen} onOpenChange={setPrivacyOpen}>
       <Dialog.Portal>
@@ -89,13 +90,13 @@ export function Assistant({ messages, onSend, onNew, onHistory, aiEnabled = true
     </div>
     <div className="assistant-composer-area">
       <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void send(input); }}>
-        <Textarea ref={textarea} aria-label="Message your plan assistant" placeholder="Ask anything about your study plan…" value={input} maxLength={4000} disabled={!!pending || !aiEnabled}
+        <Textarea ref={textarea} aria-label="Message your plan assistant" rows={1} placeholder="Ask about your study plan…" value={input} maxLength={4000} disabled={!!pending || !aiEnabled}
           onChange={(event) => { setInput(event.target.value); event.target.style.height = "auto"; event.target.style.height = Math.min(event.target.scrollHeight, 180) + "px"; }}
           onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }} />
         <div className="assistant-composer-footer"><span>Enter to send · Shift + Enter for a new line</span><Button type="submit" size="icon" aria-label="Send message" disabled={!!pending || !input.trim() || !aiEnabled}><ArrowUp size={19} /></Button></div>
       </form>
       {error && <p className="assistant-error" role="alert">{error}</p>}
-      <small className="assistant-note">Check important details. You stay in control of every payment.</small>
+      <small className="assistant-note"><span className="assistant-note-desktop">Check important details. You stay in control of every payment.</span><span className="assistant-note-mobile">Review advice. Payments stay in your control.</span></small>
     </div>
   </div>;
 }
@@ -116,7 +117,7 @@ export function ChatHistory({ messages, onOpen, onNew, onBack }: {
     .filter((chat) => `${chat.title} ${chat.preview}`.toLowerCase().includes(search.toLowerCase()));
   return <section className="chat-history-page">
     {onBack && <Button variant="ghost" size="sm" onClick={onBack} className="history-back"><ArrowLeft /> Back to chat</Button>}
-    <div className="chat-history-heading"><div><h1>Chat history</h1><p>Revisit a conversation or start something new.</p></div><Button variant="outline" onClick={onNew}><Plus /> New chat</Button></div>
+    <div className="chat-history-heading"><div><h1>Chat history</h1><p>Revisit a conversation or start something new.</p></div><Button variant="outline" onClick={onNew}><Plus /><span className="assistant-action-label">New chat</span></Button></div>
     <div className="chat-history-search"><Search size={18} /><Input aria-label="Search conversations" placeholder="Search conversations…" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
     <div className="chat-history-list">{chats.map((chat) => <button key={chat.id} onClick={() => onOpen(chat.id === "legacy" ? undefined : chat.id)}><span className="history-icon"><MessageSquare size={20} /></span><div><strong>{chat.title}</strong><p>{chat.preview}</p><small>{chat.date ? new Date(chat.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Earlier conversation"} · {chat.count} {chat.count === 1 ? "message" : "messages"}</small></div><ArrowUpRight size={18} /></button>)}</div>
     {!chats.length && <div className="chat-history-empty"><MessageSquare size={32} /><h2>{search ? "No matching conversations" : "A fresh start"}</h2><p>{search ? "Try a different search." : "Your conversations will appear here after your first message."}</p>{!search && <Button variant="outline" onClick={onNew}>Start a conversation</Button>}</div>}

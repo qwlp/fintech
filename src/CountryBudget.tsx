@@ -1,3 +1,4 @@
+import { getCountry } from "../shared/study";
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Globe2, Minus, Plus } from "lucide-react";
@@ -8,45 +9,35 @@ import MoneyAmount, { formatMoney } from "./MoneyAmount";
 const destinations = [
   {
     name: "United Kingdom",
-    code: "UK",
-    currency: "GBP",
     tuition: "6000",
     living: "1000",
     funding: "12000",
   },
   {
     name: "United States",
-    code: "US",
-    currency: "USD",
     tuition: "18000",
     living: "1500",
     funding: "24000",
   },
   {
     name: "Australia",
-    code: "AU",
-    currency: "AUD",
     tuition: "24000",
     living: "2000",
     funding: "32000",
   },
   {
     name: "Canada",
-    code: "CA",
-    currency: "CAD",
     tuition: "16000",
     living: "1400",
     funding: "24000",
   },
   {
     name: "Germany",
-    code: "DE",
-    currency: "EUR",
     tuition: "4000",
     living: "900",
     funding: "10000",
   },
-];
+].map((destination) => ({ ...destination, ...getCountry(destination.name)! }));
 type Budget = {
   tuition: string;
   living: string;

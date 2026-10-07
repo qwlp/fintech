@@ -431,3 +431,71 @@
   scrollbar-width: thin;
   scrollbar-color: var(--ui-line) transparent;
 }
+
+.setup-progress i {
+  background: var(--color-accent);
+}
+.setup-icon {
+  color: var(--color-accent);
+  background: color-mix(
+    in srgb,
+    var(--color-accent) 12%,
+    var(--ui-surface)
+  );
+}
+.setup-country-trigger:focus-visible,
+.setup-country-trigger[data-state="open"] {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.setup-country-trigger > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.setup-country-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.setup-country-options > button[aria-selected="true"],
+.setup-country-options > button:focus-visible {
+  color: var(--color-accent);
+  background: color-mix(
+    in srgb,
+    var(--color-accent) 10%,
+    var(--ui-surface)
+  );
+}
+.setup-country-option-label small {
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+.setup-directory-note {
+  color: var(--ui-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+.setup-country-menu > .setup-directory-note {
+  padding: 10px 14px;
+  border-top: 1px solid var(--ui-line);
+}
+
+/* Remove closed options immediately so focus and assistive technology only see the active list. */
+.setup-country-menu[data-state="closed"] {
+  display: none;
+  animation: none;
+}
+
+.setup-actions .ui-button[data-variant="default"],
+.setup-next.ui-button {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 5px 14px
+    color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+.setup-actions .ui-button[data-variant="default"]:hover,
+.setup-next.ui-button:hover {
+  background: var(--color-primary-hover);
+}

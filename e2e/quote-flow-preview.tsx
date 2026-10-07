@@ -51,17 +51,9 @@ function Preview() {
     <div className="app-clean">
       <main style={{ padding: 16, maxWidth: 1600, margin: "auto" }}>
         <PaymentWorkspace
-          estimateData={{
-            routes: observations,
-            selectedRoute: selected,
-            countryFrom: "Cambodia",
-            countryTo: "United Kingdom",
-            proposal: status !== "not_started" ? proposal : undefined,
-          }}
           amount={banking.paymentAmount}
           recipient={banking.recipient}
           paymentStatus={status}
-          activity={<p>Receipts</p>}
           plan={
             <TuitionDecision
               banking={banking}

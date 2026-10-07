@@ -1,11 +1,11 @@
+import { convertMoney } from "../shared/currency";
+import { useWorkspaceCurrency } from "./WorkspaceCurrency";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Landmark,
   GraduationCap,
   WalletCards,
   ArrowLeftRight,
-  ReceiptText,
-  Calculator,
   Pencil,
   ShieldCheck,
   ArrowRight,
@@ -14,7 +14,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
-import PaymentEstimate, { type EstimateData } from "./PaymentEstimate";
 import { convexApi, convexClient } from "./lib/convex";
 import "./tuition-decision.css";
 import "./brief.css";
@@ -22,7 +21,6 @@ import "./payment-compact.css";
 export default function PaymentWorkspace({
   plan,
   review,
-  activity,
   balances,
   exchange,
   amount,
@@ -32,12 +30,9 @@ export default function PaymentWorkspace({
   banking,
   initialView = "tuition",
   onEdit,
-  estimateData,
 }: {
-  estimateData?: EstimateData;
   plan: ReactNode;
   review: ReactNode;
-  activity: ReactNode;
   balances?: ReactNode;
   exchange?: ReactNode;
   amount?: number;
@@ -52,6 +47,7 @@ export default function PaymentWorkspace({
     last4: string;
   }) => Promise<void>;
 }) {
+  const currency = useWorkspaceCurrency();
   const [view, setView] = useState(initialView);
   const [reviewing, setReviewing] = useState(paymentStatus !== "not_started");
   const [editing, setEditing] = useState(false);
@@ -61,6 +57,9 @@ export default function PaymentWorkspace({
     last4: banking?.recipientAccountLast4 ?? "",
   });
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setEditing(false);
+  }, [currency]);
   const [message, setMessage] = useState("");
   useEffect(() => setView(initialView), [initialView]);
   const locked = paymentStatus !== "not_started";
@@ -100,24 +99,19 @@ export default function PaymentWorkspace({
               <ArrowLeftRight size={16} /> Exchange
             </TabsTrigger>
           )}
-          <TabsTrigger value="activity">
-            <ReceiptText size={16} /> Receipts
-          </TabsTrigger>
-          <TabsTrigger value="estimate">
-            <Calculator size={16} /> Calculator
-          </TabsTrigger>
+
         </TabsList>
         <TabsContent value="tuition">
           {amount !== undefined && !reviewing && (
             <div className="payment-workspace-summary">
               <div>
                 <span>
-                  <GraduationCap size={15} /> Tuition · GBP
+                  <GraduationCap size={15} /> Tuition · {currency}
                 </span>
                 <strong>
                   {new Intl.NumberFormat("en-GB", {
                     style: "currency",
-                    currency: "GBP",
+                    currency,
                   }).format(amount)}
                 </strong>
               </div>
@@ -191,12 +185,12 @@ export default function PaymentWorkspace({
               }}
             >
               <label>
-                Tuition amount · GBP
+                Tuition amount · {currency}
                 <Input
                   required
                   type="number"
                   min="0.01"
-                  max="1000000"
+                  max={convertMoney(1000000, "GBP", currency)}
                   step="0.01"
                   value={draft.amount}
                   disabled={busy}
@@ -250,12 +244,14 @@ export default function PaymentWorkspace({
           {!reviewing && !locked ? (
             <>
               <div className="payment-choose-view">{plan}</div>
+              <div className="payment-review-actions">
               <Button
                 className="payment-review-next"
                 onClick={() => setReviewing(true)}
               >
                 Review payment <ArrowRight size={16} />
               </Button>
+              </div>
             </>
           ) : (
             <>
@@ -273,23 +269,7 @@ export default function PaymentWorkspace({
         </TabsContent>
         <TabsContent value="balances">{balances}</TabsContent>
         <TabsContent value="exchange">{exchange}</TabsContent>
-        <TabsContent value="activity">{activity}</TabsContent>
-        <TabsContent value="estimate">
-          <PaymentEstimate
-            amount={amount}
-            recipient={recipient}
-            data={estimateData}
-          />
-          <Button
-            variant="outline"
-            onClick={() => {
-              setView("tuition");
-              setReviewing(false);
-            }}
-          >
-            Open tuition details <ArrowRight size={15} />
-          </Button>
-        </TabsContent>
+
       </Tabs>
     </section>
   );

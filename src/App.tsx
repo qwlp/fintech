@@ -1,8 +1,25 @@
+import MovePlanner from "./MovePlanner";
+export { default as MovePlanner } from "./MovePlanner";
+import {
+  WorkspaceCurrencyProvider,
+  useWorkspaceCurrency,
+  useWorkspaceMoney,
+} from "./WorkspaceCurrency";
+import {
+  studyCurrency,
+  walletValue,
+  convertMoney,
+  formatCurrency,
+  currencyRate,
+  convertMoneyText,
+} from "../shared/currency";
 import MobileNavigation from "./MobileNavigation";
 import { tuitionQuote, quoteFingerprint } from "../convex/tuitionDecision";
 import InfoHelp from "./InfoHelp";
 import AgentTour from "./AgentTour";
 import SectionHelp from "./SectionHelp";
+import UniversitySelect from "./UniversitySelect";
+import { countries, getCountry } from "../shared/study";
 import SetupCountrySelect from "./SetupCountrySelect";
 import "./brief.css";
 import { createPortal } from "react-dom";
@@ -44,6 +61,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Activity,
   ArrowRight,
+  ArrowLeft,
+  ArrowLeftRight,
   Banknote,
   Bell,
   Bot,
@@ -95,7 +114,6 @@ import {
 } from "./data";
 import {
   confirmedFunding,
-  formatGBP,
   formatUSD,
   fundingCoverage,
   fundingGap,
@@ -134,6 +152,7 @@ type DatabaseState = {
     selectedRoute: string;
     sponsorRequestSent: boolean;
     aiConsentAt?: number;
+    setupComplete?: boolean;
   };
   auditEvents: Array<{
     _id: string;
@@ -200,6 +219,8 @@ type DatabaseState = {
     timestamp: number;
   }>;
   paymentRoutes: Array<{
+    sourceCurrency?: string;
+    targetCurrency?: string;
     maxBusinessDays?: number;
     quotedAt?: number;
     quoteExpiresAt?: number;
@@ -302,6 +323,12 @@ function App({ onSignOut }: { onSignOut: () => void }) {
     useState<PaymentStatus>("not_started");
   const [localAudit, setLocalAudit] = useState<AuditEvent[]>(initialAudit);
   const [database, setDatabase] = useState<DatabaseState | null>(null);
+  // Legacy plans are denominated in GBP until the server rebases them.
+  const currency =
+    database?.config?.profile?.workspaceCurrency ??
+    database?.config?.profile?.fundingCurrency ??
+    "GBP";
+  const formatMoney = (value: number) => formatCurrency(value, currency);
   const [syncState, setSyncState] = useState<
     "demo" | "connecting" | "synced" | "error"
   >(convexClient ? "connecting" : "demo");
@@ -517,7 +544,11 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       setLocalPaymentStatus("prepared");
       addAudit(
         "PAYMENT_PREPARED",
-        "£2,000 tuition payment prepared; no funds moved",
+        convertMoneyText(
+          "£2,000 tuition payment prepared; no funds moved",
+          "GBP",
+          currency,
+        ),
         "MoveWise",
       );
     }
@@ -531,7 +562,11 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       setLocalPaymentStatus("approved");
       addAudit(
         "PAYMENT_APPROVED",
-        "Explicit approval recorded for £2,000 tuition payment",
+        convertMoneyText(
+          "Explicit approval recorded for £2,000 tuition payment",
+          "GBP",
+          currency,
+        ),
       );
     }
     announce("Approval recorded securely");
@@ -651,7 +686,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
     account
       ? mutate(convexApi.createRateAlert, {
           accountId: account._id,
-          pair: "USD/GBP",
+          pair: `USD/${currency}`,
           targetRate,
         })
       : Promise.resolve(false);
@@ -703,363 +738,369 @@ function App({ onSignOut }: { onSignOut: () => void }) {
     );
 
   return (
-    <div className={`app-shell app-clean variation-${variation}`}>
-      <aside className="sidebar sidebar-clean">
-        <Brand />
-        <nav aria-label="Main navigation">
-          {nav
-            .filter(({ page: item }) => item !== "Profile")
-            .map(({ page: item, icon: Icon }) => (
-              <div className="sidebar-section" key={item}>
-                <button
-                  className={
-                    page === item ||
-                    (item === "Payments" && ["Wallet", "Exchange"].includes(page))
-                      ? "active"
-                      : ""
-                  }
-                  aria-current={
-                    page === item ||
-                    (item === "Payments" && ["Wallet", "Exchange"].includes(page))
-                      ? "page"
-                      : undefined
-                  }
-                  onClick={() => go(item)}
-                >
-                  {page === item && (
-                    <motion.span
-                      className="nav-motion-indicator"
-                      layoutId="active-navigation"
-                      transition={
-                        reducedMotion
-                          ? { duration: 0 }
-                          : { type: "spring", stiffness: 420, damping: 34 }
-                      }
-                      aria-hidden="true"
-                    />
-                  )}
-                  <Icon size={19} />
-                  <span>{item}</span>
-                </button>
-                <SectionHelp section={item} />
-              </div>
-            ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="sidebar-tools" aria-label="Application controls">
-            <button
-              className="tour-trigger"
-              aria-label="Take a tour"
-              title="Take a tour"
-              onClick={() => setTourOpen(true)}
-            >
-              <HelpCircle size={17} />
-            </button>
-            <button
-              className="theme-toggle"
-              onClick={() =>
-                setTheme((current) => (current === "dark" ? "light" : "dark"))
-              }
-              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            >
-              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <div className="notification-wrap">
-              <button
-                ref={notificationButton}
-                aria-controls="notification-panel"
-                aria-label="Notifications"
-                title="Notifications"
-                aria-expanded={notificationsOpen}
-                onClick={readNotifications}
-              >
-                <Bell size={19} />
-                {(database?.notifications.filter((n) => !n.read).length ?? 2) >
-                  0 && (
-                  <b>
-                    {database?.notifications.filter((n) => !n.read).length ?? 2}
-                  </b>
-                )}
-              </button>
-              {notificationsOpen &&
-                createPortal(
-                  <div
-                    ref={notificationPanel}
-                    id="notification-panel"
-                    role="region"
-                    aria-label="Notifications"
-                    className="notification-popover notification-overlay"
-                  >
-                    <strong>Notifications</strong>
-                    {(database?.notifications ?? []).map((n) => (
-                      <div key={n._id}>
-                        <b>{n.title}</b>
-                        <span>{n.detail}</span>
-                      </div>
-                    ))}
-                    {database?.notifications.length === 0 && (
-                      <span>You're all caught up.</span>
-                    )}
-                    {!database && (
-                      <div>
-                        <b>Tuition due soon</b>
-                        <span>Your £2,000 instalment is due in 12 days.</span>
-                      </div>
-                    )}
-                  </div>,
-                  document.body,
-                )}
-            </div>
-          </div>
-          <button
-            className="btn secondary"
-            onClick={() => {
-              location.hash = "setup";
-            }}
-          >
-            <Settings size={16} /> Set up account
-          </button>
-          <button className="btn secondary" onClick={onSignOut}>
-            Sign out
-          </button>
-          <button
-            className={`profile ${page === "Profile" ? "active" : ""}`}
-            aria-label="Open your profile"
-            aria-current={page === "Profile" ? "page" : undefined}
-            onClick={() => go("Profile")}
-          >
-            <span>{account?.initials ?? "DC"}</span>
-            <div>
-              <strong>{account?.name ?? "Dara Chan"}</strong>
-              <small>{account?.role ?? "Student"}</small>
-            </div>
-            <ChevronRight size={17} />
-          </button>
-        </div>
-      </aside>
-      <main className={page === "Dashboard" ? "dashboard-page" : ""}>
-        <div className="content">
-          <motion.div
-            className="page-view"
-            key={`${page}-${variation}`}
-            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {page === "Dashboard" && (
-              <Dashboard
-                paid={paid}
-                go={go}
-                variation={1}
-                checklist={database?.checklist}
-                toggleChecklist={toggleChecklist}
-                database={database}
-                onSponsorRequest={createSponsorRequest}
-                onSponsorPermission={setSponsorPermission}
-                onRateAlert={createRateAlert}
-              />
-            )}
-            {page === "Profile" && (
-              <Profile
-                go={go}
-                announce={announce}
-                account={account}
-                config={database?.config?.profile}
-                totals={{
-                  funded: planFunded,
-                  gap: planGap,
-                  coverage: planCoverage,
-                }}
-                onSave={saveProfile}
-                onAddCountry={(country, label) =>
-                  account
-                    ? mutate(convexApi.addCountryAccount, {
-                        accountId: account._id,
-                        country,
-                        label,
-                      })
-                    : Promise.resolve(false)
-                }
-              />
-            )}
-            {page === "Move Planner" && (
-              <MovePlanner
-                go={go}
-                config={database?.config?.move}
-                accountId={account?._id}
-              />
-            )}
-            {page === "AI Agent" &&
-              (showChatHistory ? (
-                <ChatHistory
-                  messages={database?.messages ?? []}
-                  onNew={newChat}
-                  onBack={() => setShowChatHistory(false)}
-                  onOpen={(id) => {
-                    setActiveChat(id);
-                    setShowChatHistory(false);
-                  }}
-                />
-              ) : (
-                <Assistant
-                  key={activeChat ?? "legacy"}
-                  tour={<AgentTour accountId={account?._id} />}
-                  messages={(database?.messages ?? []).filter(
-                    (message) => message.chatId === activeChat,
-                  )}
-                  aiEnabled={!!account?.aiConsentAt}
-                  onConsent={async (enabled) =>
-                    account
-                      ? mutate(convexApi.setAIConsent, {
-                          accountId: account._id,
-                          enabled,
-                        })
-                      : false
-                  }
-                  onSend={sendMessage}
-                  onNew={newChat}
-                  onHistory={() => setShowChatHistory(true)}
-                />
-              ))}
-            {["Payments", "Wallet", "Exchange"].includes(page) && (
-              <PaymentWorkspace
-                initialView={
-                  page === "Wallet"
-                    ? "balances"
-                    : page === "Exchange"
-                      ? "exchange"
-                      : "tuition"
-                }
-                balances={<Wallet storedWallets={database?.wallets} go={go} />}
-                exchange={
-                  <ExchangeWorkspace
-                    go={go}
-                    database={database}
-                    onRateAlert={createRateAlert}
-                  />
-                }
-                estimateData={{
-                  routes: database?.paymentRoutes,
-                  selectedRoute: account?.selectedRoute,
-                  countryFrom: database?.account.countryFrom,
-                  countryTo: database?.account.countryTo,
-                  proposal:
-                    paymentStatus !== "not_started"
-                      ? database?.paymentProposals
-                          ?.slice()
-                          .sort((a, b) => b.createdAt - a.createdAt)[0]
-                      : undefined,
-                }}
-                accountId={account?._id}
-                banking={database?.config?.banking}
-                amount={database?.config?.banking?.paymentAmount}
-                recipient={database?.config?.banking?.recipient}
-                paymentStatus={paymentStatus}
-                activity={
-                  <PaymentEvidence
-                    accountId={account?._id}
-                    banking={database?.config?.banking}
-                    proposals={database?.paymentProposals ?? []}
-                    ledger={database?.ledgerEntries ?? []}
-                    audit={database?.auditEvents ?? []}
-                    tools={database?.toolExecutions ?? []}
-                  />
-                }
-                plan={
-                  database?.config?.banking ? (
-                    <TuitionDecision
-                      accountId={account?._id}
-                      banking={database.config.banking}
-                      reserveGBP={
-                        database.config.security?.protectedReserveGBP ?? 1000
-                      }
-                      wallets={database.wallets}
-                      routes={database.paymentRoutes}
-                      selectedRoute={account?.selectedRoute}
-                      paymentStatus={paymentStatus}
-                      onSelect={selectRoute}
-                    />
-                  ) : (
-                    <PaymentEvidence
-                      accountId={account?._id}
-                      proposals={[]}
-                      ledger={[]}
-                      audit={[]}
-                    />
-                  )
-                }
-                review={
-                  <Payments
-                    status={paymentStatus}
-                    paid={paid}
-                    prepare={prepare}
-                    approve={approve}
-                    execute={execute}
-                    reset={resetPayment}
-                    accountId={account?._id}
-                    storedRoute={account?.selectedRoute}
-                    onSelectRoute={selectRoute}
-                    proposal={
-                      database?.paymentProposals
-                        ?.slice()
-                        .sort((a, b) => b.createdAt - a.createdAt)[0]
+    <WorkspaceCurrencyProvider currency={currency}>
+      <div className={`app-shell app-clean variation-${variation}`}>
+        <aside className="sidebar sidebar-clean">
+          <Brand />
+          <nav aria-label="Main navigation">
+            {nav
+              .filter(({ page: item }) => item !== "Profile")
+              .map(({ page: item, icon: Icon }) => (
+                <div className="sidebar-section" key={item}>
+                  <button
+                    className={
+                      page === item ||
+                      (item === "Payments" &&
+                        ["Wallet", "Exchange"].includes(page))
+                        ? "active"
+                        : ""
                     }
-                    storedRoutes={database?.paymentRoutes}
-                    config={{
-                      ...database?.config?.banking,
-                      transactionReference: database?.paymentProposals?.find(
-                        (p) => p.status === "completed",
-                      )?.reference,
+                    aria-current={
+                      page === item ||
+                      (item === "Payments" &&
+                        ["Wallet", "Exchange"].includes(page))
+                        ? "page"
+                        : undefined
+                    }
+                    onClick={() => go(item)}
+                  >
+                    {page === item && (
+                      <motion.span
+                        className="nav-motion-indicator"
+                        layoutId="active-navigation"
+                        transition={
+                          reducedMotion
+                            ? { duration: 0 }
+                            : { type: "spring", stiffness: 420, damping: 34 }
+                        }
+                        aria-hidden="true"
+                      />
+                    )}
+                    <Icon size={19} />
+                    <span>{item}</span>
+                  </button>
+                  <SectionHelp section={item} />
+                </div>
+              ))}
+          </nav>
+          <div className="sidebar-bottom">
+            <div className="sidebar-tools" aria-label="Application controls">
+              <button
+                className="tour-trigger"
+                aria-label="Take a tour"
+                title="Take a tour"
+                onClick={() => setTourOpen(true)}
+              >
+                <HelpCircle size={17} />
+              </button>
+              <button
+                className="theme-toggle"
+                onClick={() =>
+                  setTheme((current) => (current === "dark" ? "light" : "dark"))
+                }
+                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              >
+                {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <div className="notification-wrap">
+                <button
+                  ref={notificationButton}
+                  aria-controls="notification-panel"
+                  aria-label="Notifications"
+                  title="Notifications"
+                  aria-expanded={notificationsOpen}
+                  onClick={readNotifications}
+                >
+                  <Bell size={19} />
+                  {(database?.notifications.filter((n) => !n.read).length ??
+                    2) > 0 && (
+                    <b>
+                      {database?.notifications.filter((n) => !n.read).length ??
+                        2}
+                    </b>
+                  )}
+                </button>
+                {notificationsOpen &&
+                  createPortal(
+                    <div
+                      ref={notificationPanel}
+                      id="notification-panel"
+                      role="region"
+                      aria-label="Notifications"
+                      className="notification-popover notification-overlay"
+                    >
+                      <strong>Notifications</strong>
+                      {(database?.notifications ?? []).map((n) => (
+                        <div key={n._id}>
+                          <b>{n.title}</b>
+                          <span>{n.detail}</span>
+                        </div>
+                      ))}
+                      {database?.notifications.length === 0 && (
+                        <span>You're all caught up.</span>
+                      )}
+                      {!database && (
+                        <div>
+                          <b>Tuition due soon</b>
+                          <span>
+                            Your{" "}
+                            {formatMoney(convertMoney(2000, "GBP", currency))}{" "}
+                            instalment is due in 12 days.
+                          </span>
+                        </div>
+                      )}
+                    </div>,
+                    document.body,
+                  )}
+              </div>
+            </div>
+            <button
+              className="btn secondary"
+              onClick={() => {
+                location.hash = "setup";
+              }}
+            >
+              <Settings size={16} /> Set up account
+            </button>
+            <button className="btn secondary" onClick={onSignOut}>
+              Sign out
+            </button>
+            <button
+              className={`profile ${page === "Profile" ? "active" : ""}`}
+              aria-label="Open your profile"
+              aria-current={page === "Profile" ? "page" : undefined}
+              onClick={() => go("Profile")}
+            >
+              <span>{account?.initials ?? "DC"}</span>
+              <div>
+                <strong>{account?.name ?? "Dara Chan"}</strong>
+                <small>{account?.role ?? "Student"}</small>
+              </div>
+              <ChevronRight size={17} />
+            </button>
+          </div>
+        </aside>
+        <main className={page === "Dashboard" ? "dashboard-page" : ""}>
+          <div className="content">
+            <motion.div
+              className="page-view"
+              key={`${page}-${variation}`}
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {page === "Dashboard" && (
+                <Dashboard
+                  paid={paid}
+                  go={go}
+                  variation={1}
+                  checklist={database?.checklist}
+                  toggleChecklist={toggleChecklist}
+                  database={database}
+                  onSponsorRequest={createSponsorRequest}
+                  onSponsorPermission={setSponsorPermission}
+                  onRateAlert={createRateAlert}
+                />
+              )}
+              {page === "Profile" && (
+                <Profile
+                  go={go}
+                  announce={announce}
+                  account={account}
+                  config={database?.config?.profile}
+                  totals={{
+                    funded: planFunded,
+                    gap: planGap,
+                    coverage: planCoverage,
+                  }}
+                  onSave={saveProfile}
+                  onAddCountry={(country, label) =>
+                    account
+                      ? mutate(convexApi.addCountryAccount, {
+                          accountId: account._id,
+                          country,
+                          label,
+                        })
+                      : Promise.resolve(false)
+                  }
+                />
+              )}
+              {page === "Move Planner" && (
+                <MovePlanner
+                  studyCountry={account?.countryTo}
+                  university={account?.university}
+                  annualTuition={database?.costs?.find(cost => cost.key === "tuition")?.amount ?? 0}
+                  go={go}
+                  config={database?.config?.move}
+                  accountId={account?._id}
+                />
+              )}
+              {page === "AI Agent" &&
+                (showChatHistory ? (
+                  <ChatHistory
+                    messages={database?.messages ?? []}
+                    onNew={newChat}
+                    onBack={() => setShowChatHistory(false)}
+                    onOpen={(id) => {
+                      setActiveChat(id);
+                      setShowChatHistory(false);
                     }}
                   />
-                }
-              />
-            )}
-            {page === "Sponsors" && (
-              <Sponsors
-                connected={!!database}
-                onPermission={setSponsorPermission}
-                announce={announce}
-                requestSent={account?.sponsorRequestSent}
-                onRequest={requestSponsor}
-                storedSponsors={database?.sponsors}
-                config={database?.config?.sponsorship}
-              />
-            )}
-            {page === "Security" && (
-              <Security audit={audit} config={database?.config?.security} />
-            )}
-          </motion.div>
-        </div>
-      </main>
-      <MobileNavigation page={page} go={go} />
-      {tourOpen && (
-        <Tour
-          page={page}
-          variation={variation}
-          go={go}
-          chooseVariation={chooseVariation}
-          close={closeTour}
-        />
-      )}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key={toast}
-            className="toast"
-            role="status"
-            initial={reducedMotion ? false : { opacity: 0, y: 16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
-            transition={{ duration: reducedMotion ? 0 : 0.22 }}
-          >
-            <CheckCircle2 size={18} />
-            {toast}
-          </motion.div>
+                ) : (
+                  <Assistant
+                    key={activeChat ?? "legacy"}
+                    tour={<AgentTour accountId={account?._id} />}
+                    messages={(database?.messages ?? []).filter(
+                      (message) => message.chatId === activeChat,
+                    )}
+                    aiEnabled={!!account?.aiConsentAt}
+                    onConsent={async (enabled) =>
+                      account
+                        ? mutate(convexApi.setAIConsent, {
+                            accountId: account._id,
+                            enabled,
+                          })
+                        : false
+                    }
+                    onSend={sendMessage}
+                    onNew={newChat}
+                    onHistory={() => setShowChatHistory(true)}
+                  />
+                ))}
+              {["Payments", "Wallet", "Exchange"].includes(page) && (
+                <PaymentWorkspace
+                  initialView={
+                    page === "Wallet"
+                      ? "balances"
+                      : page === "Exchange"
+                        ? "exchange"
+                        : "tuition"
+                  }
+                  balances={
+                    <Wallet storedWallets={database?.wallets} go={go} />
+                  }
+                  exchange={
+                    <ExchangeWorkspace
+                      go={go}
+                      database={database}
+                      onRateAlert={createRateAlert}
+                    />
+                  }
+                  accountId={account?._id}
+                  banking={database?.config?.banking}
+                  amount={database?.config?.banking?.paymentAmount}
+                  recipient={database?.config?.banking?.recipient}
+                  paymentStatus={paymentStatus}
+                  plan={
+                    database?.config?.banking ? (
+                      <TuitionDecision
+                        accountId={account?._id}
+                        banking={database.config.banking}
+                        reserveGBP={
+                          database.config.security?.protectedReserveGBP ??
+                          convertMoney(1000, "GBP", currency)
+                        }
+                        wallets={database.wallets}
+                        routes={database.paymentRoutes}
+                        selectedRoute={account?.selectedRoute}
+                        paymentStatus={paymentStatus}
+                        onSelect={selectRoute}
+                      />
+                    ) : (
+                      <PaymentEvidence
+                        accountId={account?._id}
+                        proposals={[]}
+                        ledger={[]}
+                        audit={[]}
+                      />
+                    )
+                  }
+                  review={
+                    <Payments
+                      status={paymentStatus}
+                      paid={paid}
+                      prepare={prepare}
+                      approve={approve}
+                      execute={execute}
+                      reset={resetPayment}
+                      accountId={account?._id}
+                      storedRoute={account?.selectedRoute}
+                      onSelectRoute={selectRoute}
+                      proposal={
+                        database?.paymentProposals
+                          ?.slice()
+                          .sort((a, b) => b.createdAt - a.createdAt)[0]
+                      }
+                      storedRoutes={database?.paymentRoutes}
+                      config={{
+                        ...database?.config?.banking,
+                        transactionReference: database?.paymentProposals?.find(
+                          (p) => p.status === "completed",
+                        )?.reference,
+                      }}
+                    />
+                  }
+                />
+              )}
+              {page === "Sponsors" && (
+                <Sponsors
+                  connected={!!database}
+                  onPermission={setSponsorPermission}
+                  announce={announce}
+                  requestSent={account?.sponsorRequestSent}
+                  onRequest={requestSponsor}
+                  storedSponsors={database?.sponsors}
+                  config={database?.config?.sponsorship}
+                />
+              )}
+              {page === "Security" && (
+                <Security audit={audit} config={database?.config?.security}
+                  receipts={
+                    <PaymentEvidence
+                      accountId={account?._id}
+                      banking={database?.config?.banking}
+                      proposals={database?.paymentProposals ?? []}
+                      ledger={database?.ledgerEntries ?? []}
+                      audit={database?.auditEvents ?? []}
+                      tools={database?.toolExecutions ?? []}
+                    />
+                  }
+                />
+              )}
+            </motion.div>
+          </div>
+        </main>
+        <MobileNavigation page={page} go={go} />
+        {tourOpen && (
+          <Tour
+            page={page}
+            variation={variation}
+            go={go}
+            chooseVariation={chooseVariation}
+            close={closeTour}
+          />
         )}
-      </AnimatePresence>
-    </div>
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              key={toast}
+              className="toast"
+              role="status"
+              initial={
+                reducedMotion ? false : { opacity: 0, y: 16, scale: 0.96 }
+              }
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
+              transition={{ duration: reducedMotion ? 0 : 0.22 }}
+            >
+              <CheckCircle2 size={18} />
+              {toast}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </WorkspaceCurrencyProvider>
   );
 }
 
@@ -1385,6 +1426,9 @@ function OverviewDashboard({
   go: (page: Page) => void;
   database: DatabaseState | null;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const categoryIcon = (name: string) => {
     const label = name.toLowerCase();
     if (label.includes("tuition")) return GraduationCap;
@@ -1463,14 +1507,14 @@ function OverviewDashboard({
         >
           <h3 id="funding-heading">Study plan funding</h3>
           <div className="funding-amount">
-            <strong>{formatGBP(fundedTotal)}</strong>
-            <span>of {formatGBP(planTotal)}</span>
+            <strong>{formatMoney(fundedTotal)}</strong>
+            <span>of {formatMoney(planTotal)}</span>
           </div>
           <div className="funding-progress-label">
             <span>{Math.round(coverage)}% funded</span>
             <span>
               {gap > 0
-                ? `${formatGBP(gap)} left to fund`
+                ? `${formatMoney(gap)} left to fund`
                 : "Funding goal reached"}
             </span>
           </div>
@@ -1500,7 +1544,7 @@ function OverviewDashboard({
               <dt>
                 <WalletCards size={15} /> Monthly essentials
               </dt>
-              <dd>{formatGBP(monthlyEssentials)}</dd>
+              <dd>{formatMoney(monthlyEssentials)}</dd>
             </div>
           </dl>
         </section>
@@ -1514,7 +1558,7 @@ function OverviewDashboard({
               <GraduationCap size={19} />{" "}
               {tuitionPaid ? "Tuition paid" : "Tuition payment"}
             </h3>
-            <strong>{formatGBP(tuition.amount)}</strong>
+            <strong>{formatMoney(tuition.amount)}</strong>
             <span className="payment-schedule">
               {tuitionPaid ? (
                 <CheckCircle2 size={15} />
@@ -1544,17 +1588,17 @@ function OverviewDashboard({
           </div>
           <figure
             className="spending-chart"
-            aria-label={`Spending breakdown. Total budget ${formatGBP(planTotal)}. Category amounts and percentages follow below.`}
+            aria-label={`Spending breakdown. Total budget ${formatMoney(planTotal)}. Category amounts and percentages follow below.`}
           >
             <div className="spending-donut">
               {planTotal > 0 ? (
-                <BudgetDonut costs={planCosts} />
+                <BudgetDonut currency={currency} costs={planCosts} />
               ) : (
                 <div className="empty-donut" />
               )}
               <div className="donut-total">
                 <span>Total budget</span>
-                <strong>{formatGBP(planTotal)}</strong>
+                <strong>{formatMoney(planTotal)}</strong>
                 <span>Study plan</span>
               </div>
             </div>
@@ -1601,13 +1645,13 @@ function OverviewDashboard({
                   <span className="budget-distribution" role="cell">
                     <span>{Math.round(share)}%</span>
                   </span>
-                  <strong role="cell">{formatGBP(item.amount)}</strong>
+                  <strong role="cell">{formatMoney(item.amount)}</strong>
                 </div>
               );
             })}
             <div className="budget-table-total" role="row">
               <span role="rowheader">Total</span>
-              <strong role="cell">{formatGBP(planTotal)}</strong>
+              <strong role="cell">{formatMoney(planTotal)}</strong>
             </div>
           </div>
         </section>
@@ -1625,7 +1669,7 @@ function OverviewDashboard({
             >
               <figcaption>
                 <strong>How your plan is funded</strong>
-                <span>Funding sources and the remaining gap · GBP</span>
+                <span>Funding sources and the remaining gap · {currency}</span>
               </figcaption>
               <div
                 className="funding-bar-chart"
@@ -1642,7 +1686,7 @@ function OverviewDashboard({
               <div className="funding-source" key={item.name}>
                 <div>
                   <span>{item.name}</span>
-                  <strong>{formatGBP(item.amount)}</strong>
+                  <strong>{formatMoney(item.amount)}</strong>
                 </div>
                 <span className="source-availability">
                   {item.status === "confirmed"
@@ -1661,7 +1705,7 @@ function OverviewDashboard({
             <div className="funding-gap">
               <div>
                 <span>Still to fund</span>
-                <strong>{formatGBP(gap)}</strong>
+                <strong>{formatMoney(gap)}</strong>
               </div>
               <button onClick={() => go("AI Agent")}>
                 Explore funding options <ArrowRight size={15} />
@@ -1695,6 +1739,9 @@ function VariationPanel({
   variation: Variation;
   go: (p: Page) => void;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [extraSpend, setExtraSpend] = useState(250);
   const [requestSent, setRequestSent] = useState(false);
   const [usdAmount, setUsdAmount] = useState(2500);
@@ -1716,7 +1763,7 @@ function VariationPanel({
         </div>
         <div className="runway-controls">
           <label>
-            Extra monthly spending <b>{formatGBP(extraSpend)}</b>
+            Extra monthly spending <b>{formatMoney(extraSpend)}</b>
             <input
               type="range"
               min="0"
@@ -1736,9 +1783,9 @@ function VariationPanel({
             <span>12 months</span>
           </div>
           <p>
-            At {formatGBP(adjustedBurn)}/month, your current liquid funds reach
-            approximately <b>{adjustedRunway.toFixed(1)} months</b>. Irregular
-            tuition payments are excluded from this stress test.
+            At {formatMoney(adjustedBurn)}/month, your current liquid funds
+            reach approximately <b>{adjustedRunway.toFixed(1)} months</b>.
+            Irregular tuition payments are excluded from this stress test.
           </p>
         </div>
       </section>
@@ -1753,13 +1800,16 @@ function VariationPanel({
             <h2>Coordinate the next contribution</h2>
           </div>
           <strong>
-            £3,000 <small>remaining</small>
+            {formatMoney(convertMoney(3000, "GBP", currency))}{" "}
+            <small>remaining</small>
           </strong>
         </div>
         <div className="sponsor-request">
           <div>
             <span>Next commitment</span>
-            <strong>£1,000 by 15 November</strong>
+            <strong>
+              {formatMoney(convertMoney(1000, "GBP", currency))} by 15 November
+            </strong>
             <p>
               Sokha sees the tuition obligation and commitment status, not your
               wallet or personal spending.
@@ -1782,19 +1832,23 @@ function VariationPanel({
         </div>
         <div className="commitment-line">
           <i style={{ width: "67%" }} />
-          <span>£6,000 received</span>
-          <span>£9,000 committed</span>
+          <span>
+            {formatMoney(convertMoney(6000, "GBP", currency))} received
+          </span>
+          <span>
+            {formatMoney(convertMoney(9000, "GBP", currency))} committed
+          </span>
         </div>
       </section>
     );
   if (variation === 4) {
-    const received = usdAmount * 0.774 - 8.4;
+    const received = usdAmount * 0.774 * currencyRate("GBP", currency);
     return (
       <section className="variation-panel fx-tool">
         <div className="variation-heading">
           <div>
             <span>Variation 4 · Exchange desk</span>
-            <h2>Preview a USD → GBP conversion</h2>
+            <h2>Preview a USD → {currency} conversion</h2>
           </div>
           <button onClick={() => go("Payments")}>
             Compare routes <ArrowRight />
@@ -1816,21 +1870,25 @@ function VariationPanel({
           <ArrowRight />
           <label>
             Estimated arrival{" "}
-            <strong>
-              £{received.toLocaleString("en-GB", { maximumFractionDigits: 2 })}
-            </strong>
-            <em>GBP</em>
+            <strong>{formatCurrency(received, currency, 2)}</strong>
+            <em>{currency}</em>
           </label>
         </div>
         <div className="rate-strip">
           <span>
-            Demo rate <b>0.774</b>
+            Demo rate{" "}
+            <b>{(0.774 * currencyRate("GBP", currency)).toFixed(4)}</b>
           </span>
           <span>
             Provider fee <b>$8.40</b>
           </span>
           <span>
-            Rate impact at −5% <b>−£{(usdAmount * 0.774 * 0.05).toFixed(0)}</b>
+            Rate impact at −5%{" "}
+            <b>
+              {formatMoney(
+                -usdAmount * 0.774 * currencyRate("GBP", currency) * 0.05,
+              )}
+            </b>
           </span>
         </div>
       </section>
@@ -1870,7 +1928,11 @@ function VariationPanel({
               {i === 2
                 ? "Due in 12 days"
                 : i === 3
-                  ? "£2,700 funding gap remains"
+                  ? convertMoneyText(
+                      "£2,700 funding gap remains",
+                      "GBP",
+                      currency,
+                    )
                   : "Verified"}
             </small>
           </button>
@@ -1919,21 +1981,28 @@ function WorkspaceHeader({
 }
 
 function RunwayWorkspace({ database }: { database: DatabaseState | null }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [tab, setTab] = useState("Forecast"),
-    [extra, setExtra] = useState(250);
+    [extra, setExtra] = useState(() => convertMoney(250, "GBP", currency));
   const recurring =
     database?.costs.filter((item) => item.category === "Recurring") ?? [];
   const baseBurn =
-    recurring.reduce((sum, item) => sum + item.amount / 12, 0) || 1300;
+    recurring.reduce((sum, item) => sum + item.amount / 12, 0) ||
+    convertMoney(1300, "GBP", currency);
   const liquid =
-    database?.wallets.reduce((sum, item) => sum + item.gbpValue, 0) || 8900;
+    database?.wallets.reduce(
+      (sum, item) => sum + walletValue(item, currency),
+      0,
+    ) ?? convertMoney(8900, "GBP", currency);
   const burnRate = baseBurn + extra,
     months = liquid / burnRate,
     currentMonths = liquid / baseBurn;
   const bills = (database?.costs ?? []).map((item) => [
     item.due,
     item.name,
-    formatGBP(item.amount),
+    formatMoney(item.amount),
   ]);
   return (
     <div className="workspace">
@@ -1961,12 +2030,16 @@ function RunwayWorkspace({ database }: { database: DatabaseState | null }) {
             <h3>Pressure points</h3>
             <div className="signal danger">
               <span>12 Oct</span>
-              <strong>£2,000 tuition</strong>
+              <strong>
+                {formatMoney(convertMoney(2000, "GBP", currency))} tuition
+              </strong>
               <p>Largest outgoing payment in the next 30 days.</p>
             </div>
             <div className="signal">
               <span>15 Nov</span>
-              <strong>£1,000 arriving</strong>
+              <strong>
+                {formatMoney(convertMoney(1000, "GBP", currency))} arriving
+              </strong>
               <p>Parent sponsor contribution confirmed.</p>
             </div>
             <button onClick={() => setTab("Scenarios")}>
@@ -1978,12 +2051,12 @@ function RunwayWorkspace({ database }: { database: DatabaseState | null }) {
       {tab === "Scenarios" && (
         <div className="scenario-workspace">
           <label>
-            Additional monthly spending <strong>{formatGBP(extra)}</strong>
+            Additional monthly spending <strong>{formatMoney(extra)}</strong>
             <input
               type="range"
               min="0"
-              max="900"
-              step="25"
+              max={convertMoney(900, "GBP", currency)}
+              step={convertMoney(25, "GBP", currency)}
               value={extra}
               onChange={(e) => setExtra(Number(e.target.value))}
             />
@@ -1992,19 +2065,23 @@ function RunwayWorkspace({ database }: { database: DatabaseState | null }) {
             <div>
               <span>Current plan</span>
               <strong>{currentMonths.toFixed(1)} months</strong>
-              <small>{formatGBP(baseBurn)} / month</small>
+              <small>{formatMoney(baseBurn)} / month</small>
             </div>
             <ArrowRight />
             <div>
               <span>Adjusted plan</span>
               <strong>{months.toFixed(1)} months</strong>
-              <small>{formatGBP(burnRate)} / month</small>
+              <small>{formatMoney(burnRate)} / month</small>
             </div>
           </div>
           <p className="workspace-note">
-            Every extra £100 per month removes approximately{" "}
-            {(currentMonths - liquid / (baseBurn + 100)).toFixed(1)} months of
-            simple runway over this period.
+            Every extra {formatMoney(convertMoney(100, "GBP", currency))} per
+            month removes approximately{" "}
+            {(
+              currentMonths -
+              liquid / (baseBurn + convertMoney(100, "GBP", currency))
+            ).toFixed(1)}{" "}
+            months of simple runway over this period.
           </p>
         </div>
       )}
@@ -2050,8 +2127,11 @@ function SponsorWorkspace({
     enabled: boolean,
   ) => Promise<boolean>;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [tab, setTab] = useState("Sponsors"),
-    [amount, setAmount] = useState(1000),
+    [amount, setAmount] = useState(() => convertMoney(1000, "GBP", currency)),
     [purpose, setPurpose] = useState("Living expenses"),
     [neededBy, setNeededBy] = useState("2026-11-15");
   const sponsor = database?.sponsors[0],
@@ -2084,16 +2164,16 @@ function SponsorWorkspace({
           <div className="commitment-board">
             <div>
               <span>Annual commitment</span>
-              <strong>{formatGBP(sponsor?.commitment ?? 0)}</strong>
+              <strong>{formatMoney(sponsor?.commitment ?? 0)}</strong>
             </div>
             <div>
               <span>Received</span>
-              <strong>{formatGBP(transferred)}</strong>
+              <strong>{formatMoney(transferred)}</strong>
             </div>
             <div>
               <span>Remaining</span>
               <strong>
-                {formatGBP(
+                {formatMoney(
                   Math.max(0, (sponsor?.commitment ?? 0) - transferred),
                 )}
               </strong>
@@ -2105,7 +2185,9 @@ function SponsorWorkspace({
               <div key={x[0]}>
                 <time>{x[0]}</time>
                 <strong>{x[1]}</strong>
-                <span>{x[2]}</span>
+                <span>
+                  {typeof x[2] === "number" ? formatMoney(x[2]) : x[2]}
+                </span>
                 <em>{x[3]}</em>
               </div>
             ))}
@@ -2126,7 +2208,7 @@ function SponsorWorkspace({
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
             />
-            <em>GBP</em>
+            <em>{currency}</em>
           </label>
           <label>
             Purpose
@@ -2228,9 +2310,16 @@ export function ExchangeWorkspace({
   database: DatabaseState | null;
   onRateAlert: (targetRate: number) => Promise<boolean>;
 }) {
-  const [tab, setTab] = useState("convert");
+  const currency = useWorkspaceCurrency();
+
   const [amount, setAmount] = useState("2500");
-  const [targetRate, setTargetRate] = useState("0.79");
+  const [targetRate, setTargetRate] = useState(() =>
+    String(0.79 * currencyRate("GBP", currency)),
+  );
+  useEffect(
+    () => setTargetRate(String(0.79 * currencyRate("GBP", currency))),
+    [currency],
+  );
   const [saving, setSaving] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const bestRoute =
@@ -2248,13 +2337,12 @@ export function ExchangeWorkspace({
     Number.isFinite(Number(targetRate)) &&
     Number(targetRate) > 0;
   const alert = database?.rateAlerts.find(
-    (item) => item.active && item.pair === "USD/GBP",
+    (item) => item.active && item.pair === `USD/${currency}`,
   );
-  const visibleWallets = database?.wallets ?? [];
-  const gbp = (value: number) =>
+  const targetMoney = (value: number) =>
     new Intl.NumberFormat("en-GB", {
       style: "currency",
-      currency: "GBP",
+      currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -2272,284 +2360,52 @@ export function ExchangeWorkspace({
     }
   };
   return (
-    <div className="workspace fx-desk">
+    <section className="workspace fx-desk fx-conversion">
       <header className="fx-heading">
-        <h2>Exchange desk</h2>
-        <p>
-          Estimate a USD to GBP conversion. Tuition payments use your saved
-          tuition amount.
-        </p>
+        <h2><ArrowLeftRight size={24} aria-hidden="true" /> Exchange</h2>
       </header>
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList aria-label="Exchange desk views" className="fx-tabs">
-          <TabsTrigger value="convert">
-            <CircleDollarSign size={16} />
-            Convert
-          </TabsTrigger>
-          <TabsTrigger value="balances">
-            <WalletCards size={16} />
-            Balances
-          </TabsTrigger>
-          <TabsTrigger value="alerts">
-            <Bell size={16} />
-            Rate alerts
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="convert">
-          <div className="fx-grid">
-            <Card className="fx-card">
-              <CardHeader>
-                <div className="fx-card-heading">
-                  <CardTitle>USD to GBP</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <label className="fx-label" htmlFor="fx-amount">
-                  You send
-                </label>
-                <div className="fx-money-field">
-                  <span aria-hidden="true">$</span>
-                  <Input
-                    className="fx-amount-input"
-                    id="fx-amount"
-                    type="number"
-                    inputMode="decimal"
-                    min="0.01"
-                    step="0.01"
-                    value={amount}
-                    aria-invalid={!validAmount}
-                    aria-describedby={
-                      !validAmount ? "fx-amount-help" : undefined
-                    }
-                    onChange={(e) => setAmount(e.target.value)}
-                  />
-                  <span className="fx-currency">USD</span>
-                </div>
-                <div className="fx-between">
-                  <span />
-                  <ArrowRight size={18} />
-                  <span />
-                </div>
-                <div className="fx-receive">
-                  <span className="fx-label">Recipient gets</span>
-                  <div>
-                    <output aria-live="polite">
-                      {bestRoute ? gbp(received) : "—"}
-                    </output>
-                    <span className="fx-currency">GBP</span>
-                  </div>
-                </div>
-                {!validAmount && (
-                  <p id="fx-amount-help" className="fx-error">
-                    Enter an amount above zero.
-                  </p>
-                )}
-                <dl className="fx-breakdown">
-                  <div>
-                    <dt>
-                      <Activity size={14} />
-                      Rate <InfoHelp term="Exchange rate" />
-                    </dt>
-                    <dd>
-                      {bestRoute
-                        ? `1 USD = ${rate.toFixed(4)} GBP`
-                        : "Unavailable"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <ReceiptText size={14} />
-                      Fee <InfoHelp term="Fees" />
-                    </dt>
-                    <dd>{bestRoute ? formatUSD(fee) : "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <Clock3 size={14} />
-                      Arrival <InfoHelp term="Arrival estimate" />
-                    </dt>
-                    <dd>{bestRoute?.delivery ?? "Unavailable"}</dd>
-                  </div>
-                  <div className="fx-total">
-                    <dt>Total</dt>
-                    <dd>
-                      {bestRoute && validAmount
-                        ? formatUSD(numericAmount + fee)
-                        : "—"}
-                    </dd>
-                  </div>
-                </dl>
-                <Button
-                  className="fx-primary"
-                  disabled={!validAmount || !bestRoute}
-                  onClick={() => go("Payments")}
-                >
-                  Open tuition payment
-                  <ArrowRight size={18} />
-                </Button>
-              </CardContent>
-            </Card>
-            <div className="fx-side">
-              <Card className="fx-card">
-                <CardHeader>
-                  <div className="fx-card-heading">
-                    <CardTitle>
-                      <Activity size={18} />
-                      USD / GBP
-                    </CardTitle>
-                    <span
-                      className="fx-badge fx-demo"
-                      title="Demo quote, not a live market rate"
-                    >
-                      Demo quote
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="fx-rate">
-                    {bestRoute ? rate.toFixed(4) : "—"}
-                  </div>
-                  <p className="fx-hint">Estimated provider quote</p>
-                  <Button
-                    variant="outline"
-                    className="fx-secondary"
-                    onClick={() => go("Payments")}
-                  >
-                    Compare providers
-                    <ArrowRight size={16} />
-                  </Button>
-                </CardContent>
-              </Card>
-              <Card className="fx-card">
-                <CardContent className="fx-risk">
-                  <div>
-                    <span className="fx-label">
-                      <TrendingUp size={16} />
-                      If USD falls 5%
-                    </span>
-                    <strong>−{gbp(received * 0.05)}</strong>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label="Set a rate alert"
-                    title="Set rate alert"
-                    onClick={() => setTab("alerts")}
-                  >
-                    <Bell size={18} />
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+      <div className="fx-conversion-layout">
+        <section className="fx-converter-panel" aria-label="Conversion estimate">
+          <div className="fx-conversion-heading"><h3>USD → {currency}</h3><span className="fx-badge"><ShieldCheck size={14} aria-hidden="true" /> Sandbox</span></div>
+          <div className="fx-amounts">
+          <label className="fx-label" htmlFor="fx-amount"><WalletCards size={15} aria-hidden="true" /> You send</label>
+          <div className="fx-money-field">
+            <Input id="fx-amount" aria-label="Amount to convert" className="fx-amount-input" type="number" inputMode="decimal" min="0.01" step="0.01" value={amount} aria-invalid={!validAmount} aria-describedby={!validAmount ? "fx-amount-help" : undefined} onChange={e => setAmount(e.target.value)} />
+            <span className="fx-currency">USD</span>
           </div>
-        </TabsContent>
-        <TabsContent value="balances">
-          <Card className="fx-card">
-            <CardHeader>
-              <CardTitle>
-                <WalletCards size={18} />
-                Balances
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {visibleWallets.length === 0 ? (
-                <p className="fx-hint">No balances yet.</p>
-              ) : (
-                <div className="fx-wallets">
-                  {visibleWallets.map((w) => (
-                    <div className="fx-wallet" key={w.currency}>
-                      <span className="fx-badge">{w.currency}</span>
-                      <div>
-                        <strong>
-                          {w.symbol}
-                          {w.amount.toLocaleString()}
-                        </strong>
-                        <p>{w.label}</p>
-                      </div>
-                      <span>
-                        {gbp(w.gbpValue)}
-                        <small>≈ GBP</small>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="fx-balance-total">
-                <span>Total · GBP</span>
-                <strong>
-                  {gbp(visibleWallets.reduce((sum, w) => sum + w.gbpValue, 0))}
-                </strong>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="alerts">
-          <Card className="fx-card fx-alert-card">
-            <CardHeader>
-              <CardTitle>
-                <Bell size={18} />
-                USD / GBP alert
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {alert && (
-                <p className="fx-active-alert">
-                  <CheckCircle2 size={18} />
-                  Active: {alert.targetRate} GBP
-                </p>
-              )}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void saveAlert();
-                }}
-              >
-                <label className="fx-label" htmlFor="fx-target">
-                  Target rate
-                </label>
-                <div className="fx-target-field">
-                  <Input
-                    className="fx-target-input"
-                    id="fx-target"
-                    type="number"
-                    inputMode="decimal"
-                    min="0.001"
-                    step="0.001"
-                    value={targetRate}
-                    onChange={(e) => {
-                      setTargetRate(e.target.value);
-                      setAlertMessage("");
-                    }}
-                    aria-invalid={!validTarget}
-                    aria-describedby="fx-target-help"
-                  />
-                  <span>GBP per USD</span>
-                </div>
-                <p
-                  id="fx-target-help"
-                  className={validTarget ? "fx-hint" : "fx-error"}
-                >
-                  {validTarget
-                    ? `Current: ${bestRoute ? rate.toFixed(4) : "unavailable"} GBP per USD`
-                    : "Enter a rate above zero."}
-                </p>
-                <Button
-                  className="fx-primary"
-                  type="submit"
-                  disabled={!validTarget || saving || !database}
-                >
-                  {saving ? "Saving…" : alert ? "Update alert" : "Create alert"}
-                  <Bell size={16} />
-                </Button>
-                <p role="status" className="fx-hint">
-                  {alertMessage}
-                </p>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+          <div className="fx-conversion-direction"><ArrowLeft className="fx-down-arrow" size={18} aria-hidden="true" /></div>
+          <div className="fx-result">
+            <span className="fx-label"><Landmark size={15} aria-hidden="true" /> You receive · {currency}</span>
+            <output aria-live="polite">{bestRoute && validAmount ? targetMoney(received) : "—"}</output>
+          </div>
+          {!validAmount && <p id="fx-amount-help" className="fx-error">Enter an amount above zero.</p>}
+          </div>
+          <div className="fx-quote-summary">
+          <dl className="fx-breakdown">
+            <div><dt><ArrowLeftRight size={15} aria-hidden="true" /> Rate <InfoHelp term="Exchange rate" /></dt><dd>{bestRoute ? `1 USD = ${rate.toFixed(4)} ${currency}` : "Unavailable"}</dd></div>
+            <div><dt><ReceiptText size={15} aria-hidden="true" /> Fee <InfoHelp term="Fees" /></dt><dd>{bestRoute ? formatUSD(fee) : "—"}</dd></div>
+            <div><dt><Clock3 size={15} aria-hidden="true" /> Arrival <InfoHelp term="Arrival estimate" /></dt><dd>{bestRoute?.delivery ?? "Unavailable"}</dd></div>
+            <div className="fx-total"><dt><WalletCards size={15} aria-hidden="true" /> Total · USD</dt><dd>{bestRoute && validAmount ? formatUSD(numericAmount + fee) : "—"}</dd></div>
+          </dl>
+          <Button className="fx-primary" disabled={!validAmount || !bestRoute} onClick={() => go("Payments")}><GraduationCap size={18} aria-hidden="true" /> Tuition payment <ArrowRight size={18} /></Button>
+          </div>
+        </section>
+        <aside className="fx-conversion-support">
+
+          <details className="fx-alert-disclosure">
+            <summary><span><Bell size={16} aria-hidden="true" /> Rate alert</span><ChevronRight size={16} aria-hidden="true" /></summary>
+            {alert && <p className="fx-active-alert">Active target: {alert.targetRate} {currency} per USD</p>}
+            <form onSubmit={e => { e.preventDefault(); void saveAlert(); }}>
+              <label className="fx-label" htmlFor="fx-target">Target rate · {currency} per USD</label>
+              <Input id="fx-target" className="fx-target-input" type="number" inputMode="decimal" min="0.001" step="0.001" value={targetRate} onChange={e => { setTargetRate(e.target.value); setAlertMessage(""); }} aria-invalid={!validTarget} aria-describedby="fx-target-help" />
+              <p id="fx-target-help" className={validTarget ? "fx-hint" : "fx-error"}>{validTarget ? `Current: ${bestRoute ? rate.toFixed(4) : "unavailable"} ${currency} per USD` : "Enter a rate above zero."}</p>
+              <Button type="submit" disabled={!validTarget || saving || !database}>{saving ? "Saving…" : alert ? "Update alert" : "Create alert"}</Button>
+              <p role="status" className="fx-hint">{alertMessage}</p>
+            </form>
+          </details>
+        </aside>
+      </div>
+    </section>
   );
 }
 
@@ -2564,15 +2420,28 @@ function DepartureWorkspace({
   onToggle: (key: string) => void;
   config?: any;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [tab, setTab] = useState("Checklist"),
     [tasks, setTasks] = useState([true, true, false, false]);
   const taskData =
     storedTasks ??
     [
       ["visa", "Visa fee paid", "Receipt verified", true],
-      ["housing", "Housing deposit reserved", "£1,300 set aside", true],
+      [
+        "housing",
+        "Housing deposit reserved",
+        convertMoneyText("£1,300 set aside", "GBP", currency),
+        true,
+      ],
       ["tuition", "Tuition instalment prepared", "Due in 12 days", false],
-      ["emergency", "Emergency fund completed", "£2,700 gap remains", false],
+      [
+        "emergency",
+        "Emergency fund completed",
+        convertMoneyText("£2,700 gap remains", "GBP", currency),
+        false,
+      ],
     ].map(([key, label, detail, done]) => ({
       key: key as string,
       label: label as string,
@@ -2606,7 +2475,11 @@ function DepartureWorkspace({
                 <i className={done ? "done" : ""} key={i} />
               ))}
             </div>
-            <p>Next required action: prepare the £2,000 tuition instalment.</p>
+            <p>
+              Next required action: prepare the{" "}
+              {formatMoney(convertMoney(2000, "GBP", currency))} tuition
+              instalment.
+            </p>
             <button onClick={() => go("Payments")}>
               Review payment <ArrowRight />
             </button>
@@ -2685,12 +2558,19 @@ function Metric({
   );
 }
 function BalanceForecastChart() {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
   return (
     <div
       className="balance-chart"
       role="img"
-      aria-label="Projected balance falls from £8,900 in September to £3,000 in February"
+      aria-label={convertMoneyText(
+        "Projected balance falls from £8,900 in September to £3,000 in February",
+        "GBP",
+        currency,
+      )}
     >
       <svg
         className="forecast-svg"
@@ -2707,7 +2587,9 @@ function BalanceForecastChart() {
           <g key={y}>
             <line x1="54" x2="748" y1={y} y2={y} className="forecast-grid" />
             <text x="0" y={y + 4} className="forecast-axis">
-              £{10 - index * 2.5}k
+              {formatMoney(
+                convertMoney((10 - index * 2.5) * 1000, "GBP", currency),
+              )}
             </text>
           </g>
         ))}
@@ -2735,6 +2617,9 @@ function BalanceForecastChart() {
   );
 }
 function Timeline() {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const months = [
     { m: "Sep", v: 7000, t: "Deposit + arrival" },
     { m: "Oct", v: 3500, t: "Tuition + living" },
@@ -2742,7 +2627,7 @@ function Timeline() {
     { m: "Dec", v: 1300, t: "Living" },
     { m: "Jan", v: 3300, t: "Tuition + living" },
     { m: "Feb", v: 1300, t: "Living" },
-  ];
+  ].map((month) => ({ ...month, v: convertMoney(month.v, "GBP", currency) }));
   return (
     <div className="timeline-chart" aria-label="Six month cash-flow outlook">
       <ResponsiveContainer width="100%" height="100%">
@@ -2779,11 +2664,14 @@ function Timeline() {
             axisLine={false}
             tickLine={false}
             tick={{ fill: "var(--color-muted)", fontSize: 10 }}
-            tickFormatter={(value) => `£${value / 1000}k`}
+            tickFormatter={(value) => formatMoney(value)}
           />
           <Tooltip
             itemStyle={{ color: "var(--color-ink)" }}
-            formatter={(value) => [formatGBP(Number(value)), "Planned outflow"]}
+            formatter={(value) => [
+              formatMoney(Number(value)),
+              "Planned outflow",
+            ]}
             labelFormatter={(_, payload) => payload[0]?.payload?.t ?? ""}
             contentStyle={{
               background: "var(--color-surface)",
@@ -2815,6 +2703,21 @@ function Timeline() {
 }
 
 function Plan({ announce }: { announce: (message: string) => void }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
+  const planCosts = costs.map((cost) => ({
+    ...cost,
+    amount: convertMoney(cost.amount, "GBP", currency),
+  }));
+  const planFunding = funding.map((item) => ({
+    ...item,
+    amount: convertMoney(item.amount, "GBP", currency),
+  }));
+  const total = sumCosts(planCosts),
+    funded = confirmedFunding(planFunding),
+    gap = fundingGap(total, funded),
+    coverage = fundingCoverage(total, funded);
   return (
     <div className="page-stack">
       <section className="page-intro">
@@ -2836,20 +2739,20 @@ function Plan({ announce }: { announce: (message: string) => void }) {
         <Metric
           icon={ReceiptText}
           label="Projected cost"
-          value={formatGBP(total)}
+          value={formatMoney(total)}
           note="First academic year"
         />
         <Metric
           icon={WalletCards}
           label="Confirmed funding"
-          value={formatGBP(funded)}
+          value={formatMoney(funded)}
           note={`${Math.round(coverage)}% coverage`}
           tone="green"
         />
         <Metric
           icon={TrendingUp}
           label="Funding gap"
-          value={formatGBP(gap)}
+          value={formatMoney(gap)}
           note="Action recommended"
           tone="amber"
         />
@@ -2868,9 +2771,9 @@ function Plan({ announce }: { announce: (message: string) => void }) {
               <span className="eyebrow">Cost plan</span>
               <h3>Year-one estimate</h3>
             </div>
-            <strong>{formatGBP(total)}</strong>
+            <strong>{formatMoney(total)}</strong>
           </div>
-          {costs.map((c) => (
+          {planCosts.map((c) => (
             <div className="line-item" key={c.id}>
               <span className="check-circle">
                 {c.paid ? (
@@ -2887,7 +2790,7 @@ function Plan({ announce }: { announce: (message: string) => void }) {
                   {c.category} · {c.due}
                 </small>
               </div>
-              <strong>{formatGBP(c.amount)}</strong>
+              <strong>{formatMoney(c.amount)}</strong>
             </div>
           ))}
         </section>
@@ -2906,7 +2809,7 @@ function Plan({ announce }: { announce: (message: string) => void }) {
               <Plus size={16} /> Add
             </button>
           </div>
-          {funding.map((f) => (
+          {planFunding.map((f) => (
             <div className="line-item" key={f.id}>
               <span className="check-circle green">
                 <Check />
@@ -2917,13 +2820,13 @@ function Plan({ announce }: { announce: (message: string) => void }) {
                   {f.type} · {f.available}
                 </small>
               </div>
-              <strong>{formatGBP(f.amount)}</strong>
+              <strong>{formatMoney(f.amount)}</strong>
             </div>
           ))}
           <div className="gap-box">
             <div>
               <span>Remaining funding gap</span>
-              <strong>{formatGBP(gap)}</strong>
+              <strong>{formatMoney(gap)}</strong>
             </div>
             <div className="progress">
               <span style={{ width: `${coverage}%` }} />
@@ -2953,6 +2856,9 @@ export function Profile({
   go: (page: Page) => void;
   onAddCountry: (country: string, label: string) => Promise<boolean>;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addingCountry, setAddingCountry] = useState(false);
@@ -2961,8 +2867,12 @@ export function Profile({
   const [adding, setAdding] = useState(false);
   const [profile, setProfile] = useState({
     name: account?.name ?? "",
-    home: account?.countryFrom ?? "",
-    study: account?.countryTo ?? "",
+    home:
+      getCountry(account?.countryFrom ?? "")?.name ??
+      account?.countryFrom ??
+      "",
+    study:
+      getCountry(account?.countryTo ?? "")?.name ?? account?.countryTo ?? "",
     university: account?.university ?? "",
     course: account?.course ?? "",
     start: config?.courseStart ?? "",
@@ -2971,13 +2881,28 @@ export function Profile({
     funding: String(totals.funded),
   });
   const update = (key: keyof typeof profile, value: string) =>
-    setProfile((current) => ({ ...current, [key]: value }));
+    setProfile((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "study" && value !== current.study
+        ? {
+            university: "",
+            funding: String(
+              convertMoney(
+                Number(current.funding),
+                studyCurrency(current.study),
+                studyCurrency(value),
+              ),
+            ),
+          }
+        : {}),
+    }));
   useEffect(() => {
     if (!account || editing) return;
     setProfile({
       name: account.name,
-      home: account.countryFrom,
-      study: account.countryTo,
+      home: getCountry(account.countryFrom)?.name ?? account.countryFrom,
+      study: getCountry(account.countryTo)?.name ?? account.countryTo,
       university: account.university,
       course: account.course,
       start: config?.courseStart ?? "",
@@ -3054,6 +2979,11 @@ export function Profile({
           <span>
             <MapPin /> {profile.home} <ArrowRight /> {profile.study}
           </span>
+          <p className="setup-directory-note">
+            Home: {getCountry(profile.home)?.currency ?? "—"} · Study:{" "}
+            {getCountry(profile.study)?.currency ?? "—"} · Budget:{" "}
+            {getCountry(profile.study)?.currency ?? currency}
+          </p>
         </div>
       </section>
       <div className="profile-grid">
@@ -3079,8 +3009,10 @@ export function Profile({
                   editing || !["name", "home", "study", "status"].includes(key),
               )
               .map(([key, label]) => (
-                <label key={key}>
-                  <span>{label}</span>
+                <div className="setup-field" key={key}>
+                  {!(
+                    editing && ["home", "study", "university"].includes(key)
+                  ) && <label htmlFor={`profile-${key}`}>{label}</label>}
                   {editing && (key === "home" || key === "study") ? (
                     <SetupCountrySelect
                       label={label}
@@ -3088,15 +3020,23 @@ export function Profile({
                       onChange={(value) => update(key, value)}
                       disabled={saving}
                     />
+                  ) : editing && key === "university" ? (
+                    <UniversitySelect
+                      country={profile.study}
+                      value={profile.university}
+                      onChange={(value) => update("university", value)}
+                      disabled={saving}
+                    />
                   ) : editing ? (
                     <Input
+                      id={`profile-${key}`}
                       value={profile[key]}
                       onChange={(e) => update(key, e.target.value)}
                     />
                   ) : (
                     <strong className="profile-value">{profile[key]}</strong>
                   )}
-                </label>
+                </div>
               ))}
           </div>
         </section>
@@ -3135,14 +3075,16 @@ export function Profile({
                 <label key={key}>
                   <span>
                     {key === "funding" && editing
-                      ? "Confirmed funding (£)"
+                      ? `Confirmed funding (${getCountry(profile.study)?.currency ?? currency})`
                       : label}
                   </span>
                   {editing ? (
                     <input
                       id={`profile-${key}`}
                       aria-label={
-                        key === "funding" ? "Confirmed funding in GBP" : label
+                        key === "funding"
+                          ? `Confirmed funding in ${getCountry(profile.study)?.currency ?? currency}`
+                          : label
                       }
                       type={key === "funding" ? "number" : "text"}
                       min={key === "funding" ? 0 : undefined}
@@ -3153,7 +3095,10 @@ export function Profile({
                   ) : (
                     <strong className="profile-value">
                       {key === "funding"
-                        ? formatGBP(Number(profile.funding))
+                        ? formatCurrency(
+                            Number(profile.funding),
+                            getCountry(profile.study)?.currency ?? currency,
+                          )
                         : profile[key]}
                     </strong>
                   )}
@@ -3164,7 +3109,7 @@ export function Profile({
             <span>
               <CheckCircle2 /> {Math.round(totals.coverage)}% funded
             </span>
-            <strong>{formatGBP(totals.gap)} gap</strong>
+            <strong>{formatMoney(totals.gap)} gap</strong>
             <div
               className="profile-funding-track"
               role="progressbar"
@@ -3193,7 +3138,10 @@ export function Profile({
               <MapPin size={18} />
               <div>
                 <strong>{item.country}</strong>
-                <small>{item.label}</small>
+                <small>
+                  {item.label} ·{" "}
+                  {getCountry(item.country)?.currency ?? "Currency unavailable"}
+                </small>
               </div>
             </div>
           ),
@@ -3221,16 +3169,14 @@ export function Profile({
             }}
           >
             <div className="field-grid">
-              <label>
-                <span>Country</span>
-                <input
-                  autoFocus
-                  required
+              <div className="setup-field">
+                <SetupCountrySelect
+                  label="Account country"
                   value={country}
-                  onChange={(event) => setCountry(event.target.value)}
-                  placeholder="e.g. United States"
+                  onChange={setCountry}
+                  disabled={adding}
                 />
-              </label>
+              </div>
               <label>
                 <span>Account name</span>
                 <input
@@ -3261,588 +3207,6 @@ export function Profile({
   );
 }
 
-export function MovePlanner({
-  go,
-  config,
-  accountId,
-}: {
-  go: (page: Page) => void;
-  config?: any;
-  accountId?: string;
-}) {
-  const [category, setCategory] = useState<string | null>(() =>
-    window.matchMedia("(max-width: 767px)").matches ? null : "Your costs",
-  );
-  const [overviewOpen, setOverviewOpen] = useState(false);
-  const chooseCategory = (name: string | null) => {
-    setCategory(name);
-    if (window.matchMedia("(max-width: 767px)").matches) {
-      requestAnimationFrame(() =>
-        document
-          .querySelector(
-            name ? ".planner-category-detail" : ".planner-categories",
-          )
-          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-      );
-    }
-  };
-  const [plannerMessage, setPlannerMessage] = useState("");
-  const [plannerSaving, setPlannerSaving] = useState(false);
-  const [months, setMonths] = useState(11);
-  const [selectedRoute, setSelectedRoute] = useState(1);
-  const [budgetOpen, setBudgetOpen] = useState(false);
-  const [arrivalDate, setArrivalDate] = useState("");
-  const [excludedCosts, setExcludedCosts] = useState<string[]>([]);
-  const [budgetAmounts, setBudgetAmounts] = useState<Record<string, number>>(
-    config?.budgetAmounts ?? {},
-  );
-  useEffect(() => {
-    setMonths(config?.months ?? 11);
-    setSelectedRoute(config?.selectedRoute ?? 1);
-    setArrivalDate(config?.arrivalDateISO ?? "");
-    setExcludedCosts(config?.excludedCosts ?? []);
-    setBudgetAmounts(config?.budgetAmounts ?? {});
-  }, [config]);
-  const parseAmount = (value: string) =>
-    Number(value.match(/[\d,]+(?:\.\d+)?/)?.[0].replaceAll(",", "") ?? 0);
-  const initialDate = new Date(config?.arrivalDate ?? "14 Sep 2026");
-  const dateValue =
-    arrivalDate ||
-    (Number.isNaN(initialDate.getTime())
-      ? "2026-09-14"
-      : `${initialDate.getFullYear()}-${String(initialDate.getMonth() + 1).padStart(2, "0")}-${String(initialDate.getDate()).padStart(2, "0")}`);
-  const displayDate = new Date(`${dateValue}T12:00:00`).toLocaleDateString(
-    "en-GB",
-    { day: "2-digit", month: "short", year: "numeric" },
-  );
-  const fallbackRoutes = [
-    ["Fastest route", "Phnom Penh → London · 1 stop", "16h 40m", "£610"],
-    [
-      "Budget friendly",
-      "Phnom Penh → Bangkok → London · 2 stops",
-      "22h 10m",
-      "£480",
-    ],
-    ["Balanced", "Phnom Penh → Singapore → London · 1 stop", "18h 25m", "£545"],
-  ];
-  const routes = (config?.routes?.length ? config.routes : fallbackRoutes).map(
-    (route: any[], index: number) => ({
-      name:
-        index === 0
-          ? "Fastest route"
-          : index === 1
-            ? "Budget friendly"
-            : index === 2
-              ? "Balanced"
-              : route[0],
-      detail: route[1],
-      time: route[2],
-      cost: parseAmount(route[3] ?? fallbackRoutes[index]?.[3] ?? "0"),
-    }),
-  );
-  const requirements = config?.requirements?.length
-    ? config.requirements
-    : [
-        ["Visa & health surcharge", "Paid", "£1,600"],
-        ["Flight", "Compare", "£480–610"],
-        ["First month rent + deposit", "Reserved", "£1,950"],
-        ["Utilities", "Estimated", "£145 / mo"],
-        ["Daily expenses", "Budgeted", "£425 / mo"],
-      ];
-  const activeRoute = routes[Math.min(selectedRoute, routes.length - 1)];
-  const costs = requirements.map(
-    ([name, status, amount]: string[], index: number) => ({
-      name,
-      status,
-      recurring: amount.includes("mo"),
-      amount:
-        index === 1
-          ? activeRoute.cost
-          : (budgetAmounts[name] ?? parseAmount(amount)),
-    }),
-  );
-  const includedCosts = costs.filter(
-    (cost: any) => !excludedCosts.includes(cost.name),
-  );
-  const upfrontTotal = includedCosts
-    .filter((cost: any) => !cost.recurring)
-    .reduce((sum: number, cost: any) => sum + cost.amount, 0);
-  const monthlyTotal = includedCosts
-    .filter((cost: any) => cost.recurring)
-    .reduce((sum: number, cost: any) => sum + cost.amount, 0);
-  const totalBudget = upfrontTotal + monthlyTotal * months;
-  const arrivalBreakdown = includedCosts.map((cost: any, index: number) => ({
-    name: cost.name,
-    amount: cost.amount * (cost.recurring ? months : 1),
-    color: planChartColors[index % planChartColors.length],
-  }));
-  const toggleCost = (name: string) =>
-    setExcludedCosts((current) =>
-      current.includes(name)
-        ? current.filter((item) => item !== name)
-        : [...current, name],
-    );
-  const renderCost = (cost: any) => (
-    <div
-      className={excludedCosts.includes(cost.name) ? "excluded" : "paid"}
-      key={cost.name}
-    >
-      <Checkbox
-        className="ui-cost-checkbox"
-        aria-label={`Include ${cost.name} in budget`}
-        checked={!excludedCosts.includes(cost.name)}
-        onCheckedChange={() => toggleCost(cost.name)}
-      />
-      <span>
-        <strong>{cost.name}</strong>
-        <small>
-          {cost.name === "Flight"
-            ? `${activeRoute.name} · Estimated`
-            : cost.status}
-        </small>
-      </span>
-      {budgetOpen && cost.name !== "Flight" ? (
-        <label className="cost-amount-edit">
-          <span className="sr-only">{cost.name} in pounds</span>
-          <span>£</span>
-          <Input
-            aria-label={`${cost.name} in pounds`}
-            type="number"
-            min="0"
-            step="0.01"
-            value={cost.amount}
-            onChange={(event) =>
-              setBudgetAmounts((current) => ({
-                ...current,
-                [cost.name]: Math.max(0, Number(event.target.value)),
-              }))
-            }
-          />
-          {cost.recurring && <small>/mo</small>}
-        </label>
-      ) : (
-        <b>
-          {formatGBP(cost.amount)}
-          {cost.recurring && <small>/mo</small>}
-        </b>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="move-board">
-      <section className="move-board-header">
-        <div>
-          <h2>Plan your arrival</h2>
-        </div>
-        <DatePicker
-          className="planner-date-picker"
-          label="Planned arrival"
-          value={dateValue}
-          onChange={setArrivalDate}
-        />
-      </section>
-      <section className="arrival-summary">
-        <div>
-          <span>Your estimated budget</span>
-          <strong aria-live="polite">{formatGBP(totalBudget)}</strong>
-          <small>For your arrival and {months} months in London</small>
-        </div>
-        <div className="arrival-summary-breakdown">
-          <div>
-            <small>Upfront</small>
-            <strong>{formatGBP(upfrontTotal)}</strong>
-          </div>
-          <span>+</span>
-          <div>
-            <small>Monthly living costs</small>
-            <strong>
-              {formatGBP(monthlyTotal)} <small>× {months} months</small>
-            </strong>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="planner-assist"
-          onClick={() => go("AI Agent")}
-        >
-          <Sparkle weight="duotone" /> Get planning help
-        </Button>
-      </section>
-
-      <section className="planner-category-layout">
-        <div className="planner-categories" aria-label="Planning categories">
-          <button
-            aria-pressed={category === "Your costs"}
-            onClick={() => chooseCategory("Your costs")}
-          >
-            <span>
-              <PlannerWallet size={18} aria-hidden="true" />
-              Your costs
-            </span>
-            <small>{months} months</small>
-          </button>
-          {costs.map((cost: any) => (
-            <button
-              key={cost.name}
-              aria-label={`${cost.name} ${excludedCosts.includes(cost.name) ? "Not included" : "Included"}`}
-              aria-pressed={category === cost.name}
-              onClick={() => chooseCategory(cost.name)}
-            >
-              <span>
-                {cost.recurring ? (
-                  <CalendarDays size={18} aria-hidden="true" />
-                ) : cost.name === costs[1]?.name ? (
-                  <Plane size={18} aria-hidden="true" />
-                ) : cost.name.toLowerCase().includes("visa") ? (
-                  <ShieldCheck size={18} aria-hidden="true" />
-                ) : cost.name.toLowerCase().includes("tuition") ? (
-                  <GraduationCap size={18} aria-hidden="true" />
-                ) : (
-                  <PlannerWallet size={18} aria-hidden="true" />
-                )}
-                {cost.name}
-              </span>
-              <small>
-                {excludedCosts.includes(cost.name)
-                  ? "Not included"
-                  : "Included"}
-              </small>
-            </button>
-          ))}
-        </div>
-        <div className="planner-category-detail">
-          {category ? (
-            <>
-              <Button
-                variant="ghost"
-                className="planner-category-back"
-                onClick={() => chooseCategory(null)}
-              >
-                Back to categories
-              </Button>
-              {category === "Your costs" ? (
-                <section className="cost-card">
-                  <div className="planner-cost-heading">
-                    <div>
-                      <h3>Your costs</h3>
-                      <p className="move-help">
-                        Choose which costs to include in your estimate.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="planner-edit"
-                      aria-pressed={budgetOpen}
-                      onClick={() => setBudgetOpen((open) => !open)}
-                    >
-                      <PencilSimple />
-                      {budgetOpen ? "Done editing" : "Edit amounts"}
-                    </Button>
-                  </div>
-                  <div className="planner-duration">
-                    <label htmlFor="arrival-months">Length of stay</label>
-                    <Select
-                      value={String(months)}
-                      onValueChange={(value) => setMonths(Number(value))}
-                    >
-                      <SelectTrigger
-                        id="arrival-months"
-                        className="ui-duration-trigger"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="ui-select-content">
-                        {Array.from({ length: 24 }, (_, i) => i + 1).map(
-                          (month) => (
-                            <SelectItem key={month} value={String(month)}>
-                              {month} {month === 1 ? "month" : "months"}
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="cost-groups">
-                    <section
-                      className="cost-group"
-                      aria-labelledby="upfront-costs-heading"
-                    >
-                      <div className="cost-group-heading">
-                        <span className="cost-group-icon">
-                          <Plane size={18} />
-                        </span>
-                        <div>
-                          <h4 id="upfront-costs-heading">Before you arrive</h4>
-                          <span>One-time costs</span>
-                        </div>
-                      </div>
-                      <div className="cost-group-total">
-                        <strong>{formatGBP(upfrontTotal)}</strong>
-                        <span>Included upfront</span>
-                      </div>
-                      <div className="cost-list">
-                        {costs
-                          .filter((cost: any) => !cost.recurring)
-                          .map(renderCost)}
-                      </div>
-                    </section>
-                    <section
-                      className="cost-group"
-                      aria-labelledby="monthly-costs-heading"
-                    >
-                      <div className="cost-group-heading">
-                        <span className="cost-group-icon">
-                          <CalendarDays size={18} />
-                        </span>
-                        <div>
-                          <h4 id="monthly-costs-heading">Each month</h4>
-                          <span>Ongoing living costs</span>
-                        </div>
-                      </div>
-                      <div className="cost-group-total">
-                        <strong>
-                          {formatGBP(monthlyTotal)}
-                          <small>/mo</small>
-                        </strong>
-                        <span>
-                          {formatGBP(monthlyTotal * months)} over {months}{" "}
-                          {months === 1 ? "month" : "months"}
-                        </span>
-                      </div>
-                      <div className="cost-list recurring-costs">
-                        {costs
-                          .filter((cost: any) => cost.recurring)
-                          .map(renderCost)}
-                      </div>
-                    </section>
-                  </div>
-
-                  <p className="planner-estimate-note">
-                    Estimates only. Confirm prices before booking.
-                  </p>
-                </section>
-              ) : (
-                <h3>{category}</h3>
-              )}
-              {costs
-                .filter((cost: any) => cost.name === category)
-                .map((cost: any) => (
-                  <div key={cost.name}>
-                    <label>
-                      <Checkbox
-                        checked={!excludedCosts.includes(cost.name)}
-                        onCheckedChange={(checked) =>
-                          setExcludedCosts((current) =>
-                            checked
-                              ? current.filter((name) => name !== cost.name)
-                              : [...current, cost.name],
-                          )
-                        }
-                      />{" "}
-                      Include in budget
-                    </label>
-                    {cost.name !== costs[1]?.name && (
-                      <label>
-                        Estimated amount · GBP
-                        <Input
-                          type="number"
-                          min="0"
-                          max="1000000"
-                          step="0.01"
-                          value={cost.amount}
-                          disabled={cost.name === costs[1]?.name}
-                          onChange={(e) =>
-                            setBudgetAmounts((current) => ({
-                              ...current,
-                              [cost.name]: Number(e.target.value),
-                            }))
-                          }
-                        />
-                      </label>
-                    )}
-                    {cost.name !== costs[1]?.name && (
-                      <p>
-                        {cost.recurring
-                          ? "Recurring monthly cost"
-                          : "Upfront cost"}{" "}
-                        · {cost.status}
-                      </p>
-                    )}
-                    {cost.name === costs[1]?.name && (
-                      <section className="route-choice-card">
-                        <h3>Flight routes</h3>
-                        <p className="move-help">
-                          Flight prices are estimates.
-                        </p>
-                        <div className="route-choices">
-                          {routes
-                            .slice(0, 4)
-                            .map((route: any, index: number) => {
-                              return (
-                                <Button
-                                  variant="outline"
-                                  type="button"
-                                  aria-pressed={selectedRoute === index}
-                                  className={
-                                    selectedRoute === index ? "selected" : ""
-                                  }
-                                  onClick={() => setSelectedRoute(index)}
-                                  key={`${route.name}-${index}`}
-                                >
-                                  <span className="route-copy">
-                                    <strong>
-                                      {route.name}
-                                      <b className="mode-price">
-                                        {formatGBP(route.cost)}
-                                      </b>
-                                    </strong>
-                                    <small>{route.detail}</small>
-                                    <em>
-                                      <Timer /> {route.time}
-                                    </em>
-                                  </span>
-                                  <i className="route-radio" />
-                                </Button>
-                              );
-                            })}
-                        </div>
-                      </section>
-                    )}
-                  </div>
-                ))}
-            </>
-          ) : (
-            <>
-              <h3>Set up your move</h3>
-              <p>Choose a category to edit your plan.</p>
-            </>
-          )}
-          <Button
-            disabled={plannerSaving || !accountId}
-            onClick={async () => {
-              if (!convexClient || !accountId) return;
-              setPlannerSaving(true);
-              setPlannerMessage("");
-              try {
-                await convexClient.mutation(convexApi.saveMovePlan, {
-                  accountId: accountId as any,
-                  months,
-                  selectedRoute,
-                  arrivalDate: dateValue,
-                  excludedCosts,
-                  budgetAmounts,
-                });
-                setPlannerMessage("Move plan saved.");
-              } catch {
-                setPlannerMessage(
-                  "Could not save. Check amounts and try again.",
-                );
-              } finally {
-                setPlannerSaving(false);
-              }
-            }}
-          >
-            {plannerSaving ? "Saving…" : "Save move plan"}
-          </Button>
-          {plannerMessage && <p role="status">{plannerMessage}</p>}
-        </div>
-      </section>
-      <Button
-        className="planner-overview-toggle"
-        variant="ghost"
-        aria-expanded={overviewOpen}
-        onClick={() => setOverviewOpen((open) => !open)}
-      >
-        {overviewOpen ? "Hide budget overview" : "Budget overview"}
-      </Button>
-      {overviewOpen && (
-        <section className="arrival-charts" aria-label="Arrival budget charts">
-          <figure className="arrival-breakdown-chart">
-            <figcaption>
-              <strong>What makes up your budget</strong>
-              <span>Included costs across your {months}-month stay</span>
-            </figcaption>
-            <div className="arrival-breakdown-body">
-              <div
-                className="spending-donut"
-                role="img"
-                aria-label={`Total estimated budget ${formatGBP(totalBudget)}. Breakdown listed alongside the chart.`}
-              >
-                {totalBudget > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={arrivalBreakdown.filter(
-                          (cost: any) => cost.amount > 0,
-                        )}
-                        dataKey="amount"
-                        nameKey="name"
-                        innerRadius="70%"
-                        outerRadius="94%"
-                        paddingAngle={2}
-                        stroke="none"
-                        isAnimationActive={false}
-                      >
-                        {arrivalBreakdown
-                          .filter((cost: any) => cost.amount > 0)
-                          .map((cost: any) => (
-                            <Cell key={cost.name} fill={cost.color} />
-                          ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value) => formatGBP(Number(value))}
-                        contentStyle={{
-                          background: "var(--color-surface)",
-                          border: "1px solid var(--color-line)",
-                          borderRadius: 8,
-                          color: "var(--color-ink)",
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="empty-donut" />
-                )}
-                <div className="donut-total">
-                  <span>Estimated total</span>
-                  <strong>{formatGBP(totalBudget)}</strong>
-                  <span>{months} months</span>
-                </div>
-              </div>
-              <ul className="arrival-chart-legend">
-                {arrivalBreakdown.map((cost: any) => (
-                  <li key={cost.name}>
-                    <span
-                      className="chart-legend-dot"
-                      style={{ background: cost.color }}
-                      aria-hidden="true"
-                    />
-                    <span>{cost.name}</span>
-                    <strong>{formatGBP(cost.amount)}</strong>
-                  </li>
-                ))}
-                {arrivalBreakdown.length === 0 && (
-                  <li>Select costs below to build your budget.</li>
-                )}
-              </ul>
-            </div>
-          </figure>
-        </section>
-      )}
-      <div className="planner-arrival-note">
-        <CalendarBlank weight="duotone" />
-        <span>
-          Arrival <strong>{displayDate}</strong> ·{" "}
-          {config?.apartment ?? "Riverside House, Zone 2"}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 function LegacyMovePlanner({
   go,
   config,
@@ -3850,6 +3214,9 @@ function LegacyMovePlanner({
   go: (page: Page) => void;
   config?: any;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [months, setMonths] = useState(12);
   const [locationOpen, setLocationOpen] = useState(false);
   const oneTime = config?.oneTime ?? 0,
@@ -3870,7 +3237,7 @@ function LegacyMovePlanner({
       name: "Direct flight",
       detail: "Phnom Penh → London · 1 stop",
       time: "16h 40m",
-      cost: "£610",
+      cost: convertMoneyText("£610", "GBP", currency),
       ease: "Easiest",
       best: true,
     },
@@ -3878,14 +3245,14 @@ function LegacyMovePlanner({
       name: "Budget flight",
       detail: "Phnom Penh → Bangkok → London · 2 stops",
       time: "22h 10m",
-      cost: "£480",
+      cost: convertMoneyText("£480", "GBP", currency),
       ease: "More effort",
     },
     {
       name: "Flexible flight",
       detail: "Phnom Penh → Singapore → London · 1 stop",
       time: "18h 25m",
-      cost: "£545",
+      cost: convertMoneyText("£545", "GBP", currency),
       ease: "Good balance",
     },
   ]; */
@@ -3919,7 +3286,7 @@ function LegacyMovePlanner({
       <section className="move-summary">
         <div>
           <span>Estimated move + {months} months</span>
-          <strong>{formatGBP(totalMove)}</strong>
+          <strong>{formatMoney(totalMove)}</strong>
           <small>Includes tuition, arrival and living costs</small>
         </div>
         <div>
@@ -4118,6 +3485,9 @@ export function Payments({
   proposal?: NonNullable<DatabaseState["paymentProposals"]>[number];
   config?: any;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const availableRoutes = (storedRoutes ?? []).map((r) => {
     try {
       const quote = tuitionQuote(Number(config?.paymentAmount), r);
@@ -4167,7 +3537,7 @@ export function Payments({
   useEffect(() => {
     if (storedRoute) setSelected(storedRoute);
     setConsent(false);
-  }, [storedRoute, status]);
+  }, [storedRoute, status, currency, config?.paymentAmount]);
   const [quoteClock, setQuoteClock] = useState(Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setQuoteClock(Date.now()), 1000);
@@ -4208,6 +3578,7 @@ export function Payments({
         selectedQuote.quoteExpiresAt <= quoteClock);
   const ready =
     !quoteExpired &&
+    (selectedQuote?.targetCurrency ?? "GBP") === currency &&
     Number.isFinite(amount) &&
     amount > 0 &&
     !!route &&
@@ -4217,7 +3588,7 @@ export function Payments({
     Number.isFinite(amount) && amount > 0
       ? new Intl.NumberFormat("en-GB", {
           style: "currency",
-          currency: "GBP",
+          currency: activeProposal?.targetCurrency ?? currency,
         }).format(amount)
       : "—";
   const recipient =
@@ -4302,11 +3673,15 @@ export function Payments({
                           </span>
                           <strong
                             className="pay-price"
-                            aria-label="Total cost in USD"
+                            aria-label={`Total cost in ${activeProposal?.sourceCurrency ?? r.sourceCurrency ?? "USD"}`}
                           >
-                            {formatUSD(
+                            {formatCurrency(
                               (activeProposal?.totalMinor ?? r.totalMinor) /
                                 100,
+                              activeProposal?.sourceCurrency ??
+                                r.sourceCurrency ??
+                                "USD",
+                              2,
                             )}
                           </strong>
                           <span className="pay-radio" aria-hidden="true">
@@ -4398,21 +3773,45 @@ export function Payments({
                         <WalletCards size={16} />
                         You pay
                       </dt>
-                      <dd>{route ? formatUSD(route.totalMinor / 100) : "—"}</dd>
+                      <dd>
+                        {route
+                          ? formatCurrency(
+                              route.totalMinor / 100,
+                              activeProposal?.sourceCurrency ??
+                                route.sourceCurrency ??
+                                "USD",
+                              2,
+                            )
+                          : "—"}
+                      </dd>
                     </div>
                     <div>
                       <dt>
                         <ReceiptText size={16} />
                         Fee included <InfoHelp term="Fees" />
                       </dt>
-                      <dd>{route ? formatUSD(route.fee) : "—"}</dd>
+                      <dd>
+                        {route
+                          ? formatCurrency(
+                              route.fee,
+                              activeProposal?.sourceCurrency ??
+                                route.sourceCurrency ??
+                                "USD",
+                              2,
+                            )
+                          : "—"}
+                      </dd>
                     </div>
                     <div>
                       <dt>
                         <Activity size={16} />
                         Rate <InfoHelp term="Exchange rate" />
                       </dt>
-                      <dd>{route ? `${route.fxRate} GBP / USD` : "—"}</dd>
+                      <dd>
+                        {route
+                          ? `${route.fxRate} ${activeProposal?.targetCurrency ?? currency} / ${activeProposal?.sourceCurrency ?? route.sourceCurrency ?? "USD"}`
+                          : "—"}
+                      </dd>
                     </div>
                     <div>
                       <dt>
@@ -4512,6 +3911,9 @@ function Sponsors({
   storedSponsors?: DatabaseState["sponsors"];
   config?: any;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [tab, setTab] = useState<"Sponsors" | "Requests" | "Privacy">(
     "Sponsors",
   );
@@ -4521,8 +3923,8 @@ function Sponsors({
   const totalCommitment = sponsor?.commitment ?? 0;
   const transferred = config?.transferred ?? 0;
   const schedule = config?.schedule ?? [
-    ["15 Nov 2026", "Living expenses", 1000],
-    ["15 Jan 2027", "Tuition instalment", 2000],
+    ["15 Nov 2026", "Living expenses", convertMoney(1000, "GBP", currency)],
+    ["15 Jan 2027", "Tuition instalment", convertMoney(2000, "GBP", currency)],
   ];
   const hasScheduleStatus = schedule.some((item: any[]) => Boolean(item[3]));
   return (
@@ -4597,16 +3999,16 @@ function Sponsors({
             <div className="sponsor-reference-commitment">
               <div className="commitment-total">
                 <span>Annual commitment</span>
-                <strong>{formatGBP(totalCommitment)}</strong>
+                <strong>{formatMoney(totalCommitment)}</strong>
               </div>
               <div className="commitment-row received">
                 <span>Received</span>
-                <strong>{formatGBP(transferred)}</strong>
+                <strong>{formatMoney(transferred)}</strong>
               </div>
               <div className="commitment-row remaining">
                 <span>Remaining</span>
                 <strong>
-                  {formatGBP(Math.max(0, totalCommitment - transferred))}
+                  {formatMoney(Math.max(0, totalCommitment - transferred))}
                 </strong>
               </div>
             </div>
@@ -4627,7 +4029,7 @@ function Sponsors({
               <div className="schedule-line" key={`${item[0]}-${item[1]}`}>
                 <span>{item[0]}</span>
                 <span>{item[1]}</span>
-                <span>{formatGBP(Number(item[2]))}</span>
+                <span>{formatMoney(Number(item[2]))}</span>
                 {hasScheduleStatus && <em>{item[3] ?? "—"}</em>}
               </div>
             ))}
@@ -4733,14 +4135,18 @@ export function Wallet({
   storedWallets?: DatabaseState["wallets"];
   go: (page: Page) => void;
 }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [detailsOpen, setDetailsOpen] = useState(false);
   const visibleWallets = storedWallets ?? wallets;
   const totalValue = visibleWallets.reduce(
-    (sum, wallet) => sum + wallet.gbpValue,
+    (sum, wallet) => sum + walletValue(wallet, currency),
     0,
   );
-  const usdBalance =
-    visibleWallets.find((wallet) => wallet.currency === "USD")?.gbpValue ?? 0;
+  const usdBalance = visibleWallets
+    .filter((wallet) => wallet.currency === "USD")
+    .reduce((sum, wallet) => sum + walletValue(wallet, currency), 0);
   return (
     <div className="page-stack balance-workspace">
       <section className="page-intro">
@@ -4750,15 +4156,15 @@ export function Wallet({
         </button>
       </section>
       <section className="balance-total">
-        <span>Total in GBP</span>
-        <strong>{formatGBP(totalValue)}</strong>
+        <span>Total in {currency}</span>
+        <strong>{formatMoney(totalValue)}</strong>
         <small>Converted values use demo rates.</small>
       </section>
       <section className="balance-accounts" aria-label="Currency accounts">
         <div className="balance-table-head">
           <span>Account</span>
           <span>Balance</span>
-          <span>GBP equivalent</span>
+          <span>{currency} equivalent</span>
         </div>
         {visibleWallets.map((wallet) => (
           <div className="balance-account-row" key={wallet.currency}>
@@ -4766,18 +4172,12 @@ export function Wallet({
               <strong>{wallet.currency}</strong>
               <span>{wallet.label}</span>
             </div>
-            <strong>
-              {wallet.symbol}
-              {wallet.amount.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </strong>
+            <strong>{formatCurrency(wallet.amount, wallet.currency, 2)}</strong>
             <span>
-              {formatGBP(wallet.gbpValue)}
+              {formatMoney(walletValue(wallet, currency))}
               <small className="balance-rate">
                 {wallet.amount > 0
-                  ? `1 ${wallet.currency} ≈ ${(wallet.gbpValue / wallet.amount).toFixed(4)} GBP`
+                  ? `1 ${wallet.currency} ≈ ${(walletValue(wallet, currency) / wallet.amount).toFixed(4)} ${currency}`
                   : "Rate unavailable"}{" "}
                 <InfoHelp term="Balance valuation" />
               </small>
@@ -4811,15 +4211,19 @@ export function Wallet({
             ))}
           </dl>
           <p>
-            A 5% fall in USD against GBP would reduce the value of your current
-            USD balance by approximately {formatGBP(usdBalance * 0.05)}.
+            A 5% fall in USD against {currency} would reduce the value of your
+            current USD balance by approximately{" "}
+            {formatMoney(usdBalance * 0.05)}.
           </p>
         </section>
       )}
     </div>
   );
 }
-function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
+export function Security({ audit, config, receipts }: { audit: AuditEvent[]; config?: any; receipts?: import("react").ReactNode }) {
+  const currency = useWorkspaceCurrency();
+  const formatMoney = useWorkspaceMoney();
+
   const [activityOpen, setActivityOpen] = useState(false);
   const exportAudit = () => {
     const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
@@ -4839,7 +4243,7 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
     <div className="page-stack security-workspace">
       <section className="page-intro">
         <div>
-          <h2>Security center</h2>
+          <h2><ShieldCheck size={24} aria-hidden="true" /> Security center</h2>
         </div>
       </section>
       <section className="security-grid">
@@ -4863,7 +4267,7 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
             <strong>Payment limit</strong>
             <p>Single sandbox transaction maximum.</p>
           </div>
-          <span>{formatGBP(config?.paymentLimit ?? 0)}</span>
+          <span>{formatMoney(config?.paymentLimit ?? 0)}</span>
         </div>
         <div className="card control">
           <Clock3 />
@@ -4874,6 +4278,10 @@ function Security({ audit, config }: { audit: AuditEvent[]; config?: any }) {
           <span>{config?.approvalExpiryMinutes ?? 0} min</span>
         </div>
       </section>
+      {receipts && <section className="security-receipts" aria-label="Payment receipts">
+        <h3><ReceiptText size={18} aria-hidden="true" /> Receipts</h3>
+        {receipts}
+      </section>}
       <button
         className="disclosure-button"
         aria-expanded={activityOpen}

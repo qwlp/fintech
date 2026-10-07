@@ -1,3 +1,4 @@
+import { convertMoney, formatCurrency } from "../shared/currency";
 import DataBoundary from "./DataBoundary";
 import "./brief.css";
 import { useState } from "react";
@@ -20,12 +21,6 @@ import { Input } from "./components/ui/input";
 import SponsorConnect from "./SponsorConnect";
 import "./sponsor-dashboard.css";
 
-const money = (amount: number) =>
-  new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "GBP",
-    maximumFractionDigits: 2,
-  }).format(amount);
 export default function SponsorDashboard(props: { name: string }) {
   return (
     <DataBoundary>
@@ -42,6 +37,8 @@ function SponsorOverview({ name }: { name: string }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const student = students?.find((s) => s.id === selected) ?? students?.[0];
+  const currency = student?.currency ?? "GBP";
+  const money = (amount: number) => formatCurrency(amount, currency, 2);
   const pending =
     students?.reduce(
       (total, s) =>
@@ -68,10 +65,18 @@ function SponsorOverview({ name }: { name: string }) {
           <CirclePoundSterling size={20} />
           <strong>
             {students
-              ? money(students.reduce((total, s) => total + s.commitment, 0))
+              ? formatCurrency(
+                  students.reduce(
+                    (total, s) =>
+                      total + convertMoney(s.commitment, s.currency, currency),
+                    0,
+                  ),
+                  currency,
+                  2,
+                )
               : "—"}
           </strong>
-          <span>Annual commitment</span>
+          <span>Annual commitment · {currency} equivalent</span>
         </div>
         <div>
           <Inbox size={20} />
@@ -111,7 +116,7 @@ function SponsorOverview({ name }: { name: string }) {
           </div>
           <div className="sponsor-commitment">
             <div>
-              <span>Annual commitment</span>
+              <span>Annual commitment · {currency}</span>
               <strong>{money(student.commitment)}</strong>
             </div>
             {!editing && (
@@ -146,7 +151,9 @@ function SponsorOverview({ name }: { name: string }) {
                 }
               }}
             >
-              <label htmlFor="annual-commitment">Annual amount · GBP</label>
+              <label htmlFor="annual-commitment">
+                Annual amount · {currency}
+              </label>
               <div>
                 <Input
                   id="annual-commitment"
@@ -191,7 +198,7 @@ function SponsorOverview({ name }: { name: string }) {
               <>
                 <dl className="route-quick-facts">
                   <div>
-                    <dt>Planned budget · GBP</dt>
+                    <dt>Planned budget · {currency}</dt>
                     <dd>{money(student.financialOverview.plannedGBP)}</dd>
                   </div>
                   <div>
@@ -294,8 +301,8 @@ function SponsorOverview({ name }: { name: string }) {
                   <ul>
                     {student.tuition.recentPayments.map((payment, index) => (
                       <li key={index}>
-                        {money(payment.amountGBP)} ·{" "}
-                        {new Date(payment.timestamp).toLocaleDateString()}
+                        {formatCurrency(payment.amountGBP, payment.currency, 2)}{" "}
+                        · {new Date(payment.timestamp).toLocaleDateString()}
                       </li>
                     ))}
                   </ul>

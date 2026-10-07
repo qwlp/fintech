@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-for (const width of [1440, 390]) {
+for (const width of [1440, 390, 320]) {
   test(`chat composer and history at ${width}px`, async ({ page }) => {
     page.on("pageerror", error => console.error(error.message));
     await page.setViewportSize({ width, height: 900 });
@@ -20,6 +20,13 @@ for (const width of [1440, 390]) {
     await expect(page.locator(".assistant-toolbar").getByRole("button", { name: "How the agent works" })).toBeVisible();
     await expect.poll(() => page.locator(".assistant-composer-area").evaluate(el => el.getBoundingClientRect().bottom - innerHeight)).toBeLessThanOrEqual(1);
     await expect(page.getByRole("heading", { name: "Let’s make a plan." })).toBeVisible();
+    if (width <= 800) {
+      const toolbar = page.locator(".assistant-toolbar");
+      expect(await toolbar.evaluate(el => el.getBoundingClientRect().height)).toBeLessThanOrEqual(65);
+      const buttons = await toolbar.getByRole("button").evaluateAll(elements => elements.map(el => el.getBoundingClientRect().top));
+      expect(Math.max(...buttons) - Math.min(...buttons)).toBeLessThanOrEqual(1);
+      await toolbar.screenshot({ path: `/tmp/movewise-chat-toolbar-${width}.png` });
+    }
     const input = page.getByRole("textbox", { name: "Message your plan assistant" });
     await page.getByRole("button", { name: "AI privacy settings", exact: true }).click();
     const privacy = page.getByRole("dialog", { name: "AI privacy", exact: true });

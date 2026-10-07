@@ -223,3 +223,80 @@
 .agent-calculation table { border-collapse: collapse; font-size: 12px; width: 100%; }
 .agent-calculation th, .agent-calculation td { text-align: left; padding: 8px; border-bottom: 1px solid var(--color-line, #e1e5e9); vertical-align: top; }
 .agent-calculation small { color: var(--color-muted, #65717f); }
+
+/* A single compact row leaves mobile space for the conversation. */
+@media (max-width: 800px) {
+  .assistant-page .assistant-toolbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-height: 64px;
+    padding: 10px 12px;
+  }
+  .assistant-page .assistant-identity { min-width: 0; flex: 1; }
+  .assistant-page .assistant-identity strong { white-space: nowrap; font-size: 14px; }
+  .assistant-page .assistant-toolbar-actions {
+    width: auto;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+  .assistant-toolbar-actions .assistant-action-label,
+  .assistant-toolbar-actions .assistant-privacy-label,
+  .assistant-toolbar-actions .agent-tour-label { display: none; }
+  :root[data-theme] .assistant-page .assistant-toolbar-actions .ui-button,
+  .assistant-page .assistant-toolbar-actions .agent-tour-trigger.ui-button {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    flex: 0 0 40px;
+    border-radius: 10px;
+  }
+  :root[data-theme] .assistant-page .assistant-toolbar-actions .assistant-new-chat.ui-button {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: transparent;
+  }
+  :root[data-theme] .assistant-page .assistant-toolbar-actions .assistant-new-chat.ui-button:hover {
+    background: var(--color-primary-hover);
+  }
+}
+
+.assistant-note-mobile { display: none; }
+:root[data-theme] .assistant-page .assistant-composer .ui-button[data-variant="default"] {
+  background: var(--color-primary);
+  color: #fff;
+}
+:root[data-theme] .assistant-page .assistant-composer:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+@media (max-width: 800px) {
+  .assistant-page .assistant-composer-area { padding: 8px 12px 10px; }
+  .assistant-page .assistant-composer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px;
+    align-items: end;
+    gap: 10px;
+    padding: 10px 10px 10px 14px;
+    border-radius: 18px;
+  }
+  .assistant-page .assistant-composer textarea[data-slot="textarea"] {
+    min-height: 40px;
+    max-height: 144px;
+    padding: 8px 0;
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .assistant-page .assistant-composer-footer { justify-content: flex-end; }
+  .assistant-page .assistant-composer-footer > span { display: none; }
+  :root[data-theme] .assistant-page .assistant-composer-footer .ui-button[data-size="icon"] {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 12px;
+  }
+  .assistant-page .assistant-note { font-size: 11px; line-height: 1.5; margin-top: 6px; }
+  .assistant-note-desktop { display: none; }
+  .assistant-note-mobile { display: inline; }
+}

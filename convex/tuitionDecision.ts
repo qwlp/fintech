@@ -1,5 +1,8 @@
+import { walletValue } from "../shared/currency";
 // Shared by the server, UI and evaluations. All inputs are sandbox observations.
 export type DecisionRoute = {
+  sourceCurrency?: string;
+  targetCurrency?: string;
   key: string;
   provider: string;
   fxRate: number;
@@ -10,6 +13,7 @@ export type DecisionRoute = {
   quoteExpiresAt?: number;
 };
 export type DecisionInput = {
+  currency?: string;
   amountGBP: number;
   reserveGBP: number;
   wallets: { currency: string; amount: number; gbpValue: number }[];
@@ -55,6 +59,8 @@ export function quoteFingerprint(
     Math.round(route.fee * 100),
     route.delivery,
     route.quoteExpiresAt,
+    route.sourceCurrency ?? "USD",
+    route.targetCurrency ?? "GBP",
   ]);
 }
 export function tuitionQuote(
@@ -80,6 +86,7 @@ export function tuitionQuote(
 const minor = (amount: number) => Math.round(amount * 100);
 export function assessTuition(input: DecisionInput) {
   const { amountGBP, reserveGBP, wallets, routes, now } = input;
+  const currency = input.currency ?? "GBP";
   const buffer = input.bufferBusinessDays ?? 1;
   if (
     ![amountGBP, reserveGBP, now].every(Number.isFinite) ||
@@ -106,14 +113,20 @@ export function assessTuition(input: DecisionInput) {
   )
     throw new Error("Wallet valuations unavailable");
   const deadline = input.deadline ? parseDeadline(input.deadline) : null;
-  const usd = wallets.find((w) => w.currency === "USD");
-  const availableMinor = minor(usd?.amount ?? 0);
-  const valuation = usd && usd.amount > 0 ? usd.gbpValue / usd.amount : null;
-  const liquidGBP = wallets.reduce((sum, w) => sum + w.gbpValue, 0);
+  const liquidGBP = wallets.reduce(
+    (sum, w) => sum + walletValue(w, currency),
+    0,
+  );
   if (!Number.isSafeInteger(minor(liquidGBP)))
     throw new Error("Wallet valuations unavailable");
   const assessments = routes
     .map((route) => {
+      const sourceCurrency = route.sourceCurrency ?? "USD";
+      const targetCurrency = route.targetCurrency ?? "GBP";
+      const usd = wallets.find((w) => w.currency === sourceCurrency);
+      const availableMinor = minor(usd?.amount ?? 0);
+      const valuation =
+        usd && usd.amount > 0 ? walletValue(usd, currency) / usd.amount : null;
       const valid =
         Number.isFinite(route.fxRate) &&
         route.fxRate > 0 &&
@@ -149,9 +162,12 @@ export function assessTuition(input: DecisionInput) {
       const meetsDeadline =
         deadline !== null && arrivalAt !== null ? arrivalAt <= deadline : null;
       const blockers: string[] = [];
+      if (targetCurrency !== currency)
+        blockers.push("Quote currency does not match study currency");
       if (!totalValid) blockers.push("Invalid quote");
       if (!fresh) blockers.push("Refresh expired or undated quote");
-      if (!affordable) blockers.push("Insufficient available USD");
+      if (!affordable)
+        blockers.push(`Insufficient available ${sourceCurrency}`);
       if (!preservesReserve)
         blockers.push(
           "Living-cost reserve would be breached or cannot be valued",
@@ -178,6 +194,8 @@ export function assessTuition(input: DecisionInput) {
             100
           : null;
       return {
+        sourceCurrency,
+        targetCurrency,
         routeKey: route.key,
         provider: route.provider,
         totalUSD: totalValid ? totalMinor! / 100 : null,
@@ -210,6 +228,7 @@ export function assessTuition(input: DecisionInput) {
     );
   const recommended = assessments.find((route) => route.eligible);
   return {
+    currency,
     sandbox: true as const,
     assessedAt: now,
     recipientAmountGBP: amountGBP,
@@ -220,7 +239,7 @@ export function assessTuition(input: DecisionInput) {
     routes: assessments,
     recommendedRouteKey: recommended?.routeKey ?? null,
     explanation: recommended
-      ? `${recommended.provider} is the lowest-cost eligible route: sufficient USD, protected living funds and estimated arrival by the deadline with the selected buffer.`
+      ? `${recommended.provider} is the lowest-cost eligible route: sufficient ${recommended.sourceCurrency}, protected living funds and estimated arrival by the deadline with the selected buffer.`
       : "No route currently satisfies all checks. Resolve the listed blockers before preparing a payment.",
     assumptions:
       "Delivery uses UTC dates and Monday–Friday business days plus a safety buffer. Bank holidays, cutoff times and university processing are excluded; arrival is an estimate. Pending sponsor commitments are not available cash. Top-ups use the current sandbox wallet valuation and require actual receipt of funds.",

@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { useReducedMotion } from "motion/react";
 import { formatMoney } from "./MoneyAmount";
-import { formatGBP } from "./lib/finance";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "./WorkspaceCurrency";
 function MeasuredChart({ children }: { children: ReactNode }) {
   const host = useRef<HTMLDivElement>(null);
   const [sized, setSized] = useState(false);
@@ -42,12 +42,14 @@ export const planChartColors = [
 export default function BudgetDonut({
   costs,
   animated = false,
-  currency = "GBP",
+  currency: suppliedCurrency,
 }: {
   costs: { name: string; amount: number }[];
   animated?: boolean;
   currency?: string;
 }) {
+  const workspaceCurrency = useWorkspaceCurrency();
+  const currency = suppliedCurrency ?? workspaceCurrency;
   const reduced = useReducedMotion();
   return (
     <MeasuredChart>
@@ -102,6 +104,7 @@ export function FundingSourcesChart({
   animated?: boolean;
   compact?: boolean;
 }) {
+  const formatMoney = useWorkspaceMoney();
   const reduced = useReducedMotion();
   return (
     <MeasuredChart>
@@ -124,7 +127,7 @@ export function FundingSourcesChart({
           />
           <XAxis
             type="number"
-            tickFormatter={(value) => `£${Number(value) / 1000}k`}
+            tickFormatter={(value) => formatMoney(Number(value))}
             tick={{ fill: "var(--color-muted, #4f637d)", fontSize: 10 }}
             axisLine={false}
             tickLine={false}
@@ -146,7 +149,7 @@ export function FundingSourcesChart({
           />
           <Tooltip
             cursor={{ fill: "var(--color-line, #d8e0e8)", fillOpacity: 0.25 }}
-            formatter={(value) => [formatGBP(Number(value)), "Amount"]}
+            formatter={(value) => [formatMoney(Number(value)), "Amount"]}
             contentStyle={{
               background: "var(--color-surface, #fff)",
               border: "1px solid var(--color-line, #d8e0e8)",

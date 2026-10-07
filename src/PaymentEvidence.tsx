@@ -1,3 +1,5 @@
+import { useWorkspaceCurrency } from "./WorkspaceCurrency";
+import { convertMoney, formatCurrency } from "../shared/currency";
 import { useState } from "react";
 import { convexApi, convexClient } from "./lib/convex";
 import { Button } from "./components/ui/button";
@@ -55,6 +57,7 @@ export default function PaymentEvidence({
     timestamp: number;
   }[];
 }) {
+  const currency = useWorkspaceCurrency();
   const [last4, setLast4] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -120,7 +123,7 @@ export default function PaymentEvidence({
         {!banking ? (
           <>
             <p>
-              Load a £2,000 tuition scenario with a simulated US$5,000 wallet.
+              Load a {formatCurrency(convertMoney(2000, "GBP", currency), currency)} tuition scenario with a simulated US$5,000 wallet.
               Your study plan stays separate.
             </p>
             <Button
@@ -133,9 +136,8 @@ export default function PaymentEvidence({
         ) : !banking.recipientVerified ? (
           <>
             <p>
-              Check the sample university account suffix{" "}
-              <strong>{banking.recipientAccountLast4}</strong>, then enter it to
-              confirm the sandbox recipient.
+              Enter the account suffix{" "}
+              <strong>{banking.recipientAccountLast4}</strong> to confirm the recipient.
             </p>
             <Input
               aria-label="Confirm recipient last four digits"
@@ -152,10 +154,10 @@ export default function PaymentEvidence({
           </>
         ) : (
           <p>
-            Sandbox recipient checked. Ask the AI to “prepare my tuition
-            payment”, or use Payment demo below.
+            Recipient verified.
           </p>
         )}
+        {!current && banking?.recipientVerified && <p className="receipt-empty">No payment receipts yet.</p>}
         {current && (
           <div role="status" style={{ overflowWrap: "anywhere" }}>
             <p>
@@ -164,16 +166,13 @@ export default function PaymentEvidence({
               {current.recipientLast4}
             </p>
             <p>
-              Recipient receives £{(current.amountMinor / 100).toFixed(2)}.
-              Total US${(current.totalMinor / 100).toFixed(2)}, including US$
-              {(current.feeMinor / 100).toFixed(2)} fee.
+              Recipient receives {formatCurrency(current.amountMinor / 100, current.targetCurrency, 2)}.
+              Total {formatCurrency(current.totalMinor / 100, current.sourceCurrency, 2)}, including {formatCurrency(current.feeMinor / 100, current.sourceCurrency, 2)} fee.
             </p>
             {current.remainingGBPMinor !== undefined && (
               <p>
-                Estimated funds after payment: £
-                {(current.remainingGBPMinor / 100).toFixed(2)}. Protected
-                living-cost reserve: £
-                {((current.protectedReserveMinor ?? 100000) / 100).toFixed(2)}.
+                Estimated funds after payment: {formatCurrency(current.remainingGBPMinor / 100, current.targetCurrency, 2)}. Protected
+                living-cost reserve: {formatCurrency((current.protectedReserveMinor ?? 0) / 100, current.targetCurrency, 2)}.
               </p>
             )}
             <p>

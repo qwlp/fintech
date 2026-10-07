@@ -1,3 +1,4 @@
+import { validateMoveSettings } from "../shared/move-planner";
 import {
   mutationGeneric as mutation,
   actionGeneric as action,
@@ -5,6 +6,15 @@ import {
   queryGeneric as query,
 } from "convex/server";
 import { v } from "convex/values";
+import { syncWorkspaceCurrency } from "./workspaceCurrency";
+import {
+  convertMoney,
+  currencyRate,
+  studyCurrency,
+  walletValue,
+  sandboxRouteGBPPerUSD,
+} from "../shared/currency";
+import { getCountry, validateStudySelection } from "../shared/study";
 
 import { requireAccount } from "./ownership";
 import { internal } from "./_generated/api";
@@ -461,13 +471,13 @@ export const markNotificationsRead = mutation({
 export const requestSponsor = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, args) => {
-    await requireAccount(ctx, args.accountId);
+    const account = await requireAccount(ctx, args.accountId);
     await ctx.db.patch(args.accountId, { sponsorRequestSent: true });
     await ctx.db.insert("auditEvents", {
       accountId: args.accountId,
       type: "SPONSOR_REQUESTED",
-      detail: "Contribution request sent for £1,000",
-      actor: "Dara Chan",
+      detail: `Contribution request sent for ${studyCurrency(account.countryTo)} ${convertMoney(1000, "GBP", studyCurrency(account.countryTo))}`,
+      actor: account.name,
       timestamp: Date.now(),
     });
   },
@@ -486,6 +496,12 @@ export const completeSetup = mutation({
   },
   handler: async (ctx, args) => {
     const account = await requireAccount(ctx);
+    validateStudySelection(
+      args.countryFrom,
+      args.countryTo,
+      args.university,
+      account.role === "Student",
+    );
     const name = args.name.trim();
     if (!name || name.length > 100) throw new Error("Enter your name");
     if (!args.countryFrom.trim()) throw new Error("Enter your home country");
@@ -495,6 +511,7 @@ export const completeSetup = mutation({
       throw new Error("Enter a valid funding amount");
     if (args.courseStart && !/^\d{4}-\d{2}(?:-\d{2})?$/.test(args.courseStart))
       throw new Error("Choose a start date");
+    await syncWorkspaceCurrency(ctx, account, args.countryTo);
     const rows = await ctx.db
       .query("appConfig")
       .withIndex("by_account", (q) => q.eq("accountId", account._id))
@@ -502,6 +519,10 @@ export const completeSetup = mutation({
     const row = rows.find((item) => item.key === "profile");
     const value = {
       ...(row?.value ?? {}),
+      homeCurrency: getCountry(args.countryFrom)?.currency,
+      studyCurrency: getCountry(args.countryTo)?.currency ?? "",
+      fundingCurrency: studyCurrency(args.countryTo),
+      workspaceCurrency: studyCurrency(args.countryTo),
       courseStart: args.courseStart,
       fundingAmount: args.fundingAmount,
       sponsorSupport: args.sponsorSupport,
@@ -513,8 +534,8 @@ export const completeSetup = mutation({
         .slice(0, 2)
         .map((part) => part[0].toUpperCase())
         .join(""),
-      countryFrom: args.countryFrom.trim(),
-      countryTo: args.countryTo.trim(),
+      countryFrom: getCountry(args.countryFrom)!.name,
+      countryTo: getCountry(args.countryTo)?.name ?? "",
       university: args.university.trim(),
       course: args.course.trim(),
       setupComplete: true,
@@ -543,7 +564,13 @@ export const updateProfile = mutation({
     fundingAmount: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireAccount(ctx, args.accountId);
+    const owner = await requireAccount(ctx, args.accountId);
+    validateStudySelection(
+      args.countryFrom,
+      args.countryTo,
+      args.university,
+      owner.role === "Student",
+    );
     const {
       accountId,
       courseStart,
@@ -554,12 +581,16 @@ export const updateProfile = mutation({
     } = args;
     if (!Number.isFinite(fundingAmount) || fundingAmount < 0)
       throw new Error("Invalid confirmed funding amount");
+    account.countryFrom = getCountry(account.countryFrom)!.name;
+    account.countryTo = getCountry(account.countryTo)?.name ?? "";
+    account.university = account.university.trim();
     const initials = account.name
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase())
       .join("");
+    await syncWorkspaceCurrency(ctx, owner, account.countryTo);
     await ctx.db.patch(accountId, { ...account, initials });
     const row = (
       await ctx.db
@@ -573,6 +604,10 @@ export const updateProfile = mutation({
       financialStatus,
       sponsorSupport,
       fundingAmount,
+      homeCurrency: getCountry(account.countryFrom)?.currency,
+      studyCurrency: getCountry(account.countryTo)?.currency ?? "",
+      fundingCurrency: studyCurrency(account.countryTo),
+      workspaceCurrency: studyCurrency(account.countryTo),
     };
     if (row) await ctx.db.patch(row._id, { value });
     else await ctx.db.insert("appConfig", { accountId, key: "profile", value });
@@ -621,7 +656,7 @@ export const createSponsorRequest = mutation({
     await ctx.db.insert("auditEvents", {
       accountId: args.accountId,
       type: "SPONSOR_REQUESTED",
-      detail: `${args.purpose} contribution requested for £${args.amount.toLocaleString("en-GB")}`,
+      detail: `${args.purpose} contribution requested for ${studyCurrency((await ctx.db.get(args.accountId))?.countryTo ?? "")} ${args.amount.toLocaleString("en-GB")}`,
       actor: "Student",
       timestamp: Date.now(),
     });
@@ -697,7 +732,10 @@ export const ensureConfig = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, { accountId }) => {
     const owner = await requireAccount(ctx, accountId);
-    if (owner.userId || owner.email !== DEMO_EMAIL) return;
+    if (owner.userId || owner.email !== DEMO_EMAIL) {
+      await syncWorkspaceCurrency(ctx, owner);
+      return;
+    }
     const existing = await ctx.db
       .query("appConfig")
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
@@ -811,6 +849,7 @@ export const ensureConfig = mutation({
           await ctx.db.patch(row._id, { value });
       }
     }
+    await syncWorkspaceCurrency(ctx, owner);
   },
 });
 
@@ -898,7 +937,19 @@ export const chatContext = internalQuery({
       )
       .order("desc")
       .take(20);
+    const profile = configRows.find((row) => row.key === "profile")?.value;
     return {
+      profile: {
+        name: account.name ?? "",
+        role: account.role ?? "",
+        homeCountry: account.countryFrom ?? "",
+        studyCountry: account.countryTo ?? "",
+        university: account.university ?? "",
+        course: account.course ?? "",
+        courseStart:
+          typeof profile?.courseStart === "string" ? profile.courseStart : "",
+      },
+      currency: studyCurrency(account.countryTo),
       totalCost,
       totalFunding,
       gap,
@@ -1007,6 +1058,8 @@ export const addCountryAccount = mutation({
   args: { accountId: v.id("accounts"), country: v.string(), label: v.string() },
   handler: async (ctx, { accountId, country, label }) => {
     await requireAccount(ctx, accountId);
+    const selectedCountry = getCountry(country.trim());
+    if (!selectedCountry) throw new Error("Choose a supported country");
     if (!country.trim() || !label.trim())
       throw new Error("Country and account name are required");
     if (!(await ctx.db.get(accountId))) throw new Error("Account not found");
@@ -1019,7 +1072,11 @@ export const addCountryAccount = mutation({
       ...(row?.value ?? {}),
       countryAccounts: [
         ...(row?.value?.countryAccounts ?? []),
-        { country: country.trim(), label: label.trim() },
+        {
+          country: selectedCountry.name,
+          currency: selectedCountry.currency,
+          label: label.trim(),
+        },
       ],
     };
     if (row) await ctx.db.patch(row._id, { value });
@@ -1109,6 +1166,8 @@ export const runAgentTool = internalMutation({
               proposalId: proposal._id,
               recipient: proposal.recipient,
               provider: proposal.provider,
+              sourceCurrency: proposal.sourceCurrency,
+              targetCurrency: proposal.targetCurrency,
               amountGBP: proposal.amountMinor / 100,
               totalUSD: proposal.totalMinor / 100,
               status: proposal.status,
@@ -1151,8 +1210,11 @@ export const runAgentTool = internalMutation({
         .collect();
       const security = config.find((row) => row.key === "security")?.value;
       result = assessTuition({
+        currency: studyCurrency(account.countryTo),
         amountGBP: amount,
-        reserveGBP: security?.protectedReserveGBP ?? 1000,
+        reserveGBP:
+          security?.protectedReserveGBP ??
+          convertMoney(1000, "GBP", studyCurrency(account.countryTo)),
         wallets,
         routes,
         deadline: banking?.tuitionDeadline,
@@ -1168,20 +1230,27 @@ export const runAgentTool = internalMutation({
         percent > 30
       )
         throw new Error("FX shock must be between 0% and 30%");
-      const currentGBP = wallets.reduce((sum, w) => sum + w.gbpValue, 0);
+      const currentGBP = wallets.reduce(
+        (sum, w) => sum + walletValue(w, studyCurrency(account.countryTo)),
+        0,
+      );
       const stressedGBP = wallets.reduce(
         (sum, w) =>
-          sum + w.gbpValue * (w.currency === "GBP" ? 1 : 1 - percent / 100),
+          sum +
+          walletValue(w, studyCurrency(account.countryTo)) *
+            (w.currency === studyCurrency(account.countryTo)
+              ? 1
+              : 1 - percent / 100),
         0,
       );
       result = {
         hypothetical: true,
+        currency: studyCurrency(account.countryTo),
         adversePercent: percent,
         currentGBP: Math.round(currentGBP * 100) / 100,
         stressedGBP: Math.round(stressedGBP * 100) / 100,
         lossGBP: Math.round((currentGBP - stressedGBP) * 100) / 100,
-        assumptions:
-          "Non-GBP wallet valuations fall by the requested percentage; GBP balances stay constant. Scenario only, not an FX forecast. No records changed.",
+        assumptions: `Foreign wallet valuations fall by the requested percentage; ${studyCurrency(account.countryTo)} balances stay constant. Scenario only, not an FX forecast. No records changed.`,
       };
     } else {
       const rent = args.monthlyRent;
@@ -1191,7 +1260,9 @@ export const runAgentTool = internalMutation({
         rent < 0 ||
         rent > 100000
       )
-        throw new Error("Monthly rent must be between £0 and £100,000");
+        throw new Error(
+          `Monthly rent must be between 0 and 100,000 ${studyCurrency(account.countryTo)}`,
+        );
       const monthly = costs.filter((c) =>
         /monthly|living|rent|food|transport|utilities/i.test(
           c.category + " " + c.name,
@@ -1203,10 +1274,13 @@ export const runAgentTool = internalMutation({
       const otherMonthly = monthly
         .filter((c) => !/rent|accommodation/i.test(c.name))
         .reduce((sum, c) => sum + c.amount / 12, 0);
-      const liquidGBP = wallets.reduce((sum, w) => sum + w.gbpValue, 0);
+      const liquidGBP = wallets.reduce(
+        (sum, w) => sum + walletValue(w, studyCurrency(account.countryTo)),
+        0,
+      );
       result = {
         hypothetical: true,
-        currency: "GBP",
+        currency: studyCurrency(account.countryTo),
         monthlyRent: rent,
         otherMonthly,
         monthlyBurn: rent + otherMonthly,
@@ -1215,7 +1289,7 @@ export const runAgentTool = internalMutation({
           rent + otherMonthly > 0 ? liquidGBP / (rent + otherMonthly) : null,
         monthlyChange: rent - currentRent,
         assumptions:
-          "Plan cost items matching rent/living/food/transport/utilities are annual totals divided by 12; wallet GBP valuations are sandbox estimates. No records changed.",
+          "Plan cost items matching rent/living/food/transport/utilities are annual totals divided by 12; wallet valuations in the study currency are sandbox estimates. No records changed.",
       };
     }
     await ctx.db.insert("toolExecutions", {
@@ -1245,15 +1319,20 @@ export const initializePaymentSandbox = mutation({
       .query("appConfig")
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
       .collect();
+    await syncWorkspaceCurrency(ctx, account);
+    const currency = studyCurrency(account.countryTo);
     if (config.some((row) => row.key === "banking"))
       throw new Error("Payment sandbox already exists");
     await ctx.db.insert("appConfig", {
       accountId,
       key: "banking",
       value: {
-        recipient: "Example UK University",
+        recipient:
+          account.university ||
+          `Example ${account.countryTo || "UK"} University`,
+        currency,
         recipientAccountLast4: "1842",
-        paymentAmount: 2000,
+        paymentAmount: convertMoney(2000, "GBP", currency),
         recipientVerified: false,
         sandbox: true,
         tuitionDeadline: new Date(Date.now() + 14 * 86400000)
@@ -1266,9 +1345,10 @@ export const initializePaymentSandbox = mutation({
       accountId,
       key: "security",
       value: {
-        paymentLimit: 2500,
+        currency,
+        paymentLimit: convertMoney(2500, "GBP", currency),
         approvalExpiryMinutes: 10,
-        protectedReserveGBP: 1000,
+        protectedReserveGBP: convertMoney(1000, "GBP", currency),
       },
     });
     const wallets = await ctx.db
@@ -1317,6 +1397,10 @@ export const initializePaymentSandbox = mutation({
       await ctx.db.insert("paymentRoutes", {
         accountId,
         ...route,
+        sourceCurrency: "USD",
+        targetCurrency: currency,
+        fxRate:
+          currency === "USD" ? 1 : route.fxRate * currencyRate("GBP", currency),
         quotedAt: Date.now(),
         quoteExpiresAt: Date.now() + 10 * 60 * 1000,
         sourceAmount: Math.ceil(200000 / route.fxRate) / 100,
@@ -1400,7 +1484,8 @@ export const updateTuitionPlan = mutation({
       bufferBusinessDays > 5 ||
       !Number.isFinite(protectedReserveGBP) ||
       protectedReserveGBP < 0 ||
-      protectedReserveGBP > 1000000 ||
+      protectedReserveGBP >
+        convertMoney(1000000, "GBP", studyCurrency(account.countryTo)) ||
       !Number.isSafeInteger(Math.round(protectedReserveGBP * 100))
     )
       throw new Error("Invalid reserve or safety buffer");
@@ -1422,13 +1507,14 @@ export const updateTuitionPlan = mutation({
     await ctx.db.patch(security._id, {
       value: {
         ...security.value,
+        currency: studyCurrency(account.countryTo),
         protectedReserveGBP: Math.round(protectedReserveGBP * 100) / 100,
       },
     });
     await ctx.db.insert("auditEvents", {
       accountId,
       type: "TUITION_PLAN_UPDATED",
-      detail: `Deadline ${deadline}; ${bufferBusinessDays} business-day buffer; protected GBP ${protectedReserveGBP}`,
+      detail: `Deadline ${deadline}; ${bufferBusinessDays} business-day buffer; protected ${studyCurrency(account.countryTo)} ${protectedReserveGBP}`,
       actor: account.name,
       timestamp: Date.now(),
     });
@@ -1447,6 +1533,9 @@ export const refreshSandboxQuotes = mutation({
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
       .collect();
     const windows: Record<string, number> = {
+      wise: 1,
+      swift: 5,
+      card: 1,
       "sandbox-standard": 2,
       "sandbox-bank": 5,
       "sandbox-fast": 1,
@@ -1456,9 +1545,12 @@ export const refreshSandboxQuotes = mutation({
       // Only known fixtures can be refreshed; never invent current observations for other records.
       if (windows[route.key] === undefined) continue;
       await ctx.db.patch(route._id, {
+        fxRate: studyCurrency(account.countryTo) === "USD" ? 1 : sandboxRouteGBPPerUSD[route.key] * currencyRate("GBP", studyCurrency(account.countryTo)),
         quotedAt: Date.now(),
         quoteExpiresAt: Date.now() + 600000,
         maxBusinessDays: windows[route.key],
+        sourceCurrency: "USD",
+        targetCurrency: studyCurrency(account.countryTo),
       });
       updated++;
     }
@@ -1489,7 +1581,7 @@ export const updatePaymentDetails = mutation({
     if (
       !Number.isFinite(amount) ||
       amount < 0.01 ||
-      amount > 1000000 ||
+      amount > convertMoney(1000000, "GBP", studyCurrency(account.countryTo)) ||
       Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001 ||
       !recipient.trim() ||
       recipient.trim().length > 160 ||
@@ -1505,6 +1597,7 @@ export const updatePaymentDetails = mutation({
     await ctx.db.patch(banking._id, {
       value: {
         ...banking.value,
+        currency: studyCurrency(account.countryTo),
         paymentAmount: Math.round(amount * 100) / 100,
         recipient: recipient.trim(),
         recipientAccountLast4: last4,
@@ -1530,6 +1623,12 @@ export const saveMovePlan = mutation({
     arrivalDate: v.string(),
     excludedCosts: v.array(v.string()),
     budgetAmounts: v.any(),
+    plannerSettings: v.optional(v.object({
+      university: v.number(), housing: v.number(), flightOption: v.number(),
+      insuranceOption: v.number(), lifestyle: v.number(), depositMonths: v.number(),
+      contingency: v.number(), livingMode: v.union(v.literal("daily"), v.literal("monthly")),
+      fundingOption: v.number(), proofOption: v.number(),
+    })),
   },
   handler: async (
     ctx,
@@ -1540,11 +1639,13 @@ export const saveMovePlan = mutation({
       arrivalDate,
       excludedCosts,
       budgetAmounts,
+      plannerSettings,
     },
   ) => {
     const account = await requireAccount(ctx, accountId);
     if (account.role !== "Student") throw new Error("Student account required");
     parseDeadline(arrivalDate);
+    if (plannerSettings !== undefined) validateMoveSettings(plannerSettings);
     if (
       !Number.isInteger(months) ||
       months < 1 ||
@@ -1559,7 +1660,8 @@ export const saveMovePlan = mutation({
           typeof value !== "number" ||
           !Number.isFinite(value) ||
           value < 0 ||
-          value > 1000000,
+          value >
+            convertMoney(1000000, "GBP", studyCurrency(account.countryTo)),
       )
     )
       throw new Error("Invalid move plan");
@@ -1576,6 +1678,9 @@ export const saveMovePlan = mutation({
       arrivalDateISO: arrivalDate,
       excludedCosts,
       budgetAmounts,
+      ...(plannerSettings !== undefined ? { plannerSettings } : {}),
+      currency: studyCurrency(account.countryTo),
+      fixtureCurrency: row?.value?.fixtureCurrency ?? "GBP",
     };
     if (row) await ctx.db.patch(row._id, { value });
     else await ctx.db.insert("appConfig", { accountId, key: "move", value });
@@ -1619,7 +1724,7 @@ export const syncPaymentReminder = mutation({
     await ctx.db.insert("notifications", {
       accountId,
       title,
-      detail: `Your saved £${banking.paymentAmount.toFixed(2)} payment to ${banking.recipient || "your university"} is due within ${Math.max(0, days)} days. Review your payment plan.`,
+      detail: `Your saved ${studyCurrency(account.countryTo)} ${banking.paymentAmount.toFixed(2)} payment to ${banking.recipient || "your university"} is due within ${Math.max(0, days)} days. Review your payment plan.`,
       read: false,
       timestamp: Date.now(),
     });

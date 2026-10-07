@@ -1,3 +1,4 @@
+import { useWorkspaceCurrency } from "./WorkspaceCurrency";
 import { useEffect } from "react";
 import {
   animate,
@@ -15,17 +16,20 @@ export function formatMoney(value: number, currency = "GBP") {
 }
 export default function MoneyAmount({
   value,
-  currency = "GBP",
+  currency: suppliedCurrency,
 }: {
   value: number;
   currency?: string;
 }) {
+  const workspaceCurrency = useWorkspaceCurrency();
+  const currency = suppliedCurrency ?? workspaceCurrency;
   const reduced = useReducedMotion();
   const amount = useMotionValue(value);
   const formatted = useTransform(amount, (n) =>
     formatMoney(Math.round(n), currency),
   );
   useEffect(() => {
+    formatted.set(formatMoney(Math.round(amount.get()), currency));
     if (reduced) {
       amount.set(value);
       return;
@@ -35,6 +39,6 @@ export default function MoneyAmount({
       ease: [0.22, 1, 0.36, 1],
     });
     return () => animation.stop();
-  }, [value, reduced, amount]);
+  }, [value, currency, reduced, amount, formatted]);
   return <motion.span>{formatted}</motion.span>;
 }
