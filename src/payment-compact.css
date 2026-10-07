@@ -1,0 +1,674 @@
+.payment-workspace-heading {
+  margin-bottom: 18px;
+}
+.payment-workspace-sandbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.payment-workspace-summary {
+  margin: 16px 0 !important;
+}
+.payment-workspace-summary > div > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.payment-workspace-summary > div > strong {
+  font-size: 18px !important;
+}
+.payment-workspace-summary > div:first-child > strong {
+  font-size: 24px !important;
+}
+.payment-plan-settings {
+  border-bottom: 1px solid var(--color-line);
+  padding: 12px 0;
+  margin-bottom: 16px;
+}
+.payment-plan-settings > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.payment-plan-settings > summary:after {
+  content: "⌄";
+  margin-left: auto;
+}
+.payment-plan-settings > summary small {
+  color: var(--color-muted);
+  margin-left: auto;
+}
+.payment-plan-settings .tuition-plan-form {
+  margin-top: 16px;
+}
+.payment-workspace .tuition-decision {
+  padding: 20px !important;
+}
+.payment-workspace .tuition-decision-heading h2,
+.payment-workspace .pay-heading h2 {
+  font-size: 17px !important;
+}
+.tuition-route-title > strong,
+.tuition-route-title > span,
+.tuition-route-summary > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tuition-route-summary > span {
+  font-size: 12px;
+}
+.payment-workspace .tuition-route {
+  padding: 14px 12px !important;
+}
+.payment-workspace .tuition-route-summary {
+  margin: 10px 0;
+}
+.tuition-route-details summary {
+  font-size: 12px;
+}
+.payment-workspace .tuition-decision-footer {
+  margin-top: 8px;
+}
+.payment-workspace .tuition-notice {
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+.payment-workspace .pay-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.payment-workspace .pay-heading {
+  margin: 20px 0 12px;
+}
+.payment-workspace .pay-card {
+  padding: 0 !important;
+}
+.payment-workspace .pay-card .ui-card-content {
+  padding: 18px;
+}
+.payment-workspace .pay-option {
+  min-height: 64px !important;
+  padding: 12px !important;
+}
+.payment-workspace .pay-recipient {
+  padding: 12px 0 !important;
+  border: 0 !important;
+}
+.payment-workspace .pay-amount {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 !important;
+}
+.payment-workspace .pay-amount strong {
+  font-size: 20px !important;
+}
+.payment-review-details {
+  margin: 14px 0;
+}
+.payment-review-details > summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.payment-review-details > summary:after {
+  content: "⌄";
+  margin-left: auto;
+}
+.payment-workspace .pay-action {
+  margin-top: 12px !important;
+}
+.payment-workspace .pay-details {
+  margin-top: 12px !important;
+}
+@media (min-width: 1000px) {
+  .payment-workspace [data-state="active"][role="tabpanel"]:first-of-type {
+    display: block;
+  }
+  .payment-workspace .tuition-decision .tuition-route-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .payment-workspace .tuition-route {
+    border: 1px solid var(--color-line) !important;
+    border-radius: 10px;
+  }
+  .payment-workspace .tuition-route-summary {
+    flex-wrap: wrap;
+  }
+  .payment-workspace .tuition-route-summary > span {
+    width: 100%;
+    order: 3;
+  }
+}
+@media (max-width: 600px) {
+  .payment-workspace .payment-workspace-tabs {
+    gap: 4px;
+  }
+  .payment-workspace .payment-workspace-tabs button {
+    gap: 5px;
+    padding: 9px 8px;
+    font-size: 11px;
+  }
+  .payment-workspace .payment-workspace-summary {
+    display: flex !important;
+    gap: 12px;
+    padding: 14px !important;
+  }
+  .payment-workspace-summary > div {
+    padding: 0 !important;
+    border: 0 !important;
+  }
+  .payment-workspace-summary > div:first-child {
+    flex: 1;
+  }
+  .payment-workspace-summary > div:nth-child(2) {
+    width: 100%;
+    order: 3;
+  }
+  .payment-workspace-summary > div:nth-child(2) > strong {
+    font-size: 14px !important;
+  }
+  .payment-workspace .pay-option {
+    grid-template-columns: 32px minmax(0, 1fr) auto 14px !important;
+  }
+  .payment-workspace .pay-price {
+    font-size: 18px !important;
+  }
+}
+/* A single task per view: route list, then confirmation. */
+.payment-workspace {
+  max-width: 960px;
+  margin-inline: auto;
+}
+.payment-workspace .payment-workspace-summary {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+.payment-workspace .payment-workspace-summary > div {
+  padding: 0 !important;
+  border: 0 !important;
+}
+.payment-workspace .payment-workspace-summary > button {
+  width: auto !important;
+  min-width: 0 !important;
+  height: 36px;
+  align-self: center;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+}
+.payment-workspace-summary > div:nth-child(2) > strong {
+  font-size: 14px !important;
+}
+.payment-workspace-summary > div:first-child > strong {
+  font-size: 22px !important;
+}
+.payment-workspace .tuition-decision {
+  padding: 12px 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.payment-workspace .tuition-route-list {
+  display: block !important;
+}
+.payment-workspace .tuition-route {
+  padding: 16px 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.payment-workspace .tuition-route.selected {
+  background: transparent !important;
+}
+.payment-workspace .tuition-route-title > span {
+  padding: 0;
+  background: transparent;
+  font-size: 11px;
+}
+.payment-workspace .tuition-route-summary {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 16px;
+  margin: 10px 0 4px;
+}
+.payment-workspace .tuition-route-summary > strong {
+  font-size: 21px;
+}
+.payment-workspace .tuition-route-summary > span {
+  width: auto;
+  order: 0;
+  margin-left: auto;
+}
+.payment-workspace .tuition-route-summary > button {
+  min-width: 90px;
+}
+.payment-workspace .tuition-route-details {
+  border: 0;
+  margin-top: 4px;
+}
+.payment-workspace .tuition-decision-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.payment-workspace .tuition-decision-footer > .info-help {
+  display: none;
+}
+.payment-workspace .tuition-estimate-details > summary {
+  font-size: 11px;
+}
+.payment-review-next {
+  display: flex;
+  margin: 22px 0 0 auto;
+  min-width: 180px;
+}
+.payment-back {
+  margin: 12px 0 0;
+}
+.payment-workspace .pay-grid {
+  display: block;
+}
+.payment-workspace .pay-card {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.payment-workspace .pay-card .ui-card-content {
+  padding: 0 !important;
+}
+.payment-workspace .pay-option {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 12px 0 !important;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 12px;
+}
+.payment-workspace .pay-radio {
+  display: none;
+}
+.payment-workspace .pay-recipient {
+  border-bottom: 1px solid var(--color-line) !important;
+}
+.payment-workspace .pay-heading {
+  margin: 12px 0;
+}
+.payment-workspace .pay-header-actions > button:disabled {
+  display: none;
+}
+@media (max-width: 600px) {
+  .payment-workspace .payment-workspace-summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .payment-workspace-summary > div:nth-child(2) {
+    grid-column: 1/-1;
+    grid-row: 2;
+    order: 0;
+  }
+  .payment-workspace .tuition-route-summary {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .payment-workspace .tuition-route-summary > span {
+    font-size: 11px;
+  }
+  .payment-workspace .tuition-route-summary > button {
+    margin-left: auto;
+  }
+  .payment-workspace .pay-option {
+    grid-template-columns: 28px minmax(0, 1fr) auto !important;
+  }
+  .payment-review-next {
+    width: 100%;
+  }
+}
+.payment-workspace .pay-card > .compact-checkout-content {
+  padding: 0 !important;
+}
+.payment-workspace .pay-heading {
+  align-items: center;
+}
+.payment-review-next {
+  margin-left: auto !important;
+}
+.payment-workspace .payment-back {
+  margin-bottom: 4px;
+}
+:root[data-theme] .app-clean .payment-workspace {
+  max-width: 960px;
+  margin-inline: auto;
+}
+/* A small set of cards, with visible controls and dialog details. */
+.payment-workspace .payment-plan-settings {
+  padding: 16px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  border-radius: 12px;
+  margin: 16px 0;
+}
+.payment-workspace .payment-plan-settings .tuition-plan-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  gap: 16px;
+  align-items: end;
+  margin: 0;
+}
+.payment-workspace .tuition-plan-option-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.payment-workspace .tuition-plan-form label {
+  font-size: 11px;
+  gap: 6px;
+}
+.payment-workspace .tuition-route-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.payment-workspace .tuition-route {
+  padding: 18px !important;
+  border: 1px solid var(--color-line) !important;
+  border-radius: 12px !important;
+  background: var(--color-surface) !important;
+}
+.payment-workspace .tuition-route.selected {
+  border-color: var(--color-accent) !important;
+  background: var(--color-primary-soft) !important;
+}
+.payment-workspace .tuition-route-title {
+  align-items: start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.payment-workspace .tuition-route-title > strong {
+  font-size: 13px;
+}
+.payment-workspace .tuition-route-title > span {
+  font-size: 10px;
+}
+.payment-workspace .tuition-route-summary {
+  flex-wrap: wrap;
+  margin-top: 18px;
+  gap: 12px;
+}
+.payment-workspace .tuition-route-summary > strong {
+  width: 100%;
+  font-size: 24px;
+}
+.payment-workspace .tuition-route-summary > span {
+  order: 2;
+  margin-left: 0;
+  width: 100%;
+}
+.payment-workspace .tuition-route-summary > button {
+  width: 100%;
+}
+.payment-workspace .route-detail-button {
+  margin-top: 6px;
+  padding-left: 0;
+  font-size: 11px;
+}
+.payment-workspace .tuition-recommendation {
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  margin: 0;
+  font-size: 12px;
+}
+.tuition-route-details.brief-dialog .route-quick-facts {
+  margin: 16px 0;
+}
+.tuition-route-details.brief-dialog > small {
+  display: block;
+  margin: 12px 0;
+}
+.tuition-route-details.brief-dialog > button {
+  margin-top: 12px;
+}
+.payment-workspace .pay-card {
+  padding: 20px !important;
+  border: 1px solid var(--color-line) !important;
+  border-radius: 12px !important;
+  background: var(--color-surface) !important;
+}
+@media (max-width: 700px) {
+  .payment-workspace .payment-plan-settings .tuition-plan-form {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  .payment-workspace .tuition-plan-option-fields {
+    grid-column: 1/-1;
+    grid-row: 2;
+  }
+  .payment-workspace .tuition-route-list {
+    grid-template-columns: 1fr;
+  }
+  .payment-workspace .tuition-route-summary {
+    margin-top: 12px;
+  }
+  .payment-workspace .tuition-route-summary > strong {
+    width: auto;
+  }
+  .payment-workspace .tuition-route-summary > button {
+    width: auto;
+    margin-left: auto;
+  }
+  .payment-workspace .tuition-route-summary > span {
+    width: auto;
+  }
+  .payment-workspace .pay-card {
+    padding: 16px !important;
+  }
+}
+.automatic-estimate {
+  max-width: 600px;
+  margin: 24px 0;
+  padding: 24px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+.estimate-saved-note {
+  color: var(--color-muted);
+  font-size: 12px;
+  margin: 0 0 20px;
+}
+.estimate-context {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.estimate-context > div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.estimate-context small,
+.estimate-context strong {
+  display: block;
+}
+.estimate-context small {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.estimate-context strong {
+  font-size: 14px;
+  margin-top: 4px;
+}
+.estimate-country-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--color-muted);
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.estimate-total {
+  padding: 20px 0;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+}
+.estimate-total > span {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+.estimate-total > strong {
+  display: block;
+  font-size: 32px;
+  margin: 10px 0;
+}
+.estimate-total > small {
+  color: var(--color-muted);
+}
+.estimate-breakdown > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  margin: 12px 0;
+}
+.estimate-breakdown dt {
+  color: var(--color-muted);
+}
+.estimate-breakdown dd {
+  margin: 0;
+  text-align: right;
+}
+.automatic-estimate h2 {
+  font-size: 18px;
+}
+.automatic-estimate p {
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .automatic-estimate {
+    padding: 18px;
+  }
+  .estimate-total > strong {
+    font-size: 28px;
+  }
+}
+/* Fill the desktop workspace; keep a single readable column on phones. */
+:root[data-theme] .app-clean .payment-workspace {
+  width: 100%;
+  max-width: 1600px;
+  margin-inline: auto;
+}
+@media (min-width: 1100px) {
+  .payment-workspace-heading {
+    margin-bottom: 24px;
+  }
+  .payment-workspace .payment-workspace-summary {
+    grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr) auto;
+    gap: 32px;
+    padding: 24px 0 !important;
+  }
+  .payment-workspace .payment-workspace-summary > div:first-child > strong {
+    font-size: 30px !important;
+  }
+  .payment-workspace .payment-workspace-summary > div:nth-child(2) > strong {
+    font-size: 17px !important;
+  }
+  .payment-workspace .tuition-decision-heading h2 {
+    font-size: 20px !important;
+  }
+  .payment-workspace .payment-plan-settings {
+    padding: 24px;
+    margin: 20px 0 24px;
+  }
+  .payment-workspace .payment-plan-settings .tuition-plan-form {
+    gap: 24px;
+    grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr) auto;
+  }
+  .payment-workspace .tuition-plan-option-fields {
+    gap: 24px;
+  }
+  .payment-workspace .tuition-plan-form label {
+    font-size: 13px;
+  }
+  .payment-workspace .tuition-decision .tuition-route-list {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+  .payment-workspace .tuition-route {
+    padding: 24px !important;
+  }
+  .payment-workspace .tuition-route-title > strong {
+    font-size: 16px;
+  }
+  .payment-workspace .tuition-route-title > span {
+    font-size: 12px;
+  }
+  .payment-workspace .tuition-route-summary {
+    margin-top: 24px;
+    gap: 16px;
+  }
+  .payment-workspace .tuition-route-summary > strong {
+    font-size: 32px;
+  }
+  .payment-workspace .tuition-route-summary > span {
+    font-size: 13px;
+  }
+  .payment-workspace .tuition-route-summary > button {
+    min-height: 44px;
+  }
+  .payment-workspace .route-detail-button {
+    font-size: 13px;
+  }
+  .payment-workspace .pay-card {
+    max-width: 900px;
+    padding: 28px !important;
+  }
+  .payment-workspace .pay-heading {
+    max-width: 900px;
+  }
+}
+@media (min-width: 701px) and (max-width: 1099px) {
+  .payment-workspace .tuition-decision .tuition-route-list {
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .payment-workspace .tuition-decision .tuition-route-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .payment-workspace .tuition-plan-form > * {
+    min-width: 0;
+  }
+  .payment-workspace .tuition-plan-form input {
+    width: 100%;
+    min-height: 44px;
+  }
+  .payment-workspace .tuition-plan-option-fields {
+    min-width: 0;
+    gap: 12px;
+  }
+  .payment-workspace .tuition-route-title > strong {
+    overflow-wrap: anywhere;
+  }
+}

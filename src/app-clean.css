@@ -981,7 +981,7 @@
   background: transparent;
   border-radius: 0;
   border: 0;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 0;
 }
 :root[data-theme] .app-clean .disclosure-button,
 :root[data-theme] .app-clean .disclosure-button:hover {

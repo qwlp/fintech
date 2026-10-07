@@ -618,3 +618,180 @@ describe("sandbox payment authorization and accounting", () => {
     ).rejects.toThrow("Monthly rent");
   });
 });
+
+describe("editable tuition and shared quote", () => {
+  it("recalculates from saved details, clears recipient verification and preserves quote through approval", async () => {
+    const { owner, accountId } = await fixture();
+    await owner.mutation(api.accounts.verifySandboxRecipient, {
+      accountId,
+      last4: "1842",
+    });
+    await owner.mutation(api.accounts.updatePaymentDetails, {
+      accountId,
+      amount: 1500.25,
+      recipient: "Corrected University",
+      last4: "9876",
+    });
+    const state = await owner.query(api.accounts.bootstrap, {});
+    expect(state.config.banking.recipientVerified).toBe(false);
+    await expect(
+      owner.mutation(api.accounts.transitionPayment, {
+        accountId,
+        next: "prepared",
+      }),
+    ).rejects.toThrow("Verify");
+    await owner.mutation(api.accounts.verifySandboxRecipient, {
+      accountId,
+      last4: "9876",
+    });
+    const { assessTuition, quoteFingerprint } =
+      await import("../convex/tuitionDecision");
+    const route = state.paymentRoutes.find(
+      (r) => r.key === state.account.selectedRoute,
+    )!;
+    const comparison = assessTuition({
+      amountGBP: state.config.banking.paymentAmount,
+      reserveGBP: state.config.security.protectedReserveGBP,
+      wallets: state.wallets,
+      routes: [route],
+      deadline: state.config.banking.tuitionDeadline,
+      bufferBusinessDays: 1,
+      now: Date.now(),
+    }).routes[0];
+    const fingerprint = quoteFingerprint(
+      1500.25,
+      "Corrected University",
+      "9876",
+      route,
+    );
+    const proposal = await owner.mutation(api.accounts.transitionPayment, {
+      accountId,
+      next: "prepared",
+      expectedQuote: fingerprint,
+    });
+    expect(proposal!.totalMinor / 100).toBe(comparison.totalUSD);
+    expect(proposal!.recipient).toBe("Corrected University");
+    await owner.mutation(api.accounts.transitionPayment, {
+      accountId,
+      next: "approved",
+      proposalId: proposal!._id,
+    });
+    const approved = await owner.query(api.accounts.bootstrap, {});
+    expect(approved.paymentProposals[0].totalMinor).toBe(proposal!.totalMinor);
+    await expect(
+      owner.mutation(api.accounts.updatePaymentDetails, {
+        accountId,
+        amount: 100,
+        recipient: "Other",
+        last4: "1234",
+      }),
+    ).rejects.toThrow("Reset");
+  });
+  it("rejects invalid, unauthorized, and changed payment details", async () => {
+    const { t, owner, accountId } = await fixture();
+    for (const changes of [
+      { amount: -1 },
+      { amount: 0 },
+      { amount: 1.001 },
+      { recipient: " " },
+      { last4: "abc" },
+    ]) {
+      await expect(
+        owner.mutation(api.accounts.updatePaymentDetails, {
+          accountId,
+          amount: 100,
+          recipient: "University",
+          last4: "1234",
+          ...changes,
+        }),
+      ).rejects.toThrow("Invalid");
+    }
+    await expect(
+      t
+        .withIdentity({ subject: "outsider|session" })
+        .mutation(api.accounts.updatePaymentDetails, {
+          accountId,
+          amount: 100,
+          recipient: "University",
+          last4: "1234",
+        }),
+    ).rejects.toThrow("access denied");
+    await owner.mutation(api.accounts.verifySandboxRecipient, {
+      accountId,
+      last4: "1842",
+    });
+    await expect(
+      owner.mutation(api.accounts.transitionPayment, {
+        accountId,
+        next: "prepared",
+        expectedQuote: "obsolete",
+      }),
+    ).rejects.toThrow("changed");
+  });
+  it("deduplicates reminders, derives amounts from saved data and stops after completion", async () => {
+    const { t, owner, accountId } = await fixture();
+    await owner.mutation(api.accounts.syncPaymentReminder, { accountId });
+    await owner.mutation(api.accounts.syncPaymentReminder, { accountId });
+    let state = await owner.query(api.accounts.bootstrap, {});
+    const reminders = state.notifications.filter((n) =>
+      n.title.startsWith("Tuition due "),
+    );
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0].detail).toContain("£2000.00");
+    await t.run((ctx) =>
+      ctx.db.patch(accountId, { paymentStatus: "completed" }),
+    );
+    await owner.mutation(api.accounts.syncPaymentReminder, { accountId });
+    state = await owner.query(api.accounts.bootstrap, {});
+    expect(
+      state.notifications.filter((n) => n.title.startsWith("Tuition due ")),
+    ).toHaveLength(1);
+  });
+  it("persists move estimates and rejects unrelated owners", async () => {
+    const { t, owner, accountId } = await fixture();
+    const args = {
+      accountId,
+      months: 12,
+      selectedRoute: 0,
+      arrivalDate: "2026-11-01",
+      excludedCosts: ["Utilities"],
+      budgetAmounts: { "Daily expenses": 300 },
+    };
+    await owner.mutation(api.accounts.saveMovePlan, args);
+    expect(
+      (await owner.query(api.accounts.bootstrap, {})).config.move,
+    ).toMatchObject({ months: 12, budgetAmounts: { "Daily expenses": 300 } });
+    await expect(
+      t
+        .withIdentity({ subject: "other|session" })
+        .mutation(api.accounts.saveMovePlan, args),
+    ).rejects.toThrow("access denied");
+    await expect(
+      owner.mutation(api.accounts.saveMovePlan, {
+        ...args,
+        budgetAmounts: { rent: -1 },
+      }),
+    ).rejects.toThrow("Invalid");
+  });
+});
+
+describe("profile country persistence", () => {
+  it("saves country through the existing profile model", async () => {
+    const { owner, accountId } = await fixture();
+    await owner.mutation(api.accounts.updateProfile, {
+      accountId,
+      name: "Student",
+      countryFrom: "Australia",
+      countryTo: "United Kingdom",
+      university: "Example",
+      course: "Computing",
+      courseStart: "2026-11-01",
+      financialStatus: "Funded",
+      sponsorSupport: "None",
+      fundingAmount: 5000,
+    });
+    const reloaded = await owner.query(api.accounts.bootstrap, {});
+    expect(reloaded.account.countryFrom).toBe("Australia");
+    expect(reloaded.account.countryTo).toBe("United Kingdom");
+  });
+});

@@ -164,3 +164,22 @@ describe("conservative payment preparation intent", () => {
     expect(hasPreparationIntent(text)).toBe(false),
   );
 });
+
+describe("canonical minor-unit quote arithmetic", () => {
+  it("rounds source up to cover recipient cents and adds fees once", async () => {
+    const { tuitionQuote } = await import("../convex/tuitionDecision");
+    expect(tuitionQuote(2000, { fxRate: 0.774, fee: 8.4 })).toEqual({
+      amountMinor: 200000,
+      sourceMinor: 258398,
+      feeMinor: 840,
+      totalMinor: 259238,
+    });
+    const quote = tuitionQuote(1500.25, { fxRate: 0.774, fee: 8.4 });
+    expect(quote.sourceMinor * 0.774).toBeGreaterThanOrEqual(quote.amountMinor);
+    expect(quote.totalMinor).toBe(quote.sourceMinor + quote.feeMinor);
+    for (const fxRate of [NaN, Infinity, 0, -1])
+      expect(() => tuitionQuote(2000, { fxRate, fee: 8.4 })).toThrow();
+    for (const amount of [NaN, Infinity, 0, -1])
+      expect(() => tuitionQuote(amount, { fxRate: 0.774, fee: 8.4 })).toThrow();
+  });
+});

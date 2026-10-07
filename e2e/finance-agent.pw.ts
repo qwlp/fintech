@@ -38,17 +38,23 @@ test("authenticated student completes an approved tuition task", async ({
     .click();
   await page.getByRole("button", { name: "Load payment sandbox" }).click();
   await page
-    .getByRole("textbox", { name: "Confirm recipient last four digits" })
+    .getByRole("button", { name: "Review payment", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", {
+      name: "Confirm recipient account last four digits",
+    })
     .fill("1842");
   await page.getByRole("button", { name: "Confirm sandbox recipient" }).click();
   await expect(
-    page.getByText("Sandbox recipient checked.", { exact: false }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Continue", exact: true }),
+  ).toBeEnabled();
   if (process.env.RUN_AGENT_SMOKE === "1") {
     await page
       .locator(".sidebar")
       .getByRole("button", { name: "AI Agent", exact: true })
       .click();
+    await page.getByRole("button", { name: "Got it", exact: true }).click();
     await page.getByRole("button", { name: "Enable AI processing" }).click();
     const chat = page.getByRole("textbox", {
       name: "Message your plan assistant",

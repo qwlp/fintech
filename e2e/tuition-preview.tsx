@@ -13,6 +13,8 @@ const observedAt = Date.now();
 function Preview() {
   const [banking, setBanking] = useState({
     paymentAmount: 2000,
+    recipient: "Example UK University",
+    recipientAccountLast4: "1842",
     tuitionDeadline: new Date(observedAt + 14 * 86400000)
       .toISOString()
       .slice(0, 10),
@@ -28,63 +30,108 @@ function Preview() {
     gbpValue: 3870,
   });
   return (
-    <div className="app-clean"><main style={{ padding: 16, maxWidth: 1100, margin: "auto" }}>
-      <PaymentWorkspace amount={2000} recipient="Example UK University" paymentStatus={status} review={<p>Review your saved proposal before approving.</p>} activity={<p>No payments yet.</p>} plan={<TuitionDecision
-        banking={banking}
-        reserveGBP={reserve}
-        selectedRoute={selected}
-        paymentStatus={status}
-        wallets={[wallet]}
-        routes={[
-          {
-            key: "sandbox-standard",
-            provider: "Sandbox Standard",
-            fee: 8.4,
-            fxRate: 0.774,
-            delivery: "1–2 business days",
-            maxBusinessDays: 2,
-            quotedAt: observedAt,
-            quoteExpiresAt: expiresAt,
-          },
-          {
-            key: "sandbox-fast",
-            provider: "Sandbox Express",
-            fee: 26,
-            fxRate: 0.77,
-            delivery: "Within 1 business day",
-            maxBusinessDays: 1,
-            quotedAt: observedAt,
-            quoteExpiresAt: expiresAt,
-          },
-        ]}
-        onSave={async (plan) => {
-          setBanking({
-            ...banking,
-            tuitionDeadline: plan.deadline,
-            bufferBusinessDays: plan.bufferBusinessDays,
-          });
-          setReserve(plan.protectedReserveGBP);
-        }}
-        onSelect={async (key) => {
-          setSelected(key);
-          return true;
-        }}
-        onRefresh={async () => {
-          setExpiresAt(Date.now() + 600000);
-        }}
-      />} />
-      <button
-        onClick={() =>
-          setWallet({ currency: "USD", amount: 2000, gbpValue: 1548 })
-        }
-      >
-        Simulate funding shortfall
-      </button>
-      <button onClick={() => setExpiresAt(Date.now() - 1)}>
-        Expire quotes
-      </button>
-      <button onClick={() => setStatus("prepared")}>Lock proposal</button>
-    </main></div>
+    <div className="app-clean">
+      <main style={{ padding: 16, maxWidth: 1600, margin: "auto" }}>
+        <PaymentWorkspace
+          estimateData={{
+            countryFrom: "Cambodia",
+            countryTo: "United Kingdom",
+            selectedRoute: selected,
+            routes: [
+              {
+                key: "sandbox-standard",
+                provider: "Sandbox Standard",
+                fee: 8.4,
+                fxRate: 0.774,
+                delivery: "1–2 business days",
+                quoteExpiresAt: expiresAt,
+              },
+              {
+                key: "sandbox-fast",
+                provider: "Sandbox Express",
+                fee: 26,
+                fxRate: 0.77,
+                delivery: "Within 1 business day",
+                quoteExpiresAt: expiresAt,
+              },
+            ],
+          }}
+          amount={banking.paymentAmount}
+          recipient={banking.recipient}
+          banking={banking}
+          balances={<p>Currency balances available.</p>}
+          exchange={<p>Exchange estimates available.</p>}
+          onEdit={async (details) =>
+            setBanking({
+              ...banking,
+              paymentAmount: details.amount,
+              recipient: details.recipient,
+              recipientAccountLast4: details.last4,
+            })
+          }
+          paymentStatus={status}
+          review={<p>Review your saved proposal before approving.</p>}
+          activity={<p>No payments yet.</p>}
+          plan={
+            <TuitionDecision
+              banking={banking}
+              reserveGBP={reserve}
+              selectedRoute={selected}
+              paymentStatus={status}
+              wallets={[wallet]}
+              routes={[
+                {
+                  key: "sandbox-standard",
+                  provider: "Sandbox Standard",
+                  fee: 8.4,
+                  fxRate: 0.774,
+                  delivery: "1–2 business days",
+                  maxBusinessDays: 2,
+                  quotedAt: observedAt,
+                  quoteExpiresAt: expiresAt,
+                },
+                {
+                  key: "sandbox-fast",
+                  provider: "Sandbox Express",
+                  fee: 26,
+                  fxRate: 0.77,
+                  delivery: "Within 1 business day",
+                  maxBusinessDays: 1,
+                  quotedAt: observedAt,
+                  quoteExpiresAt: expiresAt,
+                },
+              ]}
+              onSave={async (plan) => {
+                setBanking({
+                  ...banking,
+                  tuitionDeadline: plan.deadline,
+                  bufferBusinessDays: plan.bufferBusinessDays,
+                });
+                setReserve(plan.protectedReserveGBP);
+              }}
+              onSelect={async (key) => {
+                setSelected(key);
+                return true;
+              }}
+              onRefresh={async () => {
+                setExpiresAt(Date.now() + 600000);
+              }}
+            />
+          }
+        />
+        <button
+          onClick={() =>
+            setWallet({ currency: "USD", amount: 2000, gbpValue: 1548 })
+          }
+        >
+          Simulate funding shortfall
+        </button>
+        <button onClick={() => setExpiresAt(Date.now() - 1)}>
+          Expire quotes
+        </button>
+        <button onClick={() => setStatus("prepared")}>Lock proposal</button>
+      </main>
+    </div>
   );
 }
 ReactDOM.createRoot(document.getElementById("root")!).render(<Preview />);

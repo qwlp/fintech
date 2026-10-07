@@ -1,4 +1,5 @@
         import React from "react";
+import AgentTour from "../src/AgentTour";
         import ReactDOM from "react-dom/client";
         import {Assistant, ChatHistory} from "../src/Chat.tsx";
         import "../src/styles.css"; import "../src/components/ui/ui.css"; import "../src/app-clean.css"; import "../src/page-spacing.css"; import "../src/chat.css";
@@ -9,7 +10,7 @@
           const [aiEnabled,setAiEnabled]=React.useState(true);
           return React.createElement("div",{className:"content",style:{height:"100dvh",padding:0}},
             history ? React.createElement(ChatHistory,{messages,onBack:()=>setHistory(false),onNew:()=>{setId("second");setHistory(false)},onOpen:chat=>{setId(chat);setHistory(false)}}) :
-            React.createElement(Assistant,{key:id,aiEnabled,onConsent:async enabled=>{setAiEnabled(enabled);return true},messages:messages.filter(m=>m.chatId===id),onHistory:()=>setHistory(true),
+            React.createElement(Assistant,{key:id,tour:React.createElement(AgentTour,{accountId:"chat-preview"}),aiEnabled,onConsent:async enabled=>{setAiEnabled(enabled);return true},messages:messages.filter(m=>m.chatId===id),onHistory:()=>setHistory(true),
               onNew:()=>setId("second"),onSend:async text=>{
                 await new Promise(resolve=>setTimeout(resolve,150));
                 setMessages(m=>[...m,{_id:crypto.randomUUID(),chatId:id,from:"user",text,timestamp:Date.now()},

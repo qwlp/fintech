@@ -1,7 +1,11 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireAccount } from "./ownership";
-import { assessTuition } from "./tuitionDecision";
+import {
+  assessTuition,
+  tuitionQuote,
+  quoteFingerprint,
+} from "./tuitionDecision";
 
 export const cents = (value: number) => Math.round(value * 100);
 export async function paymentTransition(
@@ -9,6 +13,7 @@ export async function paymentTransition(
   accountId: Id<"accounts">,
   next: "prepared" | "approved" | "completed",
   expectedProposalId?: Id<"paymentProposals">,
+  expectedQuote?: string,
 ) {
   const account = await requireAccount(ctx, accountId);
   if (account.role !== "Student") throw new Error("Student account required");
@@ -49,6 +54,20 @@ export async function paymentTransition(
     ).find((row) => row.key === account.selectedRoute);
     const amount = banking?.paymentAmount;
     if (
+      expectedQuote &&
+      (!route ||
+        expectedQuote !==
+          quoteFingerprint(
+            amount,
+            banking.recipient,
+            banking.recipientAccountLast4,
+            route,
+          ))
+    )
+      throw new Error(
+        "Quote or payment details changed. Review the new terms before continuing",
+      );
+    if (
       !Number.isFinite(amount) ||
       amount <= 0 ||
       !route ||
@@ -67,16 +86,10 @@ export async function paymentTransition(
     const limit = security?.paymentLimit ?? 2500;
     if (!Number.isFinite(limit) || amount > limit)
       throw new Error("Payment exceeds the sandbox transaction limit");
-    const amountMinor = cents(amount);
-    if (amountMinor <= 0) throw new Error("Payment must be at least £0.01");
-    const sourceMinor = Math.ceil(amountMinor / route.fxRate);
-    const feeMinor = cents(route.fee);
-    if (
-      ![amountMinor, sourceMinor, feeMinor, sourceMinor + feeMinor].every(
-        Number.isSafeInteger,
-      )
-    )
-      throw new Error("Quote exceeds supported precision");
+    const { amountMinor, sourceMinor, feeMinor, totalMinor } = tuitionQuote(
+      amount,
+      route,
+    );
     const wallets = await ctx.db
       .query("wallets")
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
@@ -118,7 +131,7 @@ export async function paymentTransition(
       amountMinor,
       sourceMinor,
       feeMinor,
-      totalMinor: sourceMinor + feeMinor,
+      totalMinor,
       protectedReserveMinor: reserveMinor,
       remainingGBPMinor,
       delivery: route.delivery,

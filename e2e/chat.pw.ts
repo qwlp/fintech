@@ -16,6 +16,9 @@ for (const width of [1440, 390]) {
       </script></body></html>`,
     }));
     await page.goto("/chat-preview");
+    await page.getByRole("button", { name: "Got it", exact: true }).click();
+    await expect(page.locator(".assistant-toolbar").getByRole("button", { name: "How the agent works" })).toBeVisible();
+    await expect.poll(() => page.locator(".assistant-composer-area").evaluate(el => el.getBoundingClientRect().bottom - innerHeight)).toBeLessThanOrEqual(1);
     await expect(page.getByRole("heading", { name: "Let’s make a plan." })).toBeVisible();
     const input = page.getByRole("textbox", { name: "Message your plan assistant" });
     await page.getByRole("button", { name: "AI privacy settings", exact: true }).click();

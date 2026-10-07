@@ -1,8 +1,18 @@
+import MobileNavigation from "./MobileNavigation";
+import { tuitionQuote, quoteFingerprint } from "../convex/tuitionDecision";
+import InfoHelp from "./InfoHelp";
+import AgentTour from "./AgentTour";
+import SectionHelp from "./SectionHelp";
+import SetupCountrySelect from "./SetupCountrySelect";
+import "./brief.css";
 import { createPortal } from "react-dom";
 import SponsorConnect from "./SponsorConnect";
 import { Assistant, ChatHistory } from "./Chat";
 import type { Id } from "../convex/_generated/dataModel";
-import BudgetDonut, {planChartColors, FundingSourcesChart} from "./BudgetDonut";
+import BudgetDonut, {
+  planChartColors,
+  FundingSourcesChart,
+} from "./BudgetDonut";
 import Brand from "./Brand";
 import PaymentWorkspace from "./PaymentWorkspace";
 import PaymentEvidence from "./PaymentEvidence";
@@ -56,7 +66,6 @@ import {
   Link2,
   LockKeyhole,
   MapPin,
-  Menu,
   Moon,
   Plane,
   Plus,
@@ -91,7 +100,6 @@ import {
   fundingCoverage,
   fundingGap,
   monthlyBurn,
-  routeEffectiveCost,
   runway,
   sumCosts,
 } from "./lib/finance";
@@ -116,6 +124,8 @@ type DatabaseState = {
   account: {
     _id: string;
     university: string;
+    countryFrom: string;
+    countryTo: string;
     name: string;
     initials: string;
     role: string;
@@ -132,7 +142,14 @@ type DatabaseState = {
     timestamp: number;
     actor: string;
   }>;
-  messages: Array<{ _id: string; from: "agent" | "user"; text: string; timestamp?: number; chatId?: string; toolResults?: { name: string; result: unknown }[] }>;
+  messages: Array<{
+    _id: string;
+    from: "agent" | "user";
+    text: string;
+    timestamp?: number;
+    chatId?: string;
+    toolResults?: { name: string; result: unknown }[];
+  }>;
   notifications: Array<{
     _id: string;
     title: string;
@@ -176,7 +193,12 @@ type DatabaseState = {
     gbpValue: number;
     label: string;
   }>;
-  toolExecutions?: Array<{ name: string; arguments: unknown; result: unknown; timestamp: number }>;
+  toolExecutions?: Array<{
+    name: string;
+    arguments: unknown;
+    result: unknown;
+    timestamp: number;
+  }>;
   paymentRoutes: Array<{
     maxBusinessDays?: number;
     quotedAt?: number;
@@ -198,8 +220,36 @@ type DatabaseState = {
     neededBy: string;
     status: "sent" | "fulfilled";
   }>;
-  paymentProposals?: Array<{ _id: string; recipient: string; recipientLast4: string; provider: string; amountMinor: number; totalMinor: number; feeMinor: number; fxRate: number; sourceCurrency: string; targetCurrency: string; status: string; expiresAt: number; createdAt: number; protectedReserveMinor?: number; remainingGBPMinor?: number; reference?: string }>;
-  ledgerEntries?: Array<{ reference: string; currency: string; debitMinor: number; beforeMinor: number; afterMinor: number; recipient: string; receivedMinor: number; receivedCurrency: string; timestamp: number }>;
+  paymentProposals?: Array<{
+    delivery: string;
+    _id: string;
+    recipient: string;
+    recipientLast4: string;
+    provider: string;
+    amountMinor: number;
+    totalMinor: number;
+    feeMinor: number;
+    fxRate: number;
+    sourceCurrency: string;
+    targetCurrency: string;
+    status: string;
+    expiresAt: number;
+    createdAt: number;
+    protectedReserveMinor?: number;
+    remainingGBPMinor?: number;
+    reference?: string;
+  }>;
+  ledgerEntries?: Array<{
+    reference: string;
+    currency: string;
+    debitMinor: number;
+    beforeMinor: number;
+    afterMinor: number;
+    recipient: string;
+    receivedMinor: number;
+    receivedCurrency: string;
+    timestamp: number;
+  }>;
   rateAlerts: Array<{
     _id: string;
     pair: string;
@@ -225,9 +275,7 @@ const nav: { page: Page; icon: typeof Home }[] = [
   { page: "Move Planner", icon: Route },
   { page: "AI Agent", icon: Bot },
   { page: "Payments", icon: CreditCard },
-  { page: "Exchange", icon: CircleDollarSign },
   { page: "Sponsors", icon: UsersRound },
-  { page: "Wallet", icon: WalletCards },
   { page: "Security", icon: ShieldCheck },
 ];
 const total = sumCosts(costs),
@@ -240,12 +288,16 @@ const burn = monthlyBurn(650, [250, 80, 70, 55, 120, 75]),
 function App({ onSignOut }: { onSignOut: () => void }) {
   const reducedMotion = useReducedMotion();
   const pageFromHash = (): Page =>
-    nav.find(
+    [...nav, { page: "Wallet" as Page }, { page: "Exchange" as Page }].find(
       ({ page }) =>
         `#${page.toLowerCase().replace(" ", "-")}` === window.location.hash,
     )?.page ?? "Dashboard";
   const [page, setPage] = useState<Page>(pageFromHash);
-  const [mobileNav, setMobileNav] = useState(false);
+  useEffect(() => {
+    const update = () => setPage(pageFromHash());
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
   const [localPaymentStatus, setLocalPaymentStatus] =
     useState<PaymentStatus>("not_started");
   const [localAudit, setLocalAudit] = useState<AuditEvent[]>(initialAudit);
@@ -261,14 +313,24 @@ function App({ onSignOut }: { onSignOut: () => void }) {
     if (!notificationsOpen) return;
     const closeOutside = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (!notificationPanel.current?.contains(target) && !notificationButton.current?.contains(target)) setNotificationsOpen(false);
+      if (
+        !notificationPanel.current?.contains(target) &&
+        !notificationButton.current?.contains(target)
+      )
+        setNotificationsOpen(false);
     };
     const closeEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setNotificationsOpen(false); notificationButton.current?.focus(); }
+      if (event.key === "Escape") {
+        setNotificationsOpen(false);
+        notificationButton.current?.focus();
+      }
     };
     document.addEventListener("pointerdown", closeOutside);
     document.addEventListener("keydown", closeEscape);
-    return () => { document.removeEventListener("pointerdown", closeOutside); document.removeEventListener("keydown", closeEscape); };
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeEscape);
+    };
   }, [notificationsOpen]);
   const [executingPayment, setExecutingPayment] = useState(false);
   const [toast, setToast] = useState("");
@@ -314,7 +376,8 @@ function App({ onSignOut }: { onSignOut: () => void }) {
         if (result) {
           const state = result as DatabaseState;
           setDatabase(state);
-          if (!state.account.university && !configBackfillAttempted.current) setPage("Profile");
+          if (!state.account.university && !configBackfillAttempted.current)
+            setPage("Profile");
           setSyncState("synced");
           if (!configBackfillAttempted.current) {
             configBackfillAttempted.current = true;
@@ -336,6 +399,18 @@ function App({ onSignOut }: { onSignOut: () => void }) {
   }, []);
 
   const account = database?.account;
+  useEffect(() => {
+    if (!convexClient || !account || account.role !== "Student") return;
+    void convexClient
+      .mutation(convexApi.syncPaymentReminder, {
+        accountId: account._id as any,
+      })
+      .catch(() => {});
+  }, [
+    account?._id,
+    database?.config?.banking?.tuitionDeadline,
+    account?.paymentStatus,
+  ]);
   const visibleCosts =
     database?.costs.map((item) => ({ ...item, id: item.key })) ?? costs;
   const visibleFunding =
@@ -390,7 +465,11 @@ function App({ onSignOut }: { onSignOut: () => void }) {
     setVariation(value);
     if (page !== "Dashboard") go("Dashboard");
   };
-  const addAudit = (type: string, detail: string, actor = account?.name ?? "Student") =>
+  const addAudit = (
+    type: string,
+    detail: string,
+    actor = account?.name ?? "Student",
+  ) =>
     setLocalAudit((a) => [
       {
         id: crypto.randomUUID(),
@@ -407,8 +486,27 @@ function App({ onSignOut }: { onSignOut: () => void }) {
   const transition = async (next: "prepared" | "approved" | "completed") => {
     if (!account || !convexClient) return false;
     await convexClient.mutation(convexApi.transitionPayment, {
-      accountId: account._id as any, next,
-      proposalId: next === "prepared" ? undefined : database?.paymentProposals?.slice().sort((a, b) => b.createdAt - a.createdAt)[0]?._id as any,
+      accountId: account._id as any,
+      next,
+      expectedQuote:
+        next === "prepared" &&
+        database?.config?.banking &&
+        database.paymentRoutes.find((r) => r.key === account.selectedRoute)
+          ? quoteFingerprint(
+              database.config.banking.paymentAmount,
+              database.config.banking.recipient,
+              database.config.banking.recipientAccountLast4,
+              database.paymentRoutes.find(
+                (r) => r.key === account.selectedRoute,
+              )!,
+            )
+          : undefined,
+      proposalId:
+        next === "prepared"
+          ? undefined
+          : (database?.paymentProposals
+              ?.slice()
+              .sort((a, b) => b.createdAt - a.createdAt)[0]?._id as any),
     });
     return true;
   };
@@ -488,14 +586,24 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       : announce("Demo contribution request sent");
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [activeChat, setActiveChat] = useState<string | undefined>(undefined);
-  const newChat = () => { setActiveChat(crypto.randomUUID()); setShowChatHistory(false); go("AI Agent"); };
+  const newChat = () => {
+    setActiveChat(crypto.randomUUID());
+    setShowChatHistory(false);
+    go("AI Agent");
+  };
   const sendMessage = async (text: string) => {
     if (!account || !convexClient) return false;
     try {
-      await convexClient.action(convexApi.sendMessage, { accountId: account._id as Id<"accounts">, text, chatId: activeChat });
+      await convexClient.action(convexApi.sendMessage, {
+        accountId: account._id as Id<"accounts">,
+        text,
+        chatId: activeChat,
+      });
       return true;
     } catch {
-      announce("AI reply unavailable. Check Payments for any prepared proposal before retrying.");
+      announce(
+        "AI reply unavailable. Check Payments for any prepared proposal before retrying.",
+      );
       return false;
     }
   };
@@ -559,7 +667,6 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       "",
       `#${p.toLowerCase().replace(" ", "-")}`,
     );
-    setMobileNav(false);
     window.scrollTo(0, 0);
   };
 
@@ -571,9 +678,8 @@ function App({ onSignOut }: { onSignOut: () => void }) {
           <h1>Database connection required</h1>
           <p>
             Set <code>VITE_CONVEX_URL</code> and run{" "}
-            <code>bun run convex:dev</code>. MoveWise no longer
-            substitutes hard-coded browser data when the database is
-            unavailable.
+            <code>bun run convex:dev</code>. MoveWise no longer substitutes
+            hard-coded browser data when the database is unavailable.
           </p>
         </div>
       </main>
@@ -589,46 +695,54 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               ? "The database could not be reached. Check the Convex deployment and retry."
               : "Reading the latest account, plan, and activity data."}
           </p>
+          {syncState === "error" && (
+            <Button onClick={() => location.reload()}>Retry connection</Button>
+          )}
         </div>
       </main>
     );
 
   return (
     <div className={`app-shell app-clean variation-${variation}`}>
-      <aside className={`sidebar sidebar-clean ${mobileNav ? "open" : ""}`}>
-        <button
-          className="mobile-close"
-          aria-label="Close menu"
-          onClick={() => setMobileNav(false)}
-        >
-          <X />
-        </button>
+      <aside className="sidebar sidebar-clean">
         <Brand />
         <nav aria-label="Main navigation">
           {nav
             .filter(({ page: item }) => item !== "Profile")
             .map(({ page: item, icon: Icon }) => (
-              <button
-                key={item}
-                className={page === item ? "active" : ""}
-                aria-current={page === item ? "page" : undefined}
-                onClick={() => go(item)}
-              >
-                {page === item && (
-                  <motion.span
-                    className="nav-motion-indicator"
-                    layoutId="active-navigation"
-                    transition={
-                      reducedMotion
-                        ? { duration: 0 }
-                        : { type: "spring", stiffness: 420, damping: 34 }
-                    }
-                    aria-hidden="true"
-                  />
-                )}
-                <Icon size={19} />
-                <span>{item}</span>
-              </button>
+              <div className="sidebar-section" key={item}>
+                <button
+                  className={
+                    page === item ||
+                    (item === "Payments" && ["Wallet", "Exchange"].includes(page))
+                      ? "active"
+                      : ""
+                  }
+                  aria-current={
+                    page === item ||
+                    (item === "Payments" && ["Wallet", "Exchange"].includes(page))
+                      ? "page"
+                      : undefined
+                  }
+                  onClick={() => go(item)}
+                >
+                  {page === item && (
+                    <motion.span
+                      className="nav-motion-indicator"
+                      layoutId="active-navigation"
+                      transition={
+                        reducedMotion
+                          ? { duration: 0 }
+                          : { type: "spring", stiffness: 420, damping: 34 }
+                      }
+                      aria-hidden="true"
+                    />
+                  )}
+                  <Icon size={19} />
+                  <span>{item}</span>
+                </button>
+                <SectionHelp section={item} />
+              </div>
             ))}
         </nav>
         <div className="sidebar-bottom">
@@ -668,30 +782,47 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   </b>
                 )}
               </button>
-              {notificationsOpen && createPortal(
-                <div ref={notificationPanel} id="notification-panel" role="region" aria-label="Notifications" className="notification-popover notification-overlay">
-                  <strong>Notifications</strong>
-                  {(database?.notifications ?? []).map((n) => (
-                    <div key={n._id}>
-                      <b>{n.title}</b>
-                      <span>{n.detail}</span>
-                    </div>
-                  ))}
-                  {database?.notifications.length === 0 && (
-                    <span>You're all caught up.</span>
-                  )}
-                  {!database && (
-                    <div>
-                      <b>Tuition due soon</b>
-                      <span>Your £2,000 instalment is due in 12 days.</span>
-                    </div>
-                  )}
-                </div>, document.body
-              )}
+              {notificationsOpen &&
+                createPortal(
+                  <div
+                    ref={notificationPanel}
+                    id="notification-panel"
+                    role="region"
+                    aria-label="Notifications"
+                    className="notification-popover notification-overlay"
+                  >
+                    <strong>Notifications</strong>
+                    {(database?.notifications ?? []).map((n) => (
+                      <div key={n._id}>
+                        <b>{n.title}</b>
+                        <span>{n.detail}</span>
+                      </div>
+                    ))}
+                    {database?.notifications.length === 0 && (
+                      <span>You're all caught up.</span>
+                    )}
+                    {!database && (
+                      <div>
+                        <b>Tuition due soon</b>
+                        <span>Your £2,000 instalment is due in 12 days.</span>
+                      </div>
+                    )}
+                  </div>,
+                  document.body,
+                )}
             </div>
           </div>
-          <button className="btn secondary" onClick={() => { location.hash = "setup"; }}><Settings size={16} /> Set up account</button>
-          <button className="btn secondary" onClick={onSignOut}>Sign out</button>
+          <button
+            className="btn secondary"
+            onClick={() => {
+              location.hash = "setup";
+            }}
+          >
+            <Settings size={16} /> Set up account
+          </button>
+          <button className="btn secondary" onClick={onSignOut}>
+            Sign out
+          </button>
           <button
             className={`profile ${page === "Profile" ? "active" : ""}`}
             aria-label="Open your profile"
@@ -707,20 +838,6 @@ function App({ onSignOut }: { onSignOut: () => void }) {
           </button>
         </div>
       </aside>
-      {mobileNav && (
-        <button
-          className="scrim"
-          aria-label="Close menu"
-          onClick={() => setMobileNav(false)}
-        />
-      )}
-      <button
-        className="menu"
-        aria-label="Open menu"
-        onClick={() => setMobileNav(true)}
-      >
-        <Menu />
-      </button>
       <main className={page === "Dashboard" ? "dashboard-page" : ""}>
         <div className="content">
           <motion.div
@@ -745,6 +862,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
             )}
             {page === "Profile" && (
               <Profile
+                go={go}
                 announce={announce}
                 account={account}
                 config={database?.config?.profile}
@@ -766,53 +884,142 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               />
             )}
             {page === "Move Planner" && (
-              <MovePlanner go={go} config={database?.config?.move} />
+              <MovePlanner
+                go={go}
+                config={database?.config?.move}
+                accountId={account?._id}
+              />
             )}
-            {page === "AI Agent" && (
-              showChatHistory ? (
-                <ChatHistory messages={database?.messages ?? []} onNew={newChat}
+            {page === "AI Agent" &&
+              (showChatHistory ? (
+                <ChatHistory
+                  messages={database?.messages ?? []}
+                  onNew={newChat}
                   onBack={() => setShowChatHistory(false)}
-                  onOpen={(id) => { setActiveChat(id); setShowChatHistory(false); }} />
+                  onOpen={(id) => {
+                    setActiveChat(id);
+                    setShowChatHistory(false);
+                  }}
+                />
               ) : (
                 <Assistant
                   key={activeChat ?? "legacy"}
-                  messages={(database?.messages ?? []).filter((message) => message.chatId === activeChat)}
+                  tour={<AgentTour accountId={account?._id} />}
+                  messages={(database?.messages ?? []).filter(
+                    (message) => message.chatId === activeChat,
+                  )}
                   aiEnabled={!!account?.aiConsentAt}
-                  onConsent={async enabled => account ? mutate(convexApi.setAIConsent, { accountId: account._id, enabled }) : false}
+                  onConsent={async (enabled) =>
+                    account
+                      ? mutate(convexApi.setAIConsent, {
+                          accountId: account._id,
+                          enabled,
+                        })
+                      : false
+                  }
                   onSend={sendMessage}
                   onNew={newChat}
                   onHistory={() => setShowChatHistory(true)}
                 />
-              )
-            )}
-            {page === "Payments" && (
-              <PaymentWorkspace amount={database?.config?.banking?.paymentAmount} recipient={database?.config?.banking?.recipient} paymentStatus={paymentStatus}
-                activity={<PaymentEvidence accountId={account?._id} banking={database?.config?.banking} proposals={database?.paymentProposals ?? []} ledger={database?.ledgerEntries ?? []} audit={database?.auditEvents ?? []} tools={database?.toolExecutions ?? []} />}
-                plan={database?.config?.banking ? <TuitionDecision accountId={account?._id} banking={database.config.banking} reserveGBP={database.config.security?.protectedReserveGBP ?? 1000} wallets={database.wallets} routes={database.paymentRoutes} selectedRoute={account?.selectedRoute} paymentStatus={paymentStatus} onSelect={selectRoute} /> : <PaymentEvidence accountId={account?._id} proposals={[]} ledger={[]} audit={[]} />}
-                review={              <Payments
-                status={paymentStatus}
-                paid={paid}
-                prepare={prepare}
-                approve={approve}
-                execute={execute}
-                reset={resetPayment}
-                storedRoute={account?.selectedRoute}
-                onSelectRoute={selectRoute}
-                proposal={database?.paymentProposals?.slice().sort((a, b) => b.createdAt - a.createdAt)[0]}
-                storedRoutes={database?.paymentRoutes}
-                config={{ ...database?.config?.banking, transactionReference: database?.paymentProposals?.find(p => p.status === "completed")?.reference }}
-              />} />
-            )}
-            {page === "Exchange" && (
-              <ExchangeWorkspace
-                go={go}
-                database={database}
-                onRateAlert={createRateAlert}
+              ))}
+            {["Payments", "Wallet", "Exchange"].includes(page) && (
+              <PaymentWorkspace
+                initialView={
+                  page === "Wallet"
+                    ? "balances"
+                    : page === "Exchange"
+                      ? "exchange"
+                      : "tuition"
+                }
+                balances={<Wallet storedWallets={database?.wallets} go={go} />}
+                exchange={
+                  <ExchangeWorkspace
+                    go={go}
+                    database={database}
+                    onRateAlert={createRateAlert}
+                  />
+                }
+                estimateData={{
+                  routes: database?.paymentRoutes,
+                  selectedRoute: account?.selectedRoute,
+                  countryFrom: database?.account.countryFrom,
+                  countryTo: database?.account.countryTo,
+                  proposal:
+                    paymentStatus !== "not_started"
+                      ? database?.paymentProposals
+                          ?.slice()
+                          .sort((a, b) => b.createdAt - a.createdAt)[0]
+                      : undefined,
+                }}
+                accountId={account?._id}
+                banking={database?.config?.banking}
+                amount={database?.config?.banking?.paymentAmount}
+                recipient={database?.config?.banking?.recipient}
+                paymentStatus={paymentStatus}
+                activity={
+                  <PaymentEvidence
+                    accountId={account?._id}
+                    banking={database?.config?.banking}
+                    proposals={database?.paymentProposals ?? []}
+                    ledger={database?.ledgerEntries ?? []}
+                    audit={database?.auditEvents ?? []}
+                    tools={database?.toolExecutions ?? []}
+                  />
+                }
+                plan={
+                  database?.config?.banking ? (
+                    <TuitionDecision
+                      accountId={account?._id}
+                      banking={database.config.banking}
+                      reserveGBP={
+                        database.config.security?.protectedReserveGBP ?? 1000
+                      }
+                      wallets={database.wallets}
+                      routes={database.paymentRoutes}
+                      selectedRoute={account?.selectedRoute}
+                      paymentStatus={paymentStatus}
+                      onSelect={selectRoute}
+                    />
+                  ) : (
+                    <PaymentEvidence
+                      accountId={account?._id}
+                      proposals={[]}
+                      ledger={[]}
+                      audit={[]}
+                    />
+                  )
+                }
+                review={
+                  <Payments
+                    status={paymentStatus}
+                    paid={paid}
+                    prepare={prepare}
+                    approve={approve}
+                    execute={execute}
+                    reset={resetPayment}
+                    accountId={account?._id}
+                    storedRoute={account?.selectedRoute}
+                    onSelectRoute={selectRoute}
+                    proposal={
+                      database?.paymentProposals
+                        ?.slice()
+                        .sort((a, b) => b.createdAt - a.createdAt)[0]
+                    }
+                    storedRoutes={database?.paymentRoutes}
+                    config={{
+                      ...database?.config?.banking,
+                      transactionReference: database?.paymentProposals?.find(
+                        (p) => p.status === "completed",
+                      )?.reference,
+                    }}
+                  />
+                }
               />
             )}
             {page === "Sponsors" && (
               <Sponsors
                 connected={!!database}
+                onPermission={setSponsorPermission}
                 announce={announce}
                 requestSent={account?.sponsorRequestSent}
                 onRequest={requestSponsor}
@@ -820,15 +1027,13 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                 config={database?.config?.sponsorship}
               />
             )}
-            {page === "Wallet" && (
-              <Wallet storedWallets={database?.wallets} go={go} />
-            )}
             {page === "Security" && (
               <Security audit={audit} config={database?.config?.security} />
             )}
           </motion.div>
         </div>
       </main>
+      <MobileNavigation page={page} go={go} />
       {tourOpen && (
         <Tour
           page={page}
@@ -1989,7 +2194,7 @@ function SponsorWorkspace({
             "Commitment status",
             "Sponsored tuition",
             "Funding requests",
-            "Wallet balances",
+            "Financial overview",
           ].map((label, i) => (
             <button
               onClick={() =>
@@ -2014,7 +2219,7 @@ function SponsorWorkspace({
   );
 }
 
-function ExchangeWorkspace({
+export function ExchangeWorkspace({
   go,
   database,
   onRateAlert,
@@ -2070,6 +2275,10 @@ function ExchangeWorkspace({
     <div className="workspace fx-desk">
       <header className="fx-heading">
         <h2>Exchange desk</h2>
+        <p>
+          Estimate a USD to GBP conversion. Tuition payments use your saved
+          tuition amount.
+        </p>
       </header>
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList aria-label="Exchange desk views" className="fx-tabs">
@@ -2139,7 +2348,7 @@ function ExchangeWorkspace({
                   <div>
                     <dt>
                       <Activity size={14} />
-                      Rate
+                      Rate <InfoHelp term="Exchange rate" />
                     </dt>
                     <dd>
                       {bestRoute
@@ -2150,14 +2359,14 @@ function ExchangeWorkspace({
                   <div>
                     <dt>
                       <ReceiptText size={14} />
-                      Fee
+                      Fee <InfoHelp term="Fees" />
                     </dt>
                     <dd>{bestRoute ? formatUSD(fee) : "—"}</dd>
                   </div>
                   <div>
                     <dt>
                       <Clock3 size={14} />
-                      Arrival
+                      Arrival <InfoHelp term="Arrival estimate" />
                     </dt>
                     <dd>{bestRoute?.delivery ?? "Unavailable"}</dd>
                   </div>
@@ -2175,7 +2384,7 @@ function ExchangeWorkspace({
                   disabled={!validAmount || !bestRoute}
                   onClick={() => go("Payments")}
                 >
-                  Review transfer
+                  Open tuition payment
                   <ArrowRight size={18} />
                 </Button>
               </CardContent>
@@ -2727,7 +2936,8 @@ function Plan({ announce }: { announce: (message: string) => void }) {
   );
 }
 
-function Profile({
+export function Profile({
+  go,
   announce,
   account,
   config,
@@ -2740,6 +2950,7 @@ function Profile({
   config?: any;
   totals: { funded: number; gap: number; coverage: number };
   onSave: (profile: Record<string, string>) => Promise<boolean>;
+  go: (page: Page) => void;
   onAddCountry: (country: string, label: string) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -2827,6 +3038,14 @@ function Profile({
           </button>
         </div>
       </section>
+      <div className="profile-secondary-nav">
+        <Button variant="outline" onClick={() => go("Sponsors")}>
+          Sponsors
+        </Button>
+        <Button variant="outline" onClick={() => go("Security")}>
+          Security & activity
+        </Button>
+      </div>
       <section className="profile-hero">
         <div className="profile-avatar">{account?.initials ?? "DC"}</div>
         <div>
@@ -2862,8 +3081,15 @@ function Profile({
               .map(([key, label]) => (
                 <label key={key}>
                   <span>{label}</span>
-                  {editing ? (
-                    <input
+                  {editing && (key === "home" || key === "study") ? (
+                    <SetupCountrySelect
+                      label={label}
+                      value={profile[key]}
+                      onChange={(value) => update(key, value)}
+                      disabled={saving}
+                    />
+                  ) : editing ? (
+                    <Input
                       value={profile[key]}
                       onChange={(e) => update(key, e.target.value)}
                     />
@@ -3035,21 +3261,48 @@ function Profile({
   );
 }
 
-function MovePlanner({
+export function MovePlanner({
   go,
   config,
+  accountId,
 }: {
   go: (page: Page) => void;
   config?: any;
+  accountId?: string;
 }) {
+  const [category, setCategory] = useState<string | null>(() =>
+    window.matchMedia("(max-width: 767px)").matches ? null : "Your costs",
+  );
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const chooseCategory = (name: string | null) => {
+    setCategory(name);
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      requestAnimationFrame(() =>
+        document
+          .querySelector(
+            name ? ".planner-category-detail" : ".planner-categories",
+          )
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+    }
+  };
+  const [plannerMessage, setPlannerMessage] = useState("");
+  const [plannerSaving, setPlannerSaving] = useState(false);
   const [months, setMonths] = useState(11);
   const [selectedRoute, setSelectedRoute] = useState(1);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [arrivalDate, setArrivalDate] = useState("");
   const [excludedCosts, setExcludedCosts] = useState<string[]>([]);
   const [budgetAmounts, setBudgetAmounts] = useState<Record<string, number>>(
-    {},
+    config?.budgetAmounts ?? {},
   );
+  useEffect(() => {
+    setMonths(config?.months ?? 11);
+    setSelectedRoute(config?.selectedRoute ?? 1);
+    setArrivalDate(config?.arrivalDateISO ?? "");
+    setExcludedCosts(config?.excludedCosts ?? []);
+    setBudgetAmounts(config?.budgetAmounts ?? {});
+  }, [config]);
   const parseAmount = (value: string) =>
     Number(value.match(/[\d,]+(?:\.\d+)?/)?.[0].replaceAll(",", "") ?? 0);
   const initialDate = new Date(config?.arrivalDate ?? "14 Sep 2026");
@@ -3122,11 +3375,6 @@ function MovePlanner({
     name: cost.name,
     amount: cost.amount * (cost.recurring ? months : 1),
     color: planChartColors[index % planChartColors.length],
-  }));
-  const budgetOutlook = Array.from({ length: months + 1 }, (_, month) => ({
-    month,
-    upfront: upfrontTotal,
-    living: monthlyTotal * month,
   }));
   const toggleCost = (name: string) =>
     setExcludedCosts((current) =>
@@ -3223,300 +3471,367 @@ function MovePlanner({
         </Button>
       </section>
 
-      <section className="arrival-charts" aria-label="Arrival budget charts">
-        <figure className="arrival-breakdown-chart">
-          <figcaption>
-            <strong>What makes up your budget</strong>
-            <span>Included costs across your {months}-month stay</span>
-          </figcaption>
-          <div className="arrival-breakdown-body">
-            <div
-              className="spending-donut"
-              role="img"
-              aria-label={`Total estimated budget ${formatGBP(totalBudget)}. Breakdown listed alongside the chart.`}
-            >
-              {totalBudget > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={arrivalBreakdown.filter(
-                        (cost: any) => cost.amount > 0,
-                      )}
-                      dataKey="amount"
-                      nameKey="name"
-                      innerRadius="70%"
-                      outerRadius="94%"
-                      paddingAngle={2}
-                      stroke="none"
-                      isAnimationActive={false}
-                    >
-                      {arrivalBreakdown
-                        .filter((cost: any) => cost.amount > 0)
-                        .map((cost: any) => (
-                          <Cell key={cost.name} fill={cost.color} />
-                        ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value) => formatGBP(Number(value))}
-                      contentStyle={{
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-line)",
-                        borderRadius: 8,
-                        color: "var(--color-ink)",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="empty-donut" />
-              )}
-              <div className="donut-total">
-                <span>Estimated total</span>
-                <strong>{formatGBP(totalBudget)}</strong>
-                <span>{months} months</span>
-              </div>
-            </div>
-            <ul className="arrival-chart-legend">
-              {arrivalBreakdown.map((cost: any) => (
-                <li key={cost.name}>
-                  <span
-                    className="chart-legend-dot"
-                    style={{ background: cost.color }}
-                    aria-hidden="true"
-                  />
-                  <span>{cost.name}</span>
-                  <strong>{formatGBP(cost.amount)}</strong>
-                </li>
-              ))}
-              {arrivalBreakdown.length === 0 && (
-                <li>Select costs below to build your budget.</li>
-              )}
-            </ul>
-          </div>
-        </figure>
-        <figure className="arrival-outlook-chart">
-          <figcaption>
-            <strong>Your budget over time</strong>
-            <span>
-              {formatGBP(upfrontTotal)} upfront, then {formatGBP(monthlyTotal)}{" "}
-              each month
-            </span>
-          </figcaption>
-          <div
-            className="arrival-outlook-plot"
-            role="img"
-            aria-label={`Cumulative estimated costs start at ${formatGBP(upfrontTotal)} on arrival and increase by ${formatGBP(monthlyTotal)} per month to ${formatGBP(totalBudget)} at month ${months}.`}
+      <section className="planner-category-layout">
+        <div className="planner-categories" aria-label="Planning categories">
+          <button
+            aria-pressed={category === "Your costs"}
+            onClick={() => chooseCategory("Your costs")}
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={budgetOutlook}
-                margin={{ top: 16, right: 16, bottom: 4, left: 0 }}
-              >
-                <CartesianGrid
-                  vertical={false}
-                  stroke="var(--color-line)"
-                  strokeDasharray="3 4"
-                />
-                <XAxis
-                  dataKey="month"
-                  type="number"
-                  domain={[0, months]}
-                  tickCount={Math.min(months + 1, 6)}
-                  allowDecimals={false}
-                  tickFormatter={(value) =>
-                    value === 0 ? "Arrival" : `Mo ${value}`
-                  }
-                  tick={{ fill: "var(--color-muted)", fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tickFormatter={(value) => `£${Number(value) / 1000}k`}
-                  width={52}
-                  tick={{ fill: "var(--color-muted)", fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  labelFormatter={(value) =>
-                    Number(value) === 0 ? "Arrival" : `Month ${value}`
-                  }
-                  formatter={(value, name) => [
-                    formatGBP(Number(value)),
-                    name === "upfront"
-                      ? "Upfront costs"
-                      : "Living costs to date",
-                  ]}
-                  contentStyle={{
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-line)",
-                    borderRadius: 8,
-                    color: "var(--color-ink)",
-                  }}
-                />
-                <Area
-                  type="linear"
-                  dataKey="upfront"
-                  stackId="budget"
-                  stroke="#315c85"
-                  fill="#315c85"
-                  fillOpacity={0.18}
-                  isAnimationActive={false}
-                />
-                <Area
-                  type="linear"
-                  dataKey="living"
-                  stackId="budget"
-                  stroke="#4b8f8a"
-                  fill="#4b8f8a"
-                  fillOpacity={0.3}
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="arrival-outlook-key">
             <span>
-              <i style={{ background: "#315c85" }} />
-              Upfront costs
+              <PlannerWallet size={18} aria-hidden="true" />
+              Your costs
             </span>
-            <span>
-              <i style={{ background: "#4b8f8a" }} />
-              Living costs to date
-            </span>
-          </div>
-        </figure>
-      </section>
-      <div className="move-board-grid">
-        <section className="route-choice-card">
-          <h3>Flight routes</h3>
-          <p className="move-help">Flight prices are estimates.</p>
-          <div className="route-choices">
-            {routes.slice(0, 4).map((route: any, index: number) => {
-              return (
-                <Button
-                  variant="outline"
-                  type="button"
-                  aria-pressed={selectedRoute === index}
-                  className={selectedRoute === index ? "selected" : ""}
-                  onClick={() => setSelectedRoute(index)}
-                  key={`${route.name}-${index}`}
-                >
-                  <span className="route-copy">
-                    <strong>
-                      {route.name}
-                      <b className="mode-price">{formatGBP(route.cost)}</b>
-                    </strong>
-                    <small>{route.detail}</small>
-                    <em>
-                      <Timer /> {route.time}
-                    </em>
-                  </span>
-                  <i className="route-radio" />
-                </Button>
-              );
-            })}
-          </div>
-        </section>
-
-        <div className="move-side-stack">
-          <section className="cost-card">
-            <div className="planner-cost-heading">
-              <div>
-                <h3>Your costs</h3>
-                <p className="move-help">
-                  Choose which costs to include in your estimate.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="planner-edit"
-                aria-pressed={budgetOpen}
-                onClick={() => setBudgetOpen((open) => !open)}
-              >
-                <PencilSimple />
-                {budgetOpen ? "Done editing" : "Edit amounts"}
-              </Button>
-            </div>
-            <div className="planner-duration">
-              <label htmlFor="arrival-months">Length of stay</label>
-              <Select
-                value={String(months)}
-                onValueChange={(value) => setMonths(Number(value))}
-              >
-                <SelectTrigger
-                  id="arrival-months"
-                  className="ui-duration-trigger"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="ui-select-content">
-                  {Array.from({ length: 24 }, (_, i) => i + 1).map((month) => (
-                    <SelectItem key={month} value={String(month)}>
-                      {month} {month === 1 ? "month" : "months"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="cost-groups">
-              <section
-                className="cost-group"
-                aria-labelledby="upfront-costs-heading"
-              >
-                <div className="cost-group-heading">
-                  <span className="cost-group-icon">
-                    <Plane size={18} />
-                  </span>
-                  <div>
-                    <h4 id="upfront-costs-heading">Before you arrive</h4>
-                    <span>One-time costs</span>
-                  </div>
-                </div>
-                <div className="cost-group-total">
-                  <strong>{formatGBP(upfrontTotal)}</strong>
-                  <span>Included upfront</span>
-                </div>
-                <div className="cost-list">
-                  {costs.filter((cost: any) => !cost.recurring).map(renderCost)}
-                </div>
-              </section>
-              <section
-                className="cost-group"
-                aria-labelledby="monthly-costs-heading"
-              >
-                <div className="cost-group-heading">
-                  <span className="cost-group-icon">
-                    <CalendarDays size={18} />
-                  </span>
-                  <div>
-                    <h4 id="monthly-costs-heading">Each month</h4>
-                    <span>Ongoing living costs</span>
-                  </div>
-                </div>
-                <div className="cost-group-total">
-                  <strong>
-                    {formatGBP(monthlyTotal)}
-                    <small>/mo</small>
-                  </strong>
-                  <span>
-                    {formatGBP(monthlyTotal * months)} over {months}{" "}
-                    {months === 1 ? "month" : "months"}
-                  </span>
-                </div>
-                <div className="cost-list recurring-costs">
-                  {costs.filter((cost: any) => cost.recurring).map(renderCost)}
-                </div>
-              </section>
-            </div>
-
-            <p className="planner-estimate-note">
-              Estimates only. Confirm prices before booking.
-            </p>
-          </section>
+            <small>{months} months</small>
+          </button>
+          {costs.map((cost: any) => (
+            <button
+              key={cost.name}
+              aria-label={`${cost.name} ${excludedCosts.includes(cost.name) ? "Not included" : "Included"}`}
+              aria-pressed={category === cost.name}
+              onClick={() => chooseCategory(cost.name)}
+            >
+              <span>
+                {cost.recurring ? (
+                  <CalendarDays size={18} aria-hidden="true" />
+                ) : cost.name === costs[1]?.name ? (
+                  <Plane size={18} aria-hidden="true" />
+                ) : cost.name.toLowerCase().includes("visa") ? (
+                  <ShieldCheck size={18} aria-hidden="true" />
+                ) : cost.name.toLowerCase().includes("tuition") ? (
+                  <GraduationCap size={18} aria-hidden="true" />
+                ) : (
+                  <PlannerWallet size={18} aria-hidden="true" />
+                )}
+                {cost.name}
+              </span>
+              <small>
+                {excludedCosts.includes(cost.name)
+                  ? "Not included"
+                  : "Included"}
+              </small>
+            </button>
+          ))}
         </div>
-      </div>
+        <div className="planner-category-detail">
+          {category ? (
+            <>
+              <Button
+                variant="ghost"
+                className="planner-category-back"
+                onClick={() => chooseCategory(null)}
+              >
+                Back to categories
+              </Button>
+              {category === "Your costs" ? (
+                <section className="cost-card">
+                  <div className="planner-cost-heading">
+                    <div>
+                      <h3>Your costs</h3>
+                      <p className="move-help">
+                        Choose which costs to include in your estimate.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="planner-edit"
+                      aria-pressed={budgetOpen}
+                      onClick={() => setBudgetOpen((open) => !open)}
+                    >
+                      <PencilSimple />
+                      {budgetOpen ? "Done editing" : "Edit amounts"}
+                    </Button>
+                  </div>
+                  <div className="planner-duration">
+                    <label htmlFor="arrival-months">Length of stay</label>
+                    <Select
+                      value={String(months)}
+                      onValueChange={(value) => setMonths(Number(value))}
+                    >
+                      <SelectTrigger
+                        id="arrival-months"
+                        className="ui-duration-trigger"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="ui-select-content">
+                        {Array.from({ length: 24 }, (_, i) => i + 1).map(
+                          (month) => (
+                            <SelectItem key={month} value={String(month)}>
+                              {month} {month === 1 ? "month" : "months"}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="cost-groups">
+                    <section
+                      className="cost-group"
+                      aria-labelledby="upfront-costs-heading"
+                    >
+                      <div className="cost-group-heading">
+                        <span className="cost-group-icon">
+                          <Plane size={18} />
+                        </span>
+                        <div>
+                          <h4 id="upfront-costs-heading">Before you arrive</h4>
+                          <span>One-time costs</span>
+                        </div>
+                      </div>
+                      <div className="cost-group-total">
+                        <strong>{formatGBP(upfrontTotal)}</strong>
+                        <span>Included upfront</span>
+                      </div>
+                      <div className="cost-list">
+                        {costs
+                          .filter((cost: any) => !cost.recurring)
+                          .map(renderCost)}
+                      </div>
+                    </section>
+                    <section
+                      className="cost-group"
+                      aria-labelledby="monthly-costs-heading"
+                    >
+                      <div className="cost-group-heading">
+                        <span className="cost-group-icon">
+                          <CalendarDays size={18} />
+                        </span>
+                        <div>
+                          <h4 id="monthly-costs-heading">Each month</h4>
+                          <span>Ongoing living costs</span>
+                        </div>
+                      </div>
+                      <div className="cost-group-total">
+                        <strong>
+                          {formatGBP(monthlyTotal)}
+                          <small>/mo</small>
+                        </strong>
+                        <span>
+                          {formatGBP(monthlyTotal * months)} over {months}{" "}
+                          {months === 1 ? "month" : "months"}
+                        </span>
+                      </div>
+                      <div className="cost-list recurring-costs">
+                        {costs
+                          .filter((cost: any) => cost.recurring)
+                          .map(renderCost)}
+                      </div>
+                    </section>
+                  </div>
+
+                  <p className="planner-estimate-note">
+                    Estimates only. Confirm prices before booking.
+                  </p>
+                </section>
+              ) : (
+                <h3>{category}</h3>
+              )}
+              {costs
+                .filter((cost: any) => cost.name === category)
+                .map((cost: any) => (
+                  <div key={cost.name}>
+                    <label>
+                      <Checkbox
+                        checked={!excludedCosts.includes(cost.name)}
+                        onCheckedChange={(checked) =>
+                          setExcludedCosts((current) =>
+                            checked
+                              ? current.filter((name) => name !== cost.name)
+                              : [...current, cost.name],
+                          )
+                        }
+                      />{" "}
+                      Include in budget
+                    </label>
+                    {cost.name !== costs[1]?.name && (
+                      <label>
+                        Estimated amount · GBP
+                        <Input
+                          type="number"
+                          min="0"
+                          max="1000000"
+                          step="0.01"
+                          value={cost.amount}
+                          disabled={cost.name === costs[1]?.name}
+                          onChange={(e) =>
+                            setBudgetAmounts((current) => ({
+                              ...current,
+                              [cost.name]: Number(e.target.value),
+                            }))
+                          }
+                        />
+                      </label>
+                    )}
+                    {cost.name !== costs[1]?.name && (
+                      <p>
+                        {cost.recurring
+                          ? "Recurring monthly cost"
+                          : "Upfront cost"}{" "}
+                        · {cost.status}
+                      </p>
+                    )}
+                    {cost.name === costs[1]?.name && (
+                      <section className="route-choice-card">
+                        <h3>Flight routes</h3>
+                        <p className="move-help">
+                          Flight prices are estimates.
+                        </p>
+                        <div className="route-choices">
+                          {routes
+                            .slice(0, 4)
+                            .map((route: any, index: number) => {
+                              return (
+                                <Button
+                                  variant="outline"
+                                  type="button"
+                                  aria-pressed={selectedRoute === index}
+                                  className={
+                                    selectedRoute === index ? "selected" : ""
+                                  }
+                                  onClick={() => setSelectedRoute(index)}
+                                  key={`${route.name}-${index}`}
+                                >
+                                  <span className="route-copy">
+                                    <strong>
+                                      {route.name}
+                                      <b className="mode-price">
+                                        {formatGBP(route.cost)}
+                                      </b>
+                                    </strong>
+                                    <small>{route.detail}</small>
+                                    <em>
+                                      <Timer /> {route.time}
+                                    </em>
+                                  </span>
+                                  <i className="route-radio" />
+                                </Button>
+                              );
+                            })}
+                        </div>
+                      </section>
+                    )}
+                  </div>
+                ))}
+            </>
+          ) : (
+            <>
+              <h3>Set up your move</h3>
+              <p>Choose a category to edit your plan.</p>
+            </>
+          )}
+          <Button
+            disabled={plannerSaving || !accountId}
+            onClick={async () => {
+              if (!convexClient || !accountId) return;
+              setPlannerSaving(true);
+              setPlannerMessage("");
+              try {
+                await convexClient.mutation(convexApi.saveMovePlan, {
+                  accountId: accountId as any,
+                  months,
+                  selectedRoute,
+                  arrivalDate: dateValue,
+                  excludedCosts,
+                  budgetAmounts,
+                });
+                setPlannerMessage("Move plan saved.");
+              } catch {
+                setPlannerMessage(
+                  "Could not save. Check amounts and try again.",
+                );
+              } finally {
+                setPlannerSaving(false);
+              }
+            }}
+          >
+            {plannerSaving ? "Saving…" : "Save move plan"}
+          </Button>
+          {plannerMessage && <p role="status">{plannerMessage}</p>}
+        </div>
+      </section>
+      <Button
+        className="planner-overview-toggle"
+        variant="ghost"
+        aria-expanded={overviewOpen}
+        onClick={() => setOverviewOpen((open) => !open)}
+      >
+        {overviewOpen ? "Hide budget overview" : "Budget overview"}
+      </Button>
+      {overviewOpen && (
+        <section className="arrival-charts" aria-label="Arrival budget charts">
+          <figure className="arrival-breakdown-chart">
+            <figcaption>
+              <strong>What makes up your budget</strong>
+              <span>Included costs across your {months}-month stay</span>
+            </figcaption>
+            <div className="arrival-breakdown-body">
+              <div
+                className="spending-donut"
+                role="img"
+                aria-label={`Total estimated budget ${formatGBP(totalBudget)}. Breakdown listed alongside the chart.`}
+              >
+                {totalBudget > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={arrivalBreakdown.filter(
+                          (cost: any) => cost.amount > 0,
+                        )}
+                        dataKey="amount"
+                        nameKey="name"
+                        innerRadius="70%"
+                        outerRadius="94%"
+                        paddingAngle={2}
+                        stroke="none"
+                        isAnimationActive={false}
+                      >
+                        {arrivalBreakdown
+                          .filter((cost: any) => cost.amount > 0)
+                          .map((cost: any) => (
+                            <Cell key={cost.name} fill={cost.color} />
+                          ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => formatGBP(Number(value))}
+                        contentStyle={{
+                          background: "var(--color-surface)",
+                          border: "1px solid var(--color-line)",
+                          borderRadius: 8,
+                          color: "var(--color-ink)",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="empty-donut" />
+                )}
+                <div className="donut-total">
+                  <span>Estimated total</span>
+                  <strong>{formatGBP(totalBudget)}</strong>
+                  <span>{months} months</span>
+                </div>
+              </div>
+              <ul className="arrival-chart-legend">
+                {arrivalBreakdown.map((cost: any) => (
+                  <li key={cost.name}>
+                    <span
+                      className="chart-legend-dot"
+                      style={{ background: cost.color }}
+                      aria-hidden="true"
+                    />
+                    <span>{cost.name}</span>
+                    <strong>{formatGBP(cost.amount)}</strong>
+                  </li>
+                ))}
+                {arrivalBreakdown.length === 0 && (
+                  <li>Select costs below to build your budget.</li>
+                )}
+              </ul>
+            </div>
+          </figure>
+        </section>
+      )}
       <div className="planner-arrival-note">
         <CalendarBlank weight="duotone" />
         <span>
@@ -3776,7 +4091,8 @@ function LegacyMovePlanner({
   );
 }
 
-function Payments({
+export function Payments({
+  accountId,
   status,
   paid,
   prepare,
@@ -3789,6 +4105,7 @@ function Payments({
   config,
   proposal,
 }: {
+  accountId?: string;
   status: PaymentStatus;
   paid: boolean;
   prepare: () => Promise<boolean>;
@@ -3801,14 +4118,26 @@ function Payments({
   proposal?: NonNullable<DatabaseState["paymentProposals"]>[number];
   config?: any;
 }) {
-  const availableRoutes =
-    storedRoutes?.map((r) => ({ ...r, id: r.key })) ?? routes;
+  const availableRoutes = (storedRoutes ?? []).map((r) => {
+    try {
+      const quote = tuitionQuote(Number(config?.paymentAmount), r);
+      return {
+        ...r,
+        id: r.key,
+        sourceAmount: quote.sourceMinor / 100,
+        totalMinor: quote.totalMinor,
+      };
+    } catch {
+      return { ...r, id: r.key, sourceAmount: NaN, totalMinor: NaN };
+    }
+  });
   const [selected, setSelected] = useState(
     storedRoute ?? availableRoutes.find((r) => r.recommended)?.id ?? "wise",
   );
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [recipientDigits, setRecipientDigits] = useState("");
   const runAction = async (action: () => Promise<boolean>) => {
     if (busy) return;
     setBusy(true);
@@ -3816,7 +4145,11 @@ function Payments({
     try {
       if (!(await action())) setActionError("Could not save. Try again.");
     } catch (error) {
-      setActionError(error instanceof Error ? error.message.split("Uncaught Error: ").pop()!.split("\n")[0] : "Could not save. Try again.");
+      setActionError(
+        error instanceof Error
+          ? error.message.split("Uncaught Error: ").pop()!.split("\n")[0]
+          : "Could not save. Try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -3840,40 +4173,79 @@ function Payments({
     const timer = window.setInterval(() => setQuoteClock(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
-  const activeProposal = status !== "not_started" && proposal?.status !== "cancelled" ? proposal : undefined;
-  const route =
-    (() => {
-      const item = availableRoutes.find((r) => r.id === selected) ?? availableRoutes[0];
-      return item ? { ...item, ...(activeProposal ? { provider: activeProposal.provider, sourceAmount: (activeProposal.totalMinor - activeProposal.feeMinor) / 100, fee: activeProposal.feeMinor / 100, fxRate: activeProposal.fxRate } : { sourceAmount: Math.ceil(Math.round(Number(config?.paymentAmount) * 100) / item.fxRate) / 100 }) } : undefined;
-    })();
-  const amount = activeProposal ? activeProposal.amountMinor / 100 : Number(config?.paymentAmount);
-  const quoteExpired = !!activeProposal && activeProposal.expiresAt <= quoteClock && status !== "completed";
+  const activeProposal =
+    status !== "not_started" && proposal?.status !== "cancelled"
+      ? proposal
+      : undefined;
+  const route = (() => {
+    const item = availableRoutes.find((r) => r.id === selected);
+    return item
+      ? {
+          ...item,
+          ...(activeProposal
+            ? {
+                provider: activeProposal.provider,
+                totalMinor: activeProposal.totalMinor,
+                sourceAmount:
+                  (activeProposal.totalMinor - activeProposal.feeMinor) / 100,
+                fee: activeProposal.feeMinor / 100,
+                fxRate: activeProposal.fxRate,
+                delivery: activeProposal.delivery,
+              }
+            : { sourceAmount: item.sourceAmount }),
+        }
+      : undefined;
+  })();
+  const amount = activeProposal
+    ? activeProposal.amountMinor / 100
+    : Number(config?.paymentAmount);
+  const selectedQuote = availableRoutes.find((r) => r.id === selected);
+  const quoteExpired =
+    status !== "completed" &&
+    (activeProposal
+      ? activeProposal.expiresAt <= quoteClock
+      : !selectedQuote?.quoteExpiresAt ||
+        selectedQuote.quoteExpiresAt <= quoteClock);
   const ready =
-    !quoteExpired && Number.isFinite(amount) && amount > 0 && !!route && route.fxRate > 0 && config?.recipientVerified === true;
-  const amountLabel = Number.isFinite(amount) && amount > 0 ? formatGBP(amount) : "—";
-  const recipient = activeProposal?.recipient ?? config?.recipient ?? "Example UK University";
+    !quoteExpired &&
+    Number.isFinite(amount) &&
+    amount > 0 &&
+    !!route &&
+    route.fxRate > 0 &&
+    config?.recipientVerified === true;
+  const amountLabel =
+    Number.isFinite(amount) && amount > 0
+      ? new Intl.NumberFormat("en-GB", {
+          style: "currency",
+          currency: "GBP",
+        }).format(amount)
+      : "—";
+  const recipient =
+    activeProposal?.recipient ?? config?.recipient ?? "Example UK University";
   const locked = status !== "not_started";
   const currentStep =
     status === "not_started" ? 1 : status === "prepared" ? 2 : 3;
   return (
     <div className="payments-page payment-checkout pay-simple">
       <div className="tuition-sandbox">
-          <div id="sandbox-checkout" className="tuition-sandbox-content">
-            <header className="pay-heading">
-              <h2>Review your payment</h2>
-              <div className="pay-header-actions">
-                <span className="fx-badge">Sandbox</span>
+        <div id="sandbox-checkout" className="tuition-sandbox-content">
+          <header className="pay-heading">
+            <h2>Confirm payment</h2>
+            <div className="pay-header-actions">
+              {status !== "not_started" && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={busy || status === "not_started"}
+                  disabled={busy}
                   onClick={() => void runAction(reset)}
                 >
                   <RotateCcw size={14} />
                   Reset payment
                 </Button>
-              </div>
-            </header>
+              )}
+            </div>
+          </header>
+          {status !== "not_started" && (
             <div className="pay-progress" aria-label="Payment progress">
               {["Choose", "Approve", "Send"].map((label, i) => (
                 <div
@@ -3888,25 +4260,25 @@ function Payments({
                 </div>
               ))}
             </div>
-            {paid && (
-              <div className="pay-success" role="status">
-                <CheckCircle2 size={20} />
-                <strong>{amountLabel} sent</strong>
-                <span>{config?.transactionReference}</span>
-              </div>
-            )}
-            <div className="pay-grid">
-              <Card className="pay-card">
-                <CardHeader>
-                  <CardTitle>Choose a provider</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div
-                    className="pay-options"
-                    role="group"
-                    aria-label="Payment providers"
-                  >
-                    {availableRoutes.map((r) => {
+          )}
+          {paid && (
+            <div className="pay-success" role="status">
+              <CheckCircle2 size={20} />
+              <strong>{amountLabel} sent</strong>
+              <span>{config?.transactionReference}</span>
+            </div>
+          )}
+          <div className="pay-grid">
+            <Card className="pay-card pay-review">
+              <CardContent className="compact-checkout-content">
+                <div
+                  className="pay-options"
+                  role="group"
+                  aria-label="Payment providers"
+                >
+                  {availableRoutes
+                    .filter((r) => r.id === selected)
+                    .map((r) => {
                       const RouteIcon =
                         r.id.includes("swift") ||
                         r.provider.toLowerCase().includes("bank")
@@ -3916,15 +4288,7 @@ function Payments({
                             ? CreditCard
                             : Send;
                       return (
-                        <Button
-                          variant="outline"
-                          type="button"
-                          key={r.id}
-                          disabled={locked || busy}
-                          className={`pay-option ${route?.id === r.id ? "selected" : ""}`}
-                          aria-pressed={route?.id === r.id}
-                          onClick={() => void selectProvider(r.id)}
-                        >
+                        <div key={r.id} className="pay-option selected">
                           <span className="pay-provider-icon">
                             <RouteIcon size={20} />
                           </span>
@@ -3940,149 +4304,188 @@ function Payments({
                             className="pay-price"
                             aria-label="Total cost in USD"
                           >
-                            {formatUSD(routeEffectiveCost(r))}
+                            {formatUSD(
+                              (activeProposal?.totalMinor ?? r.totalMinor) /
+                                100,
+                            )}
                           </strong>
                           <span className="pay-radio" aria-hidden="true">
                             {route?.id === r.id && <Check size={12} />}
                           </span>
-                        </Button>
+                        </div>
                       );
                     })}
-                    {!availableRoutes.length && (
-                      <p className="fx-hint">No providers available.</p>
-                    )}
-                  </div>
-                  <div className="pay-recipient">
-                    <Landmark size={20} />
-                    <div>
-                      <strong>{recipient}</strong>
-                      <small>
-                        •••• {activeProposal?.recipientLast4 ?? config?.recipientAccountLast4 ?? "1842"}
-                      </small>
-                    </div>
-                    <ShieldCheck
-                      size={20}
-                      aria-label={config?.recipientVerified ? "Sandbox recipient checked" : "Unconfirmed sandbox recipient"}
-                      role="img"
-                    >
-                      <title>{config?.recipientVerified ? "Sandbox recipient checked" : "Unconfirmed sandbox recipient"}</title>
-                    </ShieldCheck>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="pay-card pay-review">
-                <CardHeader>
-                  <CardTitle>Review</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="pay-amount">
-                    <span>Recipient gets</span>
-                    <strong>{amountLabel}</strong>
-                  </div>
-                  {!ready && (
-                    <p className="fx-error" role="status">
-                      {quoteExpired ? "Quote expired. Reset the payment to prepare a fresh quote." : "Confirm the sandbox recipient above before preparing a payment."}
-                    </p>
+                  {!availableRoutes.length && (
+                    <p className="fx-hint">No providers available.</p>
                   )}
+                </div>
+                {config?.recipientVerified !== true &&
+                  status === "not_started" && (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void runAction(async () => {
+                          if (!convexClient || !accountId) return false;
+                          await convexClient.mutation(
+                            convexApi.verifySandboxRecipient,
+                            {
+                              accountId: accountId as any,
+                              last4: recipientDigits,
+                            },
+                          );
+                          return true;
+                        });
+                      }}
+                    >
+                      <label>
+                        Confirm recipient account last four digits
+                        <Input
+                          required
+                          pattern="[0-9]{4}"
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={recipientDigits}
+                          disabled={busy}
+                          onChange={(e) => setRecipientDigits(e.target.value)}
+                        />
+                      </label>
+                      <Button disabled={busy}>Confirm sandbox recipient</Button>
+                    </form>
+                  )}
+                <div className="pay-recipient">
+                  <Landmark size={20} />
+                  <div>
+                    <strong>{recipient}</strong>
+                    <small>
+                      ••••{" "}
+                      {activeProposal?.recipientLast4 ??
+                        config?.recipientAccountLast4 ??
+                        "1842"}
+                    </small>
+                  </div>
+                  <ShieldCheck
+                    size={20}
+                    aria-label={
+                      config?.recipientVerified
+                        ? "Sandbox recipient checked"
+                        : "Unconfirmed sandbox recipient"
+                    }
+                    role="img"
+                  >
+                    <title>
+                      {config?.recipientVerified
+                        ? "Sandbox recipient checked"
+                        : "Unconfirmed sandbox recipient"}
+                    </title>
+                  </ShieldCheck>
+                </div>
+
+                <div className="pay-amount">
+                  <span>Recipient gets</span>
+                  <strong>{amountLabel}</strong>
+                </div>
+                {!ready && (
+                  <p className="fx-error" role="status">
+                    {quoteExpired
+                      ? "Quote expired. Refresh the comparison, or reset an active payment before refreshing."
+                      : "Confirm the sandbox recipient above before preparing a payment."}
+                  </p>
+                )}
+                <div className="payment-review-details">
                   <dl className="pay-details">
                     <div>
                       <dt>
                         <WalletCards size={16} />
                         You pay
                       </dt>
-                      <dd>
-                        {route ? formatUSD(routeEffectiveCost(route)) : "—"}
-                      </dd>
+                      <dd>{route ? formatUSD(route.totalMinor / 100) : "—"}</dd>
                     </div>
                     <div>
                       <dt>
                         <ReceiptText size={16} />
-                        Fee included
+                        Fee included <InfoHelp term="Fees" />
                       </dt>
                       <dd>{route ? formatUSD(route.fee) : "—"}</dd>
                     </div>
                     <div>
                       <dt>
                         <Activity size={16} />
-                        Rate
+                        Rate <InfoHelp term="Exchange rate" />
                       </dt>
                       <dd>{route ? `${route.fxRate} GBP / USD` : "—"}</dd>
                     </div>
                     <div>
                       <dt>
                         <Clock3 size={16} />
-                        Arrival
+                        Arrival <InfoHelp term="Arrival estimate" />
                       </dt>
                       <dd>{route?.delivery ?? "—"}</dd>
                     </div>
                   </dl>
-                  {status === "not_started" && (
+                </div>
+                {status === "not_started" && (
+                  <Button
+                    className="pay-action"
+                    disabled={!ready || busy}
+                    onClick={() => void runAction(prepare)}
+                  >
+                    {busy ? "Saving…" : "Continue"}
+                    <ArrowRight size={16} />
+                  </Button>
+                )}
+                {status === "prepared" && (
+                  <>
+                    <label className="pay-consent">
+                      <Checkbox
+                        checked={consent}
+                        onCheckedChange={(checked) =>
+                          setConsent(checked === true)
+                        }
+                        disabled={!ready}
+                      />
+                      <span>Recipient and total are correct</span>
+                    </label>
                     <Button
                       className="pay-action"
-                      disabled={!ready || busy}
-                      onClick={() => void runAction(prepare)}
+                      disabled={!consent || !ready || busy}
+                      onClick={() => void runAction(approve)}
                     >
-                      {busy ? "Saving…" : "Continue"}
-                      <ArrowRight size={16} />
+                      {busy ? "Saving…" : "Approve"}
+                      <LockKeyhole size={16} />
                     </Button>
-                  )}
-                  {status === "prepared" && (
-                    <>
-                      <label className="pay-consent">
-                        <Checkbox
-                          checked={consent}
-                          onCheckedChange={(checked) =>
-                            setConsent(checked === true)
-                          }
-                          disabled={!ready}
-                        />
-                        <span>Recipient and total are correct</span>
-                      </label>
-                      <Button
-                        className="pay-action"
-                        disabled={!consent || !ready || busy}
-                        onClick={() => void runAction(approve)}
-                      >
-                        {busy ? "Saving…" : "Approve"}
-                        <LockKeyhole size={16} />
-                      </Button>
-                    </>
-                  )}
-                  {status === "approved" && (
-                    <Button
-                      className="pay-action"
-                      disabled={!ready || busy}
-                      onClick={() => void runAction(execute)}
-                    >
-                      Send {amountLabel}
-                      <ArrowRight size={16} />
-                    </Button>
-                  )}
-                  {status === "processing" && (
-                    <Button className="pay-action" disabled>
-                      <span className="spinner" />
-                      Sending…
-                    </Button>
-                  )}
-                  {status === "completed" && (
-                    <div className="pay-done">
-                      <CheckCircle2 size={18} />
-                      Sent
-                    </div>
-                  )}
-                  {actionError && (
-                    <p className="fx-error" role="alert">
-                      {actionError}
-                    </p>
-                  )}
-                  <small className="pay-sandbox">
-                    <ShieldCheck size={13} />
-                    No real funds
-                  </small>
-                </CardContent>
-              </Card>
-            </div>
+                  </>
+                )}
+                {status === "approved" && (
+                  <Button
+                    className="pay-action"
+                    disabled={!ready || busy}
+                    onClick={() => void runAction(execute)}
+                  >
+                    Send {amountLabel}
+                    <ArrowRight size={16} />
+                  </Button>
+                )}
+                {status === "processing" && (
+                  <Button className="pay-action" disabled>
+                    <span className="spinner" />
+                    Sending…
+                  </Button>
+                )}
+                {status === "completed" && (
+                  <div className="pay-done">
+                    <CheckCircle2 size={18} />
+                    Sent
+                  </div>
+                )}
+                {actionError && (
+                  <p className="fx-error" role="alert">
+                    {actionError}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </div>
+        </div>
       </div>
     </div>
   );
@@ -4095,7 +4498,13 @@ function Sponsors({
   onRequest,
   storedSponsors,
   config,
+  onPermission,
 }: {
+  onPermission?: (
+    sponsorKey: string,
+    permission: string,
+    enabled: boolean,
+  ) => Promise<boolean>;
   announce: (s: string) => void;
   requestSent?: boolean;
   onRequest: () => void;
@@ -4106,7 +4515,8 @@ function Sponsors({
   const [tab, setTab] = useState<"Sponsors" | "Requests" | "Privacy">(
     "Sponsors",
   );
-  const visibleSponsors = storedSponsors ?? sponsors;
+  const visibleSponsors =
+    storedSponsors ?? sponsors.map((s) => ({ ...s, key: s.id }));
   const sponsor = visibleSponsors[0];
   const totalCommitment = sponsor?.commitment ?? 0;
   const transferred = config?.transferred ?? 0;
@@ -4277,15 +4687,46 @@ function Sponsors({
           <LockKeyhole />
           <h3>What your sponsor can see</h3>
           <p>
-            Contributions are shared. Wallet balances, transaction history, and
-            personal spending stay private.
+            Choose what each sponsor can see. Financial overview shares
+            aggregate planned and paid costs. Wallet balances stay private.
           </p>
+          {visibleSponsors.map((sponsor) => (
+            <section key={sponsor.key}>
+              <h4>{sponsor.name}</h4>
+              {[
+                "Commitment status",
+                "Sponsored tuition",
+                "Funding requests",
+                "Financial overview",
+              ].map((permission) => (
+                <label className="sponsor-permission" key={permission}>
+                  <Checkbox
+                    checked={sponsor.permissions.includes(permission)}
+                    disabled={!onPermission}
+                    onCheckedChange={async (enabled) => {
+                      const saved = await onPermission?.(
+                        sponsor.key,
+                        permission,
+                        enabled === true,
+                      );
+                      announce(
+                        saved
+                          ? "Sharing preference saved"
+                          : "Could not save sharing preference",
+                      );
+                    }}
+                  />
+                  {permission}
+                </label>
+              ))}
+            </section>
+          ))}
         </section>
       )}
     </div>
   );
 }
-function Wallet({
+export function Wallet({
   storedWallets,
   go,
 }: {
@@ -4332,7 +4773,15 @@ function Wallet({
                 maximumFractionDigits: 2,
               })}
             </strong>
-            <span>{formatGBP(wallet.gbpValue)}</span>
+            <span>
+              {formatGBP(wallet.gbpValue)}
+              <small className="balance-rate">
+                {wallet.amount > 0
+                  ? `1 ${wallet.currency} ≈ ${(wallet.gbpValue / wallet.amount).toFixed(4)} GBP`
+                  : "Rate unavailable"}{" "}
+                <InfoHelp term="Balance valuation" />
+              </small>
+            </span>
           </div>
         ))}
         {visibleWallets.length === 0 && <p>No currency accounts yet.</p>}

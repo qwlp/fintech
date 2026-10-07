@@ -645,9 +645,12 @@ export const setSponsorPermission = mutation({
     ).find((item) => item.key === args.sponsorKey);
     if (!sponsor) throw new Error("Sponsor not found");
     if (
-      !["Commitment status", "Sponsored tuition", "Funding requests"].includes(
-        args.permission,
-      )
+      ![
+        "Commitment status",
+        "Sponsored tuition",
+        "Funding requests",
+        "Financial overview",
+      ].includes(args.permission)
     )
       throw new Error("Unknown sponsor permission");
     const permissions = args.enabled
@@ -820,9 +823,10 @@ export const transitionPayment = mutation({
       v.literal("completed"),
     ),
     proposalId: v.optional(v.id("paymentProposals")),
+    expectedQuote: v.optional(v.string()),
   },
-  handler: async (ctx, { accountId, next, proposalId }) =>
-    paymentTransition(ctx, accountId, next, proposalId),
+  handler: async (ctx, { accountId, next, proposalId, expectedQuote }) =>
+    paymentTransition(ctx, accountId, next, proposalId, expectedQuote),
 });
 
 export const verifySandboxRecipient = mutation({
@@ -1465,6 +1469,158 @@ export const refreshSandboxQuotes = mutation({
       detail:
         "Reissued illustrative fixture quotes for 10 minutes; no provider request or live rate",
       actor: account.name,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const updatePaymentDetails = mutation({
+  args: {
+    accountId: v.id("accounts"),
+    amount: v.number(),
+    recipient: v.string(),
+    last4: v.string(),
+  },
+  handler: async (ctx, { accountId, amount, recipient, last4 }) => {
+    const account = await requireAccount(ctx, accountId);
+    if (account.role !== "Student") throw new Error("Student account required");
+    if (account.paymentStatus !== "not_started")
+      throw new Error("Reset the active payment before editing details");
+    if (
+      !Number.isFinite(amount) ||
+      amount < 0.01 ||
+      amount > 1000000 ||
+      Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001 ||
+      !recipient.trim() ||
+      recipient.trim().length > 160 ||
+      !/^\d{4}$/.test(last4)
+    )
+      throw new Error("Invalid payment details");
+    const rows = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    const banking = rows.find((r) => r.key === "banking");
+    if (!banking) throw new Error("Load the payment sandbox first");
+    await ctx.db.patch(banking._id, {
+      value: {
+        ...banking.value,
+        paymentAmount: Math.round(amount * 100) / 100,
+        recipient: recipient.trim(),
+        recipientAccountLast4: last4,
+        recipientVerified: false,
+      },
+    });
+    await ctx.db.insert("auditEvents", {
+      accountId,
+      type: "PAYMENT_DETAILS_UPDATED",
+      detail:
+        "Tuition details changed; recipient confirmation required and quotes recalculated",
+      actor: account.name,
+      timestamp: Date.now(),
+    });
+  },
+});
+
+export const saveMovePlan = mutation({
+  args: {
+    accountId: v.id("accounts"),
+    months: v.number(),
+    selectedRoute: v.number(),
+    arrivalDate: v.string(),
+    excludedCosts: v.array(v.string()),
+    budgetAmounts: v.any(),
+  },
+  handler: async (
+    ctx,
+    {
+      accountId,
+      months,
+      selectedRoute,
+      arrivalDate,
+      excludedCosts,
+      budgetAmounts,
+    },
+  ) => {
+    const account = await requireAccount(ctx, accountId);
+    if (account.role !== "Student") throw new Error("Student account required");
+    parseDeadline(arrivalDate);
+    if (
+      !Number.isInteger(months) ||
+      months < 1 ||
+      months > 24 ||
+      !Number.isInteger(selectedRoute) ||
+      selectedRoute < 0 ||
+      selectedRoute > 50 ||
+      !budgetAmounts ||
+      Array.isArray(budgetAmounts) ||
+      Object.values(budgetAmounts).some(
+        (value) =>
+          typeof value !== "number" ||
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 1000000,
+      )
+    )
+      throw new Error("Invalid move plan");
+    const row = (
+      await ctx.db
+        .query("appConfig")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .collect()
+    ).find((row) => row.key === "move");
+    const value = {
+      ...(row?.value ?? {}),
+      months,
+      selectedRoute,
+      arrivalDateISO: arrivalDate,
+      excludedCosts,
+      budgetAmounts,
+    };
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("appConfig", { accountId, key: "move", value });
+  },
+});
+
+export const syncPaymentReminder = mutation({
+  args: { accountId: v.id("accounts") },
+  handler: async (ctx, { accountId }) => {
+    const account = await requireAccount(ctx, accountId);
+    if (account.role !== "Student" || account.paymentStatus === "completed")
+      return;
+    const rows = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    const banking = rows.find((row) => row.key === "banking")?.value;
+    if (
+      !banking?.tuitionDeadline ||
+      !Number.isFinite(banking.paymentAmount) ||
+      banking.paymentAmount <= 0
+    )
+      return;
+    const due = parseDeadline(banking.tuitionDeadline),
+      days = Math.ceil((due - Date.now()) / 86400000);
+    if (days < 0 || days > 14) return;
+    const title = `Tuition due ${banking.tuitionDeadline}`;
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .collect();
+    if (
+      notifications.some((n) => n.title === title) ||
+      notifications.some(
+        (n) =>
+          n.title.startsWith("Tuition due ") &&
+          Date.now() - n.timestamp < 86400000,
+      )
+    )
+      return;
+    await ctx.db.insert("notifications", {
+      accountId,
+      title,
+      detail: `Your saved £${banking.paymentAmount.toFixed(2)} payment to ${banking.recipient || "your university"} is due within ${Math.max(0, days)} days. Review your payment plan.`,
+      read: false,
       timestamp: Date.now(),
     });
   },

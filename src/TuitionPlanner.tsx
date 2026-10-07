@@ -1,3 +1,4 @@
+import InfoHelp from "./InfoHelp";
 import { useState } from "react";
 import {
   Check,
@@ -179,7 +180,8 @@ export default function TuitionPlanner() {
                   checked={localAccount}
                   onCheckedChange={(value) => setLocalAccount(value === true)}
                 />
-                <Landmark size={14} /> Local account in {destination}
+                <Landmark size={14} /> Local account in {destination}{" "}
+                <InfoHelp term="Local account" />
               </label>
             )}
             <h3 className="tuition-method-title">Payment method</h3>

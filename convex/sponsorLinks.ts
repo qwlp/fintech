@@ -156,7 +156,80 @@ export const dashboard = query({
                 status,
               }))
           : [];
+        const configs = link.permissions.includes("Sponsored tuition")
+          ? await ctx.db
+              .query("appConfig")
+              .withIndex("by_account", (q) => q.eq("accountId", link.accountId))
+              .collect()
+          : [];
+        const banking = configs.find((row) => row.key === "banking")?.value;
+        const ledger = link.permissions.includes("Sponsored tuition")
+          ? await ctx.db
+              .query("ledgerEntries")
+              .withIndex("by_account", (q) => q.eq("accountId", link.accountId))
+              .collect()
+          : [];
+        const tuition =
+          banking && Number.isFinite(banking.paymentAmount)
+            ? {
+                amountGBP: banking.paymentAmount,
+                deadline: banking.tuitionDeadline ?? null,
+                status: student?.paymentStatus ?? "not_started",
+                paidGBP:
+                  ledger
+                    .filter((row) => row.receivedCurrency === "GBP")
+                    .reduce((sum, row) => sum + row.receivedMinor, 0) / 100,
+                recentPayments: ledger
+                  .filter((row) => row.receivedCurrency === "GBP")
+                  .sort((a, b) => b.timestamp - a.timestamp)
+                  .slice(0, 5)
+                  .map((row) => ({
+                    amountGBP: row.receivedMinor / 100,
+                    timestamp: row.timestamp,
+                  })),
+              }
+            : null;
+        const requestSummary = link.permissions.includes("Funding requests")
+          ? {
+              requestedGBP: requests
+                .filter((r) => r.status === "sent")
+                .reduce((sum, r) => sum + r.amount, 0),
+              receivedGBP: requests
+                .filter((r) => r.status === "fulfilled")
+                .reduce((sum, r) => sum + r.amount, 0),
+            }
+          : null;
+        const costs = link.permissions.includes("Financial overview")
+          ? await ctx.db
+              .query("costs")
+              .withIndex("by_account", (q) => q.eq("accountId", link.accountId))
+              .collect()
+          : [];
+        const financialOverview = link.permissions.includes(
+          "Financial overview",
+        )
+          ? {
+              plannedGBP: costs.reduce((sum, cost) => sum + cost.amount, 0),
+              paidGBP: costs
+                .filter((cost) => cost.paid)
+                .reduce((sum, cost) => sum + cost.amount, 0),
+              categories: [...new Set(costs.map((cost) => cost.category))].map(
+                (category) => ({
+                  category,
+                  plannedGBP: costs
+                    .filter((cost) => cost.category === category)
+                    .reduce((sum, cost) => sum + cost.amount, 0),
+                  paidGBP: costs
+                    .filter((cost) => cost.category === category && cost.paid)
+                    .reduce((sum, cost) => sum + cost.amount, 0),
+                }),
+              ),
+            }
+          : null;
         return {
+          financialOverview,
+          tuition,
+          requestSummary,
           id: link._id,
           name: student?.name ?? "Student",
           commitment: link.commitment,

@@ -1,3 +1,5 @@
+import DataBoundary from "./DataBoundary";
+import "./brief.css";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import {
@@ -24,7 +26,14 @@ const money = (amount: number) =>
     currency: "GBP",
     maximumFractionDigits: 2,
   }).format(amount);
-export default function SponsorDashboard({ name }: { name: string }) {
+export default function SponsorDashboard(props: { name: string }) {
+  return (
+    <DataBoundary>
+      <SponsorOverview {...props} />
+    </DataBoundary>
+  );
+}
+function SponsorOverview({ name }: { name: string }) {
   const students = useQuery(api.sponsorLinks.dashboard, {});
   const update = useMutation(api.sponsorLinks.updateCommitment);
   const [selected, setSelected] = useState<Id<"sponsors"> | null>(null);
@@ -173,6 +182,138 @@ export default function SponsorDashboard({ name }: { name: string }) {
               {message}
             </p>
           )}
+          <section
+            className="sponsor-financial-summary"
+            aria-label="Shared financial overview"
+          >
+            <h3>Shared financial overview</h3>
+            {student.financialOverview ? (
+              <>
+                <dl className="route-quick-facts">
+                  <div>
+                    <dt>Planned budget · GBP</dt>
+                    <dd>{money(student.financialOverview.plannedGBP)}</dd>
+                  </div>
+                  <div>
+                    <dt>Costs marked paid</dt>
+                    <dd>{money(student.financialOverview.paidGBP)}</dd>
+                  </div>
+                  <div>
+                    <dt>Planned costs remaining</dt>
+                    <dd>
+                      {money(
+                        Math.max(
+                          0,
+                          student.financialOverview.plannedGBP -
+                            student.financialOverview.paidGBP,
+                        ),
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+                {student.financialOverview.categories.length ? (
+                  <div className="sponsor-category-breakdown">
+                    <h4>Cost distribution</h4>
+                    {student.financialOverview.categories.map((category) => (
+                      <div key={category.category}>
+                        <strong>{category.category}</strong>
+                        <span>
+                          {money(category.paidGBP)} paid /{" "}
+                          {money(category.plannedGBP)} planned
+                        </span>
+                        <progress
+                          aria-label={`${category.category} share of planned budget`}
+                          max={Math.max(
+                            1,
+                            student.financialOverview!.plannedGBP,
+                          )}
+                          value={category.plannedGBP}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No saved budget costs yet.</p>
+                )}
+                <p>
+                  Derived from saved planned costs and their paid flags; this is
+                  not a complete bank spending history.
+                </p>
+              </>
+            ) : (
+              <p>
+                Budget overview is private. The student can share aggregate
+                planned and paid costs by enabling Financial overview.
+              </p>
+            )}
+            {student.requestSummary && (
+              <dl className="route-quick-facts">
+                <div>
+                  <dt>Open funding requests</dt>
+                  <dd>{money(student.requestSummary.requestedGBP)}</dd>
+                </div>
+                <div>
+                  <dt>Received contributions</dt>
+                  <dd>{money(student.requestSummary.receivedGBP)}</dd>
+                </div>
+                <div>
+                  <dt>Commitment remaining</dt>
+                  <dd>
+                    {money(
+                      Math.max(
+                        0,
+                        student.commitment - student.requestSummary.receivedGBP,
+                      ),
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            )}
+            {student.tuition ? (
+              <>
+                <dl className="route-quick-facts">
+                  <div>
+                    <dt>Current tuition payment</dt>
+                    <dd>{money(student.tuition.amountGBP)}</dd>
+                  </div>
+                  <div>
+                    <dt>Payment progress</dt>
+                    <dd>{student.tuition.status.replaceAll("_", " ")}</dd>
+                  </div>
+                  <div>
+                    <dt>Tuition sent · sandbox</dt>
+                    <dd>{money(student.tuition.paidGBP)}</dd>
+                  </div>
+                  <div>
+                    <dt>Deadline</dt>
+                    <dd>{student.tuition.deadline ?? "Not set"}</dd>
+                  </div>
+                </dl>
+                <h4>Recent tuition payments</h4>
+                {student.tuition.recentPayments.length ? (
+                  <ul>
+                    {student.tuition.recentPayments.map((payment, index) => (
+                      <li key={index}>
+                        {money(payment.amountGBP)} ·{" "}
+                        {new Date(payment.timestamp).toLocaleDateString()}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No tuition payments yet.</p>
+                )}
+              </>
+            ) : (
+              <p>
+                No tuition information shared. The student can enable Sponsored
+                tuition in their sharing settings.
+              </p>
+            )}
+            <p>
+              Only permitted aggregates and tuition progress are shared. Wallet
+              balances and private transaction details remain private.
+            </p>
+          </section>
           <div className="sponsor-request-heading">
             <h3>
               <Inbox size={18} />

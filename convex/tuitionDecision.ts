@@ -40,6 +40,43 @@ export function addBusinessDays(timestamp: number, days: number): number {
   }
   return date.getTime();
 }
+export function quoteFingerprint(
+  amountGBP: number,
+  recipient: string,
+  last4: string,
+  route: DecisionRoute,
+) {
+  return JSON.stringify([
+    Math.round(amountGBP * 100),
+    recipient,
+    last4,
+    route.key,
+    route.fxRate,
+    Math.round(route.fee * 100),
+    route.delivery,
+    route.quoteExpiresAt,
+  ]);
+}
+export function tuitionQuote(
+  amountGBP: number,
+  route: Pick<DecisionRoute, "fxRate" | "fee">,
+) {
+  const amountMinor = Math.round(amountGBP * 100);
+  const feeMinor = Math.round(route.fee * 100);
+  const sourceMinor = Math.ceil(amountMinor / route.fxRate);
+  const totalMinor = sourceMinor + feeMinor;
+  if (
+    ![amountGBP, route.fxRate, route.fee].every(Number.isFinite) ||
+    amountMinor <= 0 ||
+    route.fxRate <= 0 ||
+    route.fee < 0 ||
+    ![amountMinor, feeMinor, sourceMinor, totalMinor].every(
+      Number.isSafeInteger,
+    )
+  )
+    throw new Error("Invalid payment quote");
+  return { amountMinor, sourceMinor, feeMinor, totalMinor };
+}
 const minor = (amount: number) => Math.round(amount * 100);
 export function assessTuition(input: DecisionInput) {
   const { amountGBP, reserveGBP, wallets, routes, now } = input;
@@ -82,9 +119,12 @@ export function assessTuition(input: DecisionInput) {
         route.fxRate > 0 &&
         Number.isFinite(route.fee) &&
         route.fee >= 0;
-      const totalMinor = valid
-        ? Math.ceil(minor(amountGBP) / route.fxRate) + minor(route.fee)
-        : null;
+      let totalMinor: number | null = null;
+      if (valid) {
+        try {
+          totalMinor = tuitionQuote(amountGBP, route).totalMinor;
+        } catch {}
+      }
       const totalValid =
         totalMinor !== null && Number.isSafeInteger(totalMinor);
       const arrivalKnown =

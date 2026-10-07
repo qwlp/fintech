@@ -22,22 +22,36 @@ for (const width of [1440, 390])
         (value) => document.documentElement.setAttribute("data-theme", value),
         theme,
       );
-      await expect(page.getByRole("heading", { name: "Tuition payments", exact: true })).toBeVisible();
-      await page.screenshot({ path: `/tmp/payment-workspace-${width}-${theme}.png`, fullPage: true });
-      await expect(page.getByLabel("Route recommendation")).toContainText(
-        "lowest-cost eligible route",
+      await expect(
+        page.getByRole("heading", { name: "Payments", exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: `/tmp/payment-workspace-${width}-${theme}.png`,
+        fullPage: true,
+      });
+      await expect(page.locator(".tuition-route-title").first()).toContainText(
+        "Selected",
       );
       await expect(page.locator(".tuition-route").first()).toContainText(
         "$2,592.38",
       );
-      await page.locator(".tuition-plan-options summary").click();
-      await page.getByRole("button", { name: "Tuition deadline", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Tuition deadline", exact: true })
+        .click();
       await expect(page.locator(".ui-calendar")).toBeVisible();
       await expect(page.locator(".ui-popover")).toHaveCSS("opacity", "1");
-      await page.screenshot({ path: `/tmp/tuition-calendar-${width}-${theme}.png` });
-      await page.locator(".ui-calendar .rdp-day_button").filter({ hasText: /^20$/ }).first().click();
+      await page.screenshot({
+        path: `/tmp/tuition-calendar-${width}-${theme}.png`,
+      });
+      await page
+        .locator(".ui-calendar .rdp-day_button")
+        .filter({ hasText: /^20$/ })
+        .first()
+        .click();
       await expect(page.locator(".ui-calendar")).not.toBeVisible();
-      await expect(page.getByRole("button", { name: "Tuition deadline", exact: true })).toContainText(/20 [A-Za-z]+ \d{4}/);
+      await expect(
+        page.getByRole("button", { name: "Tuition deadline", exact: true }),
+      ).toContainText(/20 [A-Za-z]+ \d{4}/);
       await page.getByLabel("Protected living funds in GBP").fill("1500");
       await expect(
         page.getByRole("button", { name: "Choose Sandbox Express" }),
@@ -56,42 +70,75 @@ for (const width of [1440, 390])
         .getByRole("button", { name: "Simulate funding shortfall" })
         .click();
       await expect(page.getByLabel("Route recommendation")).toContainText(
-        "No route currently satisfies all checks",
+        "Check availability below",
       );
-      for (const summary of await page.locator(".tuition-route-details summary").all()) await summary.click();
-      await expect(page.locator(".tuition-funding-gap").first()).toContainText(
+      await page
+        .getByRole("button", {
+          name: "Details for Sandbox Standard",
+          exact: true,
+        })
+        .click();
+      await expect(page.locator(".tuition-funding-gap")).toContainText(
         "additional USD",
       );
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Close", exact: true })
+        .click();
       await page.getByRole("button", { name: "Expire quotes" }).click();
-      await expect(page.locator(".tuition-route").first()).toContainText(
+      await page
+        .getByRole("button", {
+          name: "Details for Sandbox Standard",
+          exact: true,
+        })
+        .click();
+      await expect(page.getByRole("dialog")).toContainText(
         "Refresh expired or undated quote",
       );
       await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Close", exact: true })
+        .click();
+      await page
         .getByRole("button", { name: "Refresh sandbox quotes" })
         .click();
-      await expect(page.locator(".tuition-route").first()).not.toContainText(
+      await page
+        .getByRole("button", {
+          name: "Details for Sandbox Standard",
+          exact: true,
+        })
+        .click();
+      await expect(page.getByRole("dialog")).not.toContainText(
         "Refresh expired or undated quote",
       );
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Close", exact: true })
+        .click();
       await page.screenshot({
         path: `/tmp/movewise-tuition-decision-${width}-${theme}.png`,
         fullPage: true,
       });
       await page.getByRole("button", { name: "Lock proposal" }).click();
-      await expect(page.getByLabel("Tuition deadline")).toBeDisabled();
       await expect(
-        page.getByRole("button", { name: "Refresh sandbox quotes" }),
+        page.getByRole("button", { name: "Routes", exact: true }),
       ).toBeDisabled();
+      await expect(page.getByLabel("Route recommendation")).not.toBeVisible();
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      await page.getByRole("tab", { name: "Cost calculator" }).click();
-      await expect(page.getByLabel("Tuition payments", { exact: true })).toBeVisible();
+      await page.getByRole("tab", { name: "Calculator" }).click();
+      await expect(
+        page.getByLabel("Automatic payment estimate", { exact: true }),
+      ).toBeVisible();
       await expect(page.getByLabel("Route recommendation")).not.toBeVisible();
-      await page.getByRole("tab", { name: "Review & pay", exact: true }).click();
-      await expect(page.getByRole("tabpanel")).toContainText("Review your saved proposal");
-      await page.getByRole("tab", { name: "Activity & receipts" }).click();
+      await page.getByRole("tab", { name: "Tuition", exact: true }).click();
+      await expect(page.getByRole("tabpanel")).toContainText(
+        "Review your saved proposal",
+      );
+      await page.getByRole("tab", { name: "Receipts" }).click();
       await expect(page.getByRole("tabpanel")).toContainText("No payments yet");
       expect(errors).toEqual([]);
     });

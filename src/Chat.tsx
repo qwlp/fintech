@@ -2,7 +2,7 @@ import { Dialog } from "radix-ui";
 import AgentCalculation, { type ToolResult } from "./AgentCalculation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowUp, ArrowUpRight, Bot, Clock, MessageSquare, Plus, Search, Wallet, GraduationCap, House, ChartNoAxesCombined, ShieldCheck, X } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -16,7 +16,8 @@ const prompts = [
   { icon: House, label: "Explore a change", text: "How will a £900 rent change my runway?" },
 ];
 
-export function Assistant({ messages, onSend, onNew, onHistory, aiEnabled = true, onConsent }: {
+export function Assistant({ messages, onSend, onNew, onHistory, aiEnabled = true, onConsent, tour }: {
+  tour?: ReactNode;
   aiEnabled?: boolean; onConsent?: (enabled: boolean) => Promise<boolean>;
   messages: ChatMessage[]; onSend: (text: string) => Promise<boolean>; onNew: () => void; onHistory: () => void;
 }) {
@@ -43,7 +44,7 @@ export function Assistant({ messages, onSend, onNew, onHistory, aiEnabled = true
   return <div className="assistant-page">
     <div className="assistant-toolbar">
       <div className="assistant-identity"><span className="assistant-mark"><Bot size={19} /></span><div><strong>Plan assistant</strong><small>Study plan, budget & tuition tools</small></div></div>
-      <div>{onConsent && <Button variant="ghost" size="sm" aria-label="AI privacy settings" onClick={() => setPrivacyOpen(true)}><ShieldCheck /><span className="assistant-privacy-label">AI privacy</span></Button>}<Button variant="ghost" size="sm" onClick={onHistory} disabled={!!pending}><Clock /> History</Button><Button variant="outline" size="sm" onClick={onNew} disabled={!!pending}><Plus /> New chat</Button></div>
+      <div className="assistant-toolbar-actions">{tour}{onConsent && <Button variant="ghost" size="sm" aria-label="AI privacy settings" onClick={() => setPrivacyOpen(true)}><ShieldCheck /><span className="assistant-privacy-label">AI privacy</span></Button>}<Button variant="ghost" size="sm" onClick={onHistory} disabled={!!pending}><Clock /> History</Button><Button variant="outline" size="sm" onClick={onNew} disabled={!!pending}><Plus /> New chat</Button></div>
     </div>
     {onConsent && <Dialog.Root open={privacyOpen} onOpenChange={setPrivacyOpen}>
       <Dialog.Portal>

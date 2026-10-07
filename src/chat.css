@@ -4,6 +4,9 @@
 .assistant-page { --chat-surface: var(--ui-background, #fff); display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--color-ink); }
 .assistant-toolbar { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 32px; border-bottom: 1px solid var(--color-line); }
 .assistant-toolbar > div:last-child { display: flex; gap: 8px; }
+.assistant-toolbar .agent-tour-toolbar { padding: 0; }
+.assistant-toolbar .agent-tour-trigger { margin: 0; }
+.assistant-toolbar-actions { align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .assistant-identity { display: flex; align-items: center; gap: 12px; }
 .assistant-mark, .assistant-welcome-icon, .history-icon { display: grid; place-items: center; background: var(--ui-secondary, #e8ece7); border-radius: 12px; color: var(--color-ink); }
 .assistant-mark { width: 40px; height: 40px; }
@@ -30,6 +33,7 @@
 .assistant-composer-area { width: min(760px, 100%); box-sizing: border-box; padding: 12px 24px max(10px, env(safe-area-inset-bottom)); margin: 0 auto; flex-shrink: 0; }
 .assistant-composer { border: 1px solid var(--color-line); border-radius: 16px; background: var(--chat-surface); box-shadow: 0 4px 20px #00000006; padding: 14px 16px 10px; transition: border-color .15s, box-shadow .15s; }
 .assistant-composer:focus-within { border-color: var(--ui-muted); box-shadow: 0 0 0 3px #70827812; }
+:root[data-theme] .app-clean main .assistant-composer textarea:focus-visible { outline: none; box-shadow: none; }
 .assistant-composer textarea[data-slot="textarea"] { display: block; box-sizing: border-box; background: transparent; border: 0; border-radius: 0; box-shadow: none; outline: none; width: 100%; padding: 2px 0; min-height: 52px; max-height: 180px; resize: none; font: inherit; font-size: 14px; line-height: 1.7; color: inherit; }
 .assistant-composer textarea::placeholder { color: var(--ui-muted); }
 .assistant-composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -64,6 +68,9 @@
 :root[data-theme="dark"] .assistant-mark, :root[data-theme="dark"] .assistant-welcome-icon, :root[data-theme="dark"] .history-icon, :root[data-theme="dark"] .assistant-message.user { background: #202830; }
 :root[data-theme="dark"] .chat-history-list > button { background: #151a21; }
 @media(max-width: 800px) {
+  .assistant-toolbar { flex-wrap: wrap; }
+  .assistant-toolbar-actions { width: 100%; justify-content: flex-start; }
+  .assistant-toolbar .agent-tour-trigger { font-size: 12px; padding-inline: 8px; }
   :root[data-theme] .content:has(.assistant-page),
 :root[data-theme] .app-clean > main > .content:has(.assistant-page) { height: calc(100dvh - 64px); }
   .assistant-toolbar { padding: 16px; }

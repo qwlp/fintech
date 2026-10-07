@@ -1,8 +1,13 @@
+import { Dialog } from "radix-ui";
+import InfoHelp from "./InfoHelp";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ShieldCheck,
   ArrowRight,
   RefreshCw,
+  Clock3,
+  CheckCircle2,
+  CircleAlert,
+  Landmark,
 } from "lucide-react";
 import { assessTuition, type DecisionRoute } from "../convex/tuitionDecision";
 import { convexApi, convexClient } from "./lib/convex";
@@ -48,6 +53,7 @@ export default function TuitionDecision(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [detailRoute, setDetailRoute] = useState<string | null>(null);
   const locked = paymentStatus !== "not_started";
   useEffect(() => {
     setDeadline(banking.tuitionDeadline ?? "");
@@ -129,76 +135,77 @@ export default function TuitionDecision(props: Props) {
     >
       <div className="tuition-decision-heading">
         <div>
-          <h2 id="tuition-decision-heading">Choose your payment route</h2>
-          <p>Set your deadline, then choose a payment route.</p>
+          <h2 id="tuition-decision-heading">Choose a route</h2>
         </div>
-        <span className="tuition-sandbox">USD → GBP · Sandbox</span>
+        <span className="tuition-sandbox">USD → GBP</span>
       </div>
-      <form
-        className="tuition-plan-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const plan = {
-            deadline,
-            bufferBusinessDays: Number(buffer),
-            protectedReserveGBP: Number(reserve),
-          };
-          void run(
-            () =>
-              props.onSave
-                ? props.onSave(plan)
-                : mutation("updateTuitionPlan", plan),
-            "Tuition plan saved.",
-          );
-        }}
-      >
-        <label>
-          Pay by (UTC date)
-          <DatePicker
-            label="Tuition deadline"
-            compact
-            value={deadline}
-            disabled={locked || busy}
-            onChange={setDeadline}
-          />
-        </label>
-        <details className="tuition-plan-options">
-          <summary>Living funds & timing</summary>
+      <div className="payment-plan-settings">
+        <form
+          className="tuition-plan-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const plan = {
+              deadline,
+              bufferBusinessDays: Number(buffer),
+              protectedReserveGBP: Number(reserve),
+            };
+            void run(
+              () =>
+                props.onSave
+                  ? props.onSave(plan)
+                  : mutation("updateTuitionPlan", plan),
+              "Tuition plan saved.",
+            );
+          }}
+        >
+          <label>
+            Deadline · UTC
+            <DatePicker
+              label="Tuition deadline"
+              compact
+              value={deadline}
+              disabled={locked || busy}
+              onChange={setDeadline}
+            />
+          </label>
           <div className="tuition-plan-option-fields">
-        <label>
-          Safety buffer (business days)
-          <Input
-            aria-label="Safety buffer in business days"
-            type="number"
-            min={0}
-            max={5}
-            step={1}
-            required
-            value={buffer}
-            disabled={locked || busy}
-            onChange={(e) => setBuffer(e.target.value)}
-          />
-        </label>
-        <label>
-          Protected living funds (GBP)
-          <Input
-            aria-label="Protected living funds in GBP"
-            type="number"
-            min={0}
-            max={1000000}
-            step="0.01"
-            required
-            value={reserve}
-            disabled={locked || busy}
-            onChange={(e) => setReserve(e.target.value)}
-          />
-        </label>
+            <label>
+              Buffer · business days
+              <Input
+                aria-label="Safety buffer in business days"
+                type="number"
+                min={0}
+                max={5}
+                step={1}
+                required
+                value={buffer}
+                disabled={locked || busy}
+                onChange={(e) => setBuffer(e.target.value)}
+              />
+            </label>
+            <label>
+              Living reserve · GBP
+              <Input
+                aria-label="Protected living funds in GBP"
+                type="number"
+                min={0}
+                max={1000000}
+                step="0.01"
+                required
+                value={reserve}
+                disabled={locked || busy}
+                onChange={(e) => setReserve(e.target.value)}
+              />
+            </label>
           </div>
-        </details>
-        <Button type="submit" disabled={locked || busy || !dirty || !deadline}>
-          Save plan
-        </Button>
-      </form>
+          <Button
+            type="submit"
+            disabled={locked || busy || !dirty || !deadline}
+          >
+            Save plan
+          </Button>
+        </form>
+      </div>
       {dirty && (
         <p className="tuition-plan-note">
           Save your changes to update the comparison and the AI’s
@@ -207,43 +214,61 @@ export default function TuitionDecision(props: Props) {
       )}
       {locked && (
         <p className="tuition-plan-note">
-          An existing proposal keeps its approved terms. Reset it in Review & pay before
-          changing the plan, refreshing quotes or choosing a route.
+          An existing proposal keeps its approved terms. Reset it in the payment
+          review before changing the plan, refreshing quotes or choosing a
+          route.
         </p>
       )}
       {decision && (
         <>
-          <div
-            className={`tuition-recommendation ${decision.recommendedRouteKey ? "ready" : "blocked"}`}
-            aria-label="Route recommendation"
-          >
-            <ShieldCheck size={21} />
-            <div>
-              <strong>
-                {decision.recommendedRouteKey
-                  ? "A route meets your plan"
-                  : "Update your plan to continue"}
-              </strong>
-              <p>{decision.explanation}</p>
+          {!decision.recommendedRouteKey && (
+            <div
+              className="tuition-recommendation blocked"
+              aria-label="Route recommendation"
+            >
+              <CircleAlert size={18} />
+              <strong>Check availability below</strong>
             </div>
-          </div>
+          )}
           <div className="tuition-route-list">
             {decision.routes.map((route) => (
-              <article className={`tuition-route ${props.selectedRoute === route.routeKey ? "selected" : ""}`} key={route.routeKey}>
+              <article
+                className={`tuition-route ${props.selectedRoute === route.routeKey ? "selected" : ""}`}
+                key={route.routeKey}
+              >
                 <div className="tuition-route-title">
-                  <strong>{route.provider}</strong>
+                  <strong>
+                    <Landmark size={17} />
+                    {route.provider}
+                  </strong>
                   <span>
-                    {route.eligible ? "Meets plan" : "Blocked"}
+                    {route.eligible ? (
+                      <CheckCircle2 size={14} />
+                    ) : (
+                      <CircleAlert size={14} />
+                    )}
                     {props.selectedRoute === route.routeKey
-                      ? " · Selected"
-                      : ""}
+                      ? "Selected"
+                      : route.eligible
+                        ? "Available"
+                        : "Unavailable"}
                   </span>
                 </div>
                 <div className="tuition-route-summary">
                   <strong>{usd(route.totalUSD)}</strong>
-                  <span>{route.estimatedArrival ? `Arrives ${route.estimatedArrival}` : "Set a deadline to estimate arrival"}</span>
+                  <span>
+                    <Clock3 size={14} />
+                    {route.estimatedArrival
+                      ? route.delivery
+                      : "Arrival unavailable"}
+                  </span>
                   <Button
                     variant="outline"
+                    aria-label={
+                      props.selectedRoute === route.routeKey
+                        ? "Selected"
+                        : `Choose ${route.provider}`
+                    }
                     size="sm"
                     disabled={
                       busy ||
@@ -257,59 +282,106 @@ export default function TuitionDecision(props: Props) {
                       void run(async () => {
                         if (!(await props.onSelect?.(route.routeKey)))
                           throw new Error("Could not select route");
-                      }, "Route selected. Ask the AI to prepare your tuition payment, then review and approve in Payments.")
+                      }, "Route selected.")
                     }
                   >
-                    {props.selectedRoute === route.routeKey ? "Selected" : `Choose ${route.provider}`}
+                    {props.selectedRoute === route.routeKey
+                      ? "Selected"
+                      : "Select"}
                     <ArrowRight size={15} />
                   </Button>
                 </div>
-                <details className="tuition-route-details">
-                  <summary>{route.eligible ? "Cost & timing details" : "Why is this unavailable?"}</summary>
-                <div className="tuition-route-facts">
-                  <div>
-                    <small>Total USD, including fee</small>
-                    <strong>{usd(route.totalUSD)}</strong>
-                  </div>
-                  <div>
-                    <small>Estimated arrival, with buffer</small>
-                    <strong>{route.estimatedArrival ?? "Unknown"}</strong>
-                  </div>
-                  <div>
-                    <small>Living funds after payment</small>
-                    <strong>
-                      {route.remainingGBP === null
-                        ? "Unknown"
-                        : `£${route.remainingGBP.toFixed(2)}`}
-                    </strong>
-                  </div>
-                </div>
-                {!route.eligible && (
-                  <ul className="tuition-blockers">
-                    {route.blockers.map((blocker) => (
-                      <li key={blocker}>{blocker}</li>
-                    ))}
-                  </ul>
-                )}
-                {route.minimumTopUpUSD !== null &&
-                  route.minimumTopUpUSD > 0 && (
-                    <p className="tuition-funding-gap">
-                      At least {usd(route.minimumTopUpUSD)} additional USD is
-                      needed to cover this payment and protect your reserve,
-                      using the current sandbox valuation. A sponsor promise
-                      does not count until funds arrive.
-                    </p>
-                  )}
-                  <small>{route.fresh ? "Quote valid until " + new Date(route.quoteExpiresAt!).toLocaleTimeString() : "Quote needs refresh"}</small>
-                </details>
+                <Dialog.Root
+                  open={detailRoute === route.routeKey}
+                  onOpenChange={(open) =>
+                    setDetailRoute(open ? route.routeKey : null)
+                  }
+                >
+                  <Dialog.Trigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="route-detail-button"
+                      aria-label={`Details for ${route.provider}`}
+                    >
+                      Details
+                    </Button>
+                  </Dialog.Trigger>
+                  <Dialog.Portal>
+                    <Dialog.Overlay className="brief-overlay" />
+                    <Dialog.Content className="brief-dialog tuition-route-details">
+                      <Dialog.Title>{route.provider}</Dialog.Title>
+                      <Dialog.Description>
+                        Rate, fees and availability for this quote.
+                      </Dialog.Description>
+                      <dl className="route-quick-facts">
+                        <div>
+                          <dt>
+                            Rate <InfoHelp term="Exchange rate" />
+                          </dt>
+                          <dd>{route.rateGBPPerUSD} GBP / USD</dd>
+                        </div>
+                        <div>
+                          <dt>
+                            Fees <InfoHelp term="Fees" />
+                          </dt>
+                          <dd>{usd(route.feeUSD)}</dd>
+                        </div>
+                      </dl>
+                      <div className="tuition-route-facts">
+                        <div>
+                          <small>
+                            Estimated arrival, with buffer{" "}
+                            <InfoHelp term="Arrival estimate" />
+                          </small>
+                          <strong>{route.estimatedArrival ?? "Unknown"}</strong>
+                        </div>
+                        <div>
+                          <small>Living funds after payment</small>
+                          <strong>
+                            {route.remainingGBP === null
+                              ? "Unknown"
+                              : `£${route.remainingGBP.toFixed(2)}`}
+                          </strong>
+                        </div>
+                      </div>
+                      {!route.eligible && (
+                        <ul className="tuition-blockers">
+                          {route.blockers.map((blocker) => (
+                            <li key={blocker}>{blocker}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {route.minimumTopUpUSD !== null &&
+                        route.minimumTopUpUSD > 0 && (
+                          <p className="tuition-funding-gap">
+                            At least {usd(route.minimumTopUpUSD)} additional USD
+                            is needed to cover this payment and protect your
+                            reserve, using the current sandbox valuation. A
+                            sponsor promise does not count until funds arrive.
+                          </p>
+                        )}
+                      <small>
+                        {route.fresh
+                          ? "Quote valid until " +
+                            new Date(route.quoteExpiresAt!).toLocaleTimeString()
+                          : "Quote needs refresh"}
+                      </small>
+                      <Dialog.Close asChild>
+                        <Button variant="outline">Close</Button>
+                      </Dialog.Close>
+                    </Dialog.Content>
+                  </Dialog.Portal>
+                </Dialog.Root>
               </article>
             ))}
           </div>
           <div className="tuition-decision-footer">
-            <details className="tuition-estimate-details"><summary>About these estimates</summary><p>Quotes and balances are simulated. Delivery estimates exclude bank holidays, bank cutoffs and university processing. The buffer adds planning time; it cannot guarantee arrival.</p></details>
+            <InfoHelp term="Provider quote" />
             <Button
               variant="ghost"
               size="sm"
+              aria-label="Refresh sandbox quotes"
               disabled={busy || locked}
               onClick={() =>
                 void run(
@@ -317,12 +389,12 @@ export default function TuitionDecision(props: Props) {
                     props.onRefresh
                       ? props.onRefresh()
                       : mutation("refreshSandboxQuotes", {}),
-                  "Sandbox quotes refreshed. These are illustrative rates.",
+                  "Quotes refreshed.",
                 )
               }
             >
               <RefreshCw size={14} />
-              Refresh sandbox quotes
+              Refresh
             </Button>
           </div>
         </>

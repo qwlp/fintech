@@ -141,13 +141,18 @@ describe("sponsor invitations", () => {
     expect(updated.commitment).toBe(1500);
     expect(updated.requests).toHaveLength(1);
     expect(updated.requests[0].amount).toBe(500);
-    expect(Object.keys(updated).sort()).toEqual([
-      "commitment",
-      "id",
-      "name",
-      "permissions",
-      "requests",
-    ]);
+    expect(Object.keys(updated).sort()).toEqual(
+      [
+        "commitment",
+        "financialOverview",
+        "id",
+        "name",
+        "permissions",
+        "requests",
+        "requestSummary",
+        "tuition",
+      ].sort(),
+    );
     expect(await other.client.query(api.sponsorLinks.dashboard, {})).toEqual(
       [],
     );
@@ -172,6 +177,84 @@ describe("sponsor invitations", () => {
       }),
     ).rejects.toThrow("Unknown sponsor permission");
     await student.client.mutation(api.sponsorLinks.disconnect, { id: link.id });
+    expect(await sponsor.client.query(api.sponsorLinks.dashboard, {})).toEqual(
+      [],
+    );
+  });
+});
+
+describe("permission-scoped financial overview", () => {
+  it("shares tuition only after consent and hides it immediately on revocation", async () => {
+    const { t, student, sponsor, other } = await fixture();
+    await student.client.mutation(api.accounts.initializePaymentSandbox, {
+      accountId: student.accountId,
+    });
+    await student.client.mutation(api.sponsorLinks.createInvite, {});
+    const invite = (await student.client.query(api.sponsorLinks.overview, {}))
+      .invite!;
+    await sponsor.client.mutation(api.sponsorLinks.connect, {
+      code: invite.code,
+    });
+    let [summary] = await sponsor.client.query(api.sponsorLinks.dashboard, {});
+    expect(summary.tuition).toBeNull();
+    expect(summary.requestSummary).toBeNull();
+    expect(summary.financialOverview).toBeNull();
+    await t.run((ctx) =>
+      ctx.db.insert("costs", {
+        accountId: student.accountId,
+        key: "rent",
+        name: "Rent",
+        category: "Arrival",
+        amount: 500,
+        due: "Arrival",
+        paid: true,
+      }),
+    );
+    await student.client.mutation(api.accounts.setSponsorPermission, {
+      accountId: student.accountId,
+      sponsorKey: String(sponsor.accountId),
+      permission: "Financial overview",
+      enabled: true,
+    });
+    const [sharedBudget] = await sponsor.client.query(
+      api.sponsorLinks.dashboard,
+      {},
+    );
+    expect(sharedBudget.financialOverview).toMatchObject({
+      plannedGBP: 500,
+      paidGBP: 500,
+    });
+    expect(sharedBudget.financialOverview).not.toHaveProperty("wallets");
+    await student.client.mutation(api.accounts.setSponsorPermission, {
+      accountId: student.accountId,
+      sponsorKey: String(sponsor.accountId),
+      permission: "Sponsored tuition",
+      enabled: true,
+    });
+    [summary] = await sponsor.client.query(api.sponsorLinks.dashboard, {});
+    expect(summary.tuition).toMatchObject({
+      amountGBP: 2000,
+      status: "not_started",
+      paidGBP: 0,
+      recentPayments: [],
+    });
+    expect(summary).not.toHaveProperty("wallets");
+    expect(summary).not.toHaveProperty("email");
+    expect(await other.client.query(api.sponsorLinks.dashboard, {})).toEqual(
+      [],
+    );
+    await student.client.mutation(api.accounts.setSponsorPermission, {
+      accountId: student.accountId,
+      sponsorKey: String(sponsor.accountId),
+      permission: "Sponsored tuition",
+      enabled: false,
+    });
+    expect(
+      (await sponsor.client.query(api.sponsorLinks.dashboard, {}))[0].tuition,
+    ).toBeNull();
+    await student.client.mutation(api.sponsorLinks.disconnect, {
+      id: summary.id,
+    });
     expect(await sponsor.client.query(api.sponsorLinks.dashboard, {})).toEqual(
       [],
     );
