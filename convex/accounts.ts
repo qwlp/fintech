@@ -1,4 +1,4 @@
-import { validateMoveSettings } from "../shared/move-planner";
+import { calculateMove, validateMoveSettings } from "../shared/move-planner";
 import { routeProviderName } from "../shared/payment-routes";
 import { isWorkspaceTool } from "../shared/agent-tools";
 import { runWorkspaceTool, resolveFundingChange } from "./agentTools";
@@ -1682,12 +1682,20 @@ export const saveMovePlan = mutation({
     arrivalDate: v.string(),
     excludedCosts: v.array(v.string()),
     budgetAmounts: v.any(),
-    plannerSettings: v.optional(v.object({
-      university: v.number(), housing: v.number(), flightOption: v.number(),
-      insuranceOption: v.number(), lifestyle: v.number(), depositMonths: v.number(),
-      contingency: v.number(), livingMode: v.union(v.literal("daily"), v.literal("monthly")),
-      fundingOption: v.number(), proofOption: v.number(),
-    })),
+    plannerSettings: v.optional(
+      v.object({
+        university: v.number(),
+        housing: v.number(),
+        flightOption: v.number(),
+        insuranceOption: v.number(),
+        lifestyle: v.number(),
+        depositMonths: v.number(),
+        contingency: v.number(),
+        livingMode: v.union(v.literal("daily"), v.literal("monthly")),
+        fundingOption: v.number(),
+        proofOption: v.number(),
+      }),
+    ),
   },
   handler: async (
     ctx,
@@ -1703,7 +1711,7 @@ export const saveMovePlan = mutation({
   ) => {
     const account = await requireAccount(ctx, accountId);
     if (account.role !== "Student") throw new Error("Student account required");
-    parseDeadline(arrivalDate);
+    if (arrivalDate) parseDeadline(arrivalDate);
     if (plannerSettings !== undefined) validateMoveSettings(plannerSettings);
     if (
       !Number.isInteger(months) ||
@@ -1743,6 +1751,59 @@ export const saveMovePlan = mutation({
     };
     if (row) await ctx.db.patch(row._id, { value });
     else await ctx.db.insert("appConfig", { accountId, key: "move", value });
+    // The saved planner is the study budget used by the dashboard and agent.
+    // Replace the previous breakdown atomically so estimates are never added twice.
+    if (plannerSettings !== undefined) {
+      const plan = calculateMove(
+        budgetAmounts,
+        months,
+        plannerSettings,
+        excludedCosts,
+      );
+      const existing = await ctx.db
+        .query("costs")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .collect();
+      const keys = [
+        "flight",
+        "visa",
+        "tuition",
+        "housing",
+        "insurance",
+        "books",
+        "settling",
+        "living",
+        "contingency",
+      ];
+      const retained = new Set<string>();
+      for (const [index, item] of plan.breakdown.entries()) {
+        if (item.amount <= 0) continue;
+        const key = keys[index];
+        const previous = existing.find((cost) => cost.key === key);
+        const cost = {
+          key,
+          name: item.name,
+          amount: item.amount,
+          category: ["tuition", "housing", "living"].includes(key)
+            ? "Recurring"
+            : key === "contingency"
+              ? "Safety"
+              : key === "settling"
+                ? "Arrival"
+                : "Pre-departure",
+          due: ["housing", "living"].includes(key)
+            ? `Over ${months} months`
+            : arrivalDate,
+        };
+        if (previous) {
+          await ctx.db.patch(previous._id, cost);
+          retained.add(previous._id);
+        } else
+          await ctx.db.insert("costs", { accountId, ...cost, paid: false });
+      }
+      for (const cost of existing)
+        if (!retained.has(cost._id)) await ctx.db.delete(cost._id);
+    }
   },
 });
 

@@ -23,6 +23,11 @@ for (const width of [390, 1440]) {
       "Security",
     ]) {
       await page
+        .getByRole("navigation", { name: "Preview sections" })
+        .getByRole("button", { name: section, exact: true })
+        .click();
+      await expect(page.locator(".section-help-trigger")).toHaveCount(1);
+      await page
         .getByRole("button", { name: `About ${section}`, exact: true })
         .click();
       const help = page.getByRole("dialog", {
@@ -41,6 +46,10 @@ for (const width of [390, 1440]) {
     await page.evaluate(
       () => (document.documentElement.dataset.theme = "dark"),
     );
+    await page
+      .getByRole("navigation", { name: "Preview sections" })
+      .getByRole("button", { name: "Payments", exact: true })
+      .click();
     await page
       .getByRole("button", { name: "About Payments", exact: true })
       .click();

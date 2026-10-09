@@ -32,6 +32,7 @@ import {
 import profiles from "../shared/move-planner-data.json";
 import {
   calculateMove,
+  moveFields,
   migrateMoveAmounts,
   defaultMoveSettings,
   type MoveSettings,
@@ -185,13 +186,14 @@ const insurance = [
   [3885, 2750],
 ];
 export default function MovePlanner({
+  go,
   studyCountry,
   university,
   annualTuition = 0,
   config,
   accountId,
 }: {
-  go: (page: "AI Agent") => void;
+  go: (page: "AI Agent" | "Dashboard") => void;
   studyCountry?: string;
   university?: string;
   annualTuition?: number;
@@ -294,6 +296,32 @@ export default function MovePlanner({
     }
   }, [config, initialUniversity, annualTuition, currency]);
   const total = calculateMove(amounts, months, settings, excluded);
+  const signature = (
+    planMonths: number,
+    planDate: string,
+    planAmounts: Partial<Record<MoveField, number>>,
+    planSettings: MoveSettings,
+    planExcluded: string[],
+  ) =>
+    JSON.stringify([
+      planMonths,
+      planDate,
+      moveFields.map((key) => planAmounts[key] ?? 0),
+      Object.keys(defaultMoveSettings).map(
+        (key) => planSettings[key as keyof MoveSettings],
+      ),
+      [...planExcluded].sort(),
+    ]);
+  const hasUnsavedChanges =
+    !config?.plannerSettings ||
+    signature(months, date, amounts, settings, excluded) !==
+      signature(
+        config.months ?? 12,
+        config.arrivalDateISO ?? "",
+        config.budgetAmounts ?? {},
+        config.plannerSettings,
+        config.excludedCosts ?? [],
+      );
   const group = groups.find((g) => g.name === category);
   const CategoryIcon =
     categoryIcons[
@@ -383,7 +411,7 @@ export default function MovePlanner({
         </div>
         <DatePicker
           className="planner-date-picker"
-          label="Planned arrival"
+          label="Arrival date (optional)"
           value={date}
           onChange={setDate}
         />
@@ -847,46 +875,56 @@ export default function MovePlanner({
       </section>
       <div className="planner-save-bar">
         <div className="planner-save-summary">
-          <span>Your first-year budget</span>
+          <span>First-year budget</span>
           <strong>
             {money(total.total)} <small>{currency}</small>
           </strong>
         </div>
         <div className="planner-save-action">
-          <Button
-            disabled={saving || !accountId || !date}
-            onClick={async () => {
-              if (!convexClient || !accountId) return;
-              setSaving(true);
-              setMessage("");
-              try {
-                await convexClient.mutation(convexApi.saveMovePlan, {
-                  accountId: accountId as any,
-                  months,
-                  selectedRoute: settings.flightOption,
-                  arrivalDate: date,
-                  excludedCosts: excluded,
-                  budgetAmounts: amounts,
-                  plannerSettings: settings,
-                });
-                setMessage("Move plan saved.");
-              } catch {
-                setMessage("Could not save. Check your amounts and try again.");
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
-            <Save size={16} aria-hidden="true" />
-            {saving ? "Saving…" : "Save move plan"}
-          </Button>
-          {!date && (
-            <p className="move-help">
-              <CalendarDays size={14} aria-hidden="true" />
-              Set arrival date to save
-            </p>
+          <p role="status">
+            {message && message !== "Move plan saved."
+              ? message
+              : saving
+                ? "Saving…"
+                : hasUnsavedChanges
+                  ? "Unsaved changes"
+                  : "Saved"}
+          </p>
+          {!hasUnsavedChanges && !saving ? (
+            <Button onClick={() => go("Dashboard")}>
+              View dashboard <ArrowRight size={16} />
+            </Button>
+          ) : (
+            <Button
+              disabled={saving || !accountId}
+              onClick={async () => {
+                if (!convexClient || !accountId) return;
+                setSaving(true);
+                setMessage("");
+                try {
+                  await convexClient.mutation(convexApi.saveMovePlan, {
+                    accountId: accountId as any,
+                    months,
+                    selectedRoute: settings.flightOption,
+                    arrivalDate: date,
+                    excludedCosts: excluded,
+                    budgetAmounts: amounts,
+                    plannerSettings: settings,
+                  });
+                  setMessage("Move plan saved.");
+                } catch {
+                  setMessage(
+                    "Could not save. Check your amounts and try again.",
+                  );
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              <Save size={16} aria-hidden="true" />
+              {saving ? "Saving…" : "Save move plan"}
+            </Button>
           )}
-          {message && <p role="status">{message}</p>}
         </div>
       </div>
       <Button

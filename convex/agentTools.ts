@@ -308,10 +308,6 @@ export async function runWorkspaceTool(
       budgetAmounts,
       plannerSettings: settings,
     };
-    if (!patch.arrivalDate)
-      throw new Error(
-        "Provide your arrival date (YYYY-MM-DD) to save the Move Planner",
-      );
     await ctx.runMutation(api.accounts.saveMovePlan, patch);
     changes = {
       months: patch.months,

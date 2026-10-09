@@ -35,6 +35,16 @@
   padding: 10px 0 0;
   min-width: 0;
 }
+.budget-setup {
+  margin-top: 16px;
+}
+.budget-setup p {
+  max-width: 540px;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
 .visual-dashboard h3 {
   margin: 0;
   font-size: 16px;
@@ -592,6 +602,144 @@
     height: 230px;
   }
   .budget-category > svg {
+    display: none;
+  }
+}
+
+/* Keep the chart and its legend together, with funding as a compact summary. */
+.visual-dashboard .budget-funding-grid {
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.visual-dashboard .visual-budget,
+.visual-dashboard .visual-funding {
+  padding: 24px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+.visual-dashboard .visual-card-head {
+  margin-bottom: 24px;
+}
+.budget-breakdown {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+.visual-dashboard .spending-chart {
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+.visual-dashboard .spending-donut {
+  width: 180px;
+  height: 180px;
+}
+.visual-dashboard .donut-total strong {
+  font-size: 20px;
+}
+.visual-dashboard .donut-total span {
+  font-size: 11px;
+}
+.visual-dashboard .spending-chart figcaption {
+  color: var(--color-muted);
+  font-size: 12px;
+  text-align: center;
+}
+.visual-dashboard .budget-table-head,
+.visual-dashboard .budget-table-row {
+  grid-template-columns: minmax(0, 1fr) 76px 80px;
+  gap: 12px;
+}
+.visual-dashboard .budget-table-row {
+  min-height: 48px;
+}
+.visual-dashboard .budget-category {
+  gap: 8px;
+  line-height: 1.4;
+}
+.visual-dashboard .budget-share-track {
+  min-width: 24px;
+}
+.funding-coverage-summary {
+  margin-bottom: 24px;
+}
+.funding-coverage-summary > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.funding-coverage-summary strong {
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.funding-coverage-summary span {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.funding-coverage-track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--color-line);
+  overflow: hidden;
+}
+.funding-coverage-track i {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: inherit;
+}
+.visual-dashboard .funding-gap {
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-background);
+}
+.visual-dashboard .funding-gap > div {
+  align-items: baseline;
+}
+.visual-dashboard .funding-gap strong {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.visual-dashboard .funding-gap button {
+  margin-top: 8px;
+  padding-bottom: 0;
+}
+@media (max-width: 1200px) {
+  .budget-breakdown {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+@media (max-width: 900px) {
+  .visual-dashboard .budget-funding-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .budget-breakdown {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .visual-dashboard .visual-budget,
+  .visual-dashboard .visual-funding {
+    padding: 18px;
+  }
+  .budget-breakdown {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .visual-dashboard .budget-table-head,
+  .visual-dashboard .budget-table-row {
+    grid-template-columns: minmax(0, 1fr) 38px 72px;
+    gap: 8px;
+  }
+  .visual-dashboard .budget-share-track {
     display: none;
   }
 }

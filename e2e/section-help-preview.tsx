@@ -13,35 +13,21 @@ const sections = [
   "Sponsors",
   "Security",
 ];
-createRoot(document.getElementById("root")).render(
-  React.createElement(
-    "aside",
-    {
-      className: "sidebar sidebar-clean open",
-      style: {
-        position: "fixed",
-        left: 0,
-        top: 0,
-        width: 280,
-        height: "100dvh",
-        transform: "none",
-      },
-    },
-    React.createElement(
-      "nav",
-      { "aria-label": "Main navigation" },
-      sections.map((section) =>
-        React.createElement(
-          "div",
-          { className: "sidebar-section", key: section },
-          React.createElement(
-            "button",
-            { onClick: () => (location.hash = section) },
-            section,
-          ),
-          React.createElement(SectionHelp, { section }),
-        ),
-      ),
-    ),
-  ),
-);
+function Preview() {
+  const [section, setSection] = React.useState("Dashboard");
+  return (
+    <main style={{ padding: 24 }}>
+      <div className="page-help-tools">
+        <SectionHelp key={section} section={section} />
+      </div>
+      <nav aria-label="Preview sections">
+        {sections.map((item) => (
+          <button key={item} onClick={() => setSection(item)}>
+            {item}
+          </button>
+        ))}
+      </nav>
+    </main>
+  );
+}
+createRoot(document.getElementById("root")).render(<Preview />);

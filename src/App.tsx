@@ -1,4 +1,5 @@
 import MovePlanner from "./MovePlanner";
+import { calculateMove } from "../shared/move-planner";
 export { default as MovePlanner } from "./MovePlanner";
 import {
   WorkspaceCurrencyProvider,
@@ -30,7 +31,6 @@ import { Assistant, ChatHistory } from "./Chat";
 import type { Id } from "../convex/_generated/dataModel";
 import BudgetDonut, {
   planChartColors,
-  FundingSourcesChart,
 } from "./BudgetDonut";
 import Brand from "./Brand";
 import PaymentWorkspace from "./PaymentWorkspace";
@@ -785,7 +785,6 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                     <Icon size={19} />
                     <span>{item}</span>
                   </button>
-                  <SectionHelp section={item} />
                 </div>
               ))}
           </nav>
@@ -896,6 +895,12 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             >
+              {(page !== "AI Agent" || showChatHistory) &&
+                !["Payments", "Wallet", "Exchange"].includes(page) && (
+                  <div className="page-help-tools">
+                    <SectionHelp key={page} section={page} />
+                  </div>
+                )}
               {page === "Dashboard" && (
                 <Dashboard
                   paid={paid}
@@ -936,7 +941,10 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                 <MovePlanner
                   studyCountry={account?.countryTo}
                   university={account?.university}
-                  annualTuition={database?.costs?.find(cost => cost.key === "tuition")?.amount ?? 0}
+                  annualTuition={
+                    database?.costs?.find((cost) => cost.key === "tuition")
+                      ?.amount ?? 0
+                  }
                   go={go}
                   config={database?.config?.move}
                   accountId={account?._id}
@@ -976,6 +984,11 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                 ))}
               {["Payments", "Wallet", "Exchange"].includes(page) && (
                 <PaymentWorkspace
+                  help={
+                    <div className="page-help-tools">
+                      <SectionHelp key={page} section={page} />
+                    </div>
+                  }
                   initialView={
                     page === "Wallet"
                       ? "balances"
@@ -1061,7 +1074,9 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                 />
               )}
               {page === "Security" && (
-                <Security audit={audit} config={database?.config?.security}
+                <Security
+                  audit={audit}
+                  config={database?.config?.security}
                   receipts={
                     <PaymentEvidence
                       accountId={account?._id}
@@ -1435,45 +1450,37 @@ function OverviewDashboard({
   const currency = useWorkspaceCurrency();
   const formatMoney = useWorkspaceMoney();
 
-  const categoryIcon = (name: string) => {
-    const label = name.toLowerCase();
-    if (label.includes("tuition")) return GraduationCap;
-    if (label.includes("visa")) return ShieldCheck;
-    if (label.includes("flight")) return Plane;
-    if (label.includes("rent") || label.includes("housing")) return Home;
-    if (label.includes("emergency")) return ShieldCheck;
-    return ReceiptText;
-  };
   const planCosts = database?.costs ?? costs;
   const { sources: planFunding, total: fundedTotal } = resolvePlanFunding(
     database?.funding ?? funding,
     database?.config?.profile?.fundingAmount,
   );
   const planTotal = planCosts.reduce((sum, item) => sum + item.amount, 0);
+  const hasBudget = planTotal > 0;
   const confirmed = planFunding.filter((item) => item.status === "confirmed");
   const gap = fundingGap(planTotal, fundedTotal);
   const coverage = fundingCoverage(planTotal, fundedTotal);
-  const fundingChartData = [
-    ...planFunding.map((item, index) => ({
-      name: item.name,
-      amount: item.amount,
-      color:
-        item.status === "confirmed"
-          ? planChartColors[index % planChartColors.length]
-          : "#94a3b8",
-    })),
-    ...(gap > 0
-      ? [{ name: "Still to fund", amount: gap, color: "#c47e6a" }]
-      : []),
-  ];
-  const monthlyEssentials =
-    planCosts
-      .filter(
-        (item) =>
-          item.category === "Recurring" &&
-          !item.name.toLowerCase().includes("tuition"),
+  const move = database?.config?.move;
+  const savedMove = move?.plannerSettings
+    ? calculateMove(
+        move.budgetAmounts ?? {},
+        move.months ?? 12,
+        move.plannerSettings,
+        move.excludedCosts ?? [],
       )
-      .reduce((sum, item) => sum + item.amount, 0) / 12;
+    : null;
+  const monthlyEssentials = savedMove
+    ? savedMove.monthly +
+      (move.excludedCosts?.includes("rent")
+        ? 0
+        : (move.budgetAmounts?.rent ?? 0))
+    : planCosts
+        .filter(
+          (item) =>
+            item.category === "Recurring" &&
+            !item.name.toLowerCase().includes("tuition"),
+        )
+        .reduce((sum, item) => sum + item.amount, 0) / 12;
   const liquidSavings = confirmed
     .filter((item) => item.type.toLowerCase() === "savings")
     .reduce((sum, item) => sum + item.amount, 0);
@@ -1513,33 +1520,55 @@ function OverviewDashboard({
           <h3 id="funding-heading">Study plan funding</h3>
           <div className="funding-amount">
             <strong>{formatMoney(fundedTotal)}</strong>
-            <span>of {formatMoney(planTotal)}</span>
-          </div>
-          <div className="funding-progress-label">
-            <span>{Math.round(coverage)}% funded</span>
             <span>
-              {gap > 0
-                ? `${formatMoney(gap)} left to fund`
-                : "Funding goal reached"}
+              {hasBudget ? `of ${formatMoney(planTotal)}` : "confirmed funding"}
             </span>
           </div>
-          <div
-            className="funding-progress"
-            role="progressbar"
-            aria-label="Study plan funded"
-            aria-valuenow={Math.round(coverage)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <i style={{ width: `${coverage}%` }} />
+          <div className="funding-progress-label">
+            <span>
+              {hasBudget ? `${Math.round(coverage)}% funded` : "Budget not set"}
+            </span>
+            <span>
+              {!hasBudget
+                ? "Set your budget to calculate funding progress"
+                : gap > 0
+                  ? `${formatMoney(gap)} left to fund`
+                  : "Funding goal reached"}
+            </span>
           </div>
+          {hasBudget && (
+            <div
+              className="funding-progress"
+              role="progressbar"
+              aria-label="Study plan funded"
+              aria-valuenow={Math.round(coverage)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <i style={{ width: `${coverage}%` }} />
+            </div>
+          )}
+          {!hasBudget && (
+            <div className="budget-setup">
+              <p>
+                Your funding is saved. Add tuition, housing and living costs in
+                the Move Planner to see your target and any funding gap.
+              </p>
+              <button
+                className="dashboard-primary"
+                onClick={() => go("Move Planner")}
+              >
+                Set your budget <ArrowRight size={16} />
+              </button>
+            </div>
+          )}
           <dl className="plan-facts">
             <div>
               <dt>
                 <Clock3 size={15} /> Savings runway
               </dt>
               <dd>
-                {monthlyEssentials > 0
+                {monthlyEssentials > 0 && liquidSavings > 0
                   ? runway(liquidSavings, monthlyEssentials).toFixed(1)
                   : "—"}
                 <span> months</span>
@@ -1549,7 +1578,9 @@ function OverviewDashboard({
               <dt>
                 <WalletCards size={15} /> Monthly essentials
               </dt>
-              <dd>{formatMoney(monthlyEssentials)}</dd>
+              <dd>
+                {monthlyEssentials > 0 ? formatMoney(monthlyEssentials) : "—"}
+              </dd>
             </div>
           </dl>
         </section>
@@ -1588,103 +1619,108 @@ function OverviewDashboard({
           <div className="visual-card-head">
             <h3 id="budget-heading">Planned spending</h3>
             <button onClick={() => go("Move Planner")}>
-              Edit plan <ArrowRight size={15} />
+              {hasBudget ? "Edit plan" : "Create plan"} <ArrowRight size={15} />
             </button>
           </div>
-          <figure
-            className="spending-chart"
-            aria-label={`Spending breakdown. Total budget ${formatMoney(planTotal)}. Category amounts and percentages follow below.`}
-          >
-            <div className="spending-donut">
-              {planTotal > 0 ? (
-                <BudgetDonut currency={currency} costs={planCosts} />
-              ) : (
-                <div className="empty-donut" />
-              )}
-              <div className="donut-total">
-                <span>Total budget</span>
-                <strong>{formatMoney(planTotal)}</strong>
-                <span>Study plan</span>
-              </div>
-            </div>
-            <figcaption>
-              <strong>Where your money goes</strong>
-              <span>Each slice shows a category’s share of your plan.</span>
-            </figcaption>
-          </figure>
-          <div
-            className="budget-table"
-            role="table"
-            aria-label="Planned spending by category"
-          >
-            <div className="budget-table-head" role="row">
-              <span role="columnheader">Category</span>
-              <span role="columnheader">Share of plan</span>
-              <span role="columnheader">Budget</span>
-            </div>
-            {planCosts.map((item, index) => {
-              const Icon = categoryIcon(item.name);
-              const share = planTotal > 0 ? (item.amount / planTotal) * 100 : 0;
-              const isPaid = item.paid || (paid && item === tuition);
-              return (
-                <div className="budget-table-row" role="row" key={item.name}>
-                  <span className="budget-category" role="cell">
-                    <span
-                      className="chart-legend-dot"
-                      style={{
-                        background:
-                          planChartColors[index % planChartColors.length],
-                      }}
-                      aria-hidden="true"
-                    />
-                    <Icon size={18} />
-                    <span>{item.name}</span>
-                    {isPaid && (
-                      <Check
-                        size={14}
-                        aria-label="Paid"
-                        className="budget-paid"
-                      />
-                    )}
+          <div className="budget-breakdown">
+            <figure
+              className="spending-chart"
+              aria-label={`Spending breakdown. Total budget ${formatMoney(planTotal)}. Category amounts and percentages follow below.`}
+            >
+              <div className="spending-donut">
+                {planTotal > 0 ? (
+                  <BudgetDonut currency={currency} costs={planCosts} />
+                ) : (
+                  <div className="empty-donut" />
+                )}
+                <div className="donut-total">
+                  <span>Total budget</span>
+                  <strong>{hasBudget ? formatMoney(planTotal) : "—"}</strong>
+                  <span>
+                    {hasBudget
+                      ? `${move?.months ?? 12}-month plan`
+                      : "Budget not set"}
                   </span>
-                  <span className="budget-distribution" role="cell">
-                    <span>{Math.round(share)}%</span>
-                  </span>
-                  <strong role="cell">{formatMoney(item.amount)}</strong>
                 </div>
-              );
-            })}
-            <div className="budget-table-total" role="row">
-              <span role="rowheader">Total</span>
-              <strong role="cell">{formatMoney(planTotal)}</strong>
+              </div>
+              {!hasBudget && (
+                <figcaption>Add costs in the Move Planner.</figcaption>
+              )}
+            </figure>
+            <div
+              className="budget-table"
+              role="table"
+              aria-label="Planned spending by category"
+            >
+              <div className="budget-table-head" role="row">
+                <span role="columnheader">Category</span>
+                <span role="columnheader">Share</span>
+                <span role="columnheader">Budget</span>
+              </div>
+              {planCosts.map((item, index) => {
+                const share =
+                  planTotal > 0 ? (item.amount / planTotal) * 100 : 0;
+                const isPaid = item.paid || (paid && item === tuition);
+                return (
+                  <div className="budget-table-row" role="row" key={item.name}>
+                    <span className="budget-category" role="cell">
+                      <span
+                        className="chart-legend-dot"
+                        style={{
+                          background:
+                            planChartColors[index % planChartColors.length],
+                        }}
+                        aria-hidden="true"
+                      />
+                      <span>{item.name}</span>
+                      {isPaid && (
+                        <Check
+                          size={14}
+                          aria-label="Paid"
+                          className="budget-paid"
+                        />
+                      )}
+                    </span>
+                    <span className="budget-distribution" role="cell">
+                      <span className="budget-share-track" aria-hidden="true">
+                        <i
+                          style={{
+                            width: `${share}%`,
+                            background:
+                              planChartColors[index % planChartColors.length],
+                          }}
+                        />
+                      </span>
+                      <span>{Math.round(share)}%</span>
+                    </span>
+                    <strong role="cell">{formatMoney(item.amount)}</strong>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
         <section className="visual-funding" aria-labelledby="sources-heading">
           <div className="visual-card-head">
             <h3 id="sources-heading">Funding sources</h3>
-            <button onClick={() => go("Sponsors")}>
+            <button onClick={() => go("Profile")}>
               Manage <ArrowRight size={15} />
             </button>
           </div>
-          {fundingChartData.length > 0 && (
-            <figure
-              className="funding-comparison"
-              aria-label="Funding source amounts compared with the remaining funding gap. Exact amounts and confirmation statuses follow below."
-            >
-              <figcaption>
-                <strong>How your plan is funded</strong>
-                <span>Funding sources and the remaining gap · {currency}</span>
-              </figcaption>
-              <div
-                className="funding-bar-chart"
-                style={{
-                  height: Math.max(250, fundingChartData.length * 56 + 40),
-                }}
-              >
-                <FundingSourcesChart data={fundingChartData} />
+          {hasBudget && (
+            <div className="funding-coverage-summary">
+              <div>
+                <strong>{Math.round(coverage)}%</strong>
+                <span>of budget covered</span>
               </div>
-            </figure>
+              <div
+                className="funding-coverage-track"
+                role="img"
+                aria-label={`${Math.round(coverage)}% confirmed, ${formatMoney(gap)} still to fund`}
+              >
+                <i style={{ width: `${coverage}%` }} />
+              </div>
+            </div>
           )}
           <div className="funding-source-list">
             {planFunding.map((item) => (
@@ -1713,7 +1749,7 @@ function OverviewDashboard({
                 <strong>{formatMoney(gap)}</strong>
               </div>
               <button onClick={() => go("AI Agent")}>
-                Explore funding options <ArrowRight size={15} />
+                Find funding <ArrowRight size={15} />
               </button>
             </div>
           )}

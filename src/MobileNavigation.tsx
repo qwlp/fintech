@@ -5,7 +5,6 @@ import {
   Route,
   UserRound,
 } from "lucide-react";
-import SectionHelp from "./SectionHelp";
 import "./mobile-navigation.css";
 export default function MobileNavigation({
   page,
@@ -45,7 +44,6 @@ export default function MobileNavigation({
                 <Icon size={20} />
                 <span>{label}</span>
               </button>
-              {active && <SectionHelp key={page} section={page} />}
             </div>
           );
         })}

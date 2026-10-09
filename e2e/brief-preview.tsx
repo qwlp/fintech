@@ -1,3 +1,4 @@
+import SectionHelp from "../src/SectionHelp";
 import MobileNavigation from "../src/MobileNavigation";
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
@@ -34,6 +35,18 @@ function Preview() {
             </button>
           ))}
         </nav>
+        <div className="page-help-tools">
+          <SectionHelp
+            key={view}
+            section={
+              view === "Planner"
+                ? "Move Planner"
+                : view === "Agent"
+                  ? "AI Agent"
+                  : "Profile"
+            }
+          />
+        </div>
         {view === "Planner" && (
           <MovePlanner
             go={() => {}}

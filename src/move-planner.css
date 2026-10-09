@@ -472,7 +472,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 #move-planner .planner-save-action > button {
   height: 40px;

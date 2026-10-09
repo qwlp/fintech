@@ -21,6 +21,7 @@ import "./tuition-decision.css";
 import "./brief.css";
 import "./payment-compact.css";
 export default function PaymentWorkspace({
+  help,
   plan,
   review,
   balances,
@@ -33,6 +34,7 @@ export default function PaymentWorkspace({
   initialView = "tuition",
   onEdit,
 }: {
+  help?: ReactNode;
   plan: ReactNode;
   review: ReactNode;
   balances?: ReactNode;
@@ -81,9 +83,12 @@ export default function PaymentWorkspace({
             <h1>Payments</h1>
           </div>
         </div>
-        <span className="payment-workspace-sandbox">
-          <ShieldCheck size={14} /> Sandbox · No real funds
-        </span>
+        <div className="payment-heading-actions">
+          <span className="payment-workspace-sandbox">
+            <ShieldCheck size={14} /> Sandbox · No real funds
+          </span>
+          {help}
+        </div>
       </div>
       <Tabs value={view} onValueChange={setView}>
         <TabsList

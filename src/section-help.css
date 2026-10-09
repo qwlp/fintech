@@ -10,28 +10,54 @@
 .sidebar.sidebar-clean nav .sidebar-section > button:first-child {
   flex: 1;
   min-width: 0;
-  padding-right: 44px;
 }
-.sidebar.sidebar-clean nav .sidebar-section .section-help-trigger {
+.page-help-tools {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+.app-clean .page-view {
+  position: relative;
+}
+.page-view > .page-help-tools {
   position: absolute;
-  right: 2px;
+  top: 0;
+  right: 0;
+  z-index: 5;
+}
+:root[data-theme] .app-clean .page-view:has(> .page-help-tools)
+  :is(
+    .consumer-welcome,
+    .move-board-header,
+    .page-intro,
+    .chat-history-heading
+  ) {
+  margin-right: 56px;
+}
+.payment-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.page-help-tools .section-help-trigger {
   display: grid;
   place-items: center;
   width: 40px;
-  height: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--ui-muted);
-  opacity: 0.65;
+  height: 40px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-muted);
   cursor: pointer;
 }
-.sidebar.sidebar-clean nav .section-help-trigger:hover,
-.sidebar.sidebar-clean nav .section-help-trigger[data-state="open"] {
-  opacity: 1;
+.page-help-tools .section-help-trigger:hover,
+.page-help-tools .section-help-trigger[data-state="open"] {
   color: var(--color-ink);
   background: var(--color-surface-soft);
+}
+.page-help-tools .section-help-trigger:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 .section-help-popover {
   z-index: 350;
@@ -79,8 +105,11 @@
   outline-offset: 2px;
 }
 @media (pointer: coarse) {
-  .sidebar.sidebar-clean nav .sidebar-section .section-help-trigger {
+  .page-help-tools .section-help-trigger {
     width: 44px;
-    opacity: 0.8;
+    height: 44px;
   }
+}
+.page-view:has(> .page-help-tools) #profile-workspace > .page-intro {
+  margin-right: 56px;
 }
