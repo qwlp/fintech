@@ -22,6 +22,8 @@ import UniversitySelect from "./UniversitySelect";
 import { countries, getCountry } from "../shared/study";
 import SetupCountrySelect from "./SetupCountrySelect";
 import "./brief.css";
+import "./security.css";
+import "./profile.css";
 import { createPortal } from "react-dom";
 import SponsorConnect from "./SponsorConnect";
 import { Assistant, ChatHistory } from "./Chat";
@@ -60,6 +62,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Activity,
+  Download,
   ArrowRight,
   ArrowLeft,
   ArrowLeftRight,
@@ -1494,9 +1497,6 @@ function OverviewDashboard({
             {greeting}, {database?.account.name.split(" ")[0] ?? "there"}
           </h2>
         </div>
-        <button onClick={() => go("AI Agent")}>
-          <Sparkles size={16} /> Ask your agent
-        </button>
       </section>
 
       <div className="overview-top">
@@ -1715,14 +1715,6 @@ function OverviewDashboard({
         </section>
       </div>
       <nav className="dashboard-shortcuts" aria-label="Dashboard actions">
-        <button onClick={() => go("Payments")}>
-          <Send size={17} />
-          Send money
-        </button>
-        <button onClick={() => go("Sponsors")}>
-          <UsersRound size={17} />
-          Invite a sponsor
-        </button>
         <button onClick={() => go("Exchange")}>
           <Route size={17} />
           Compare transfer routes
@@ -2880,6 +2872,17 @@ export function Profile({
     income: config?.sponsorSupport ?? "",
     funding: String(totals.funded),
   });
+  const profileFieldIcons = {
+    name: UserRound,
+    home: Home,
+    study: MapPin,
+    university: Landmark,
+    course: GraduationCap,
+    start: CalendarDays,
+    status: TrendingUp,
+    income: UsersRound,
+    funding: WalletCards,
+  };
   const update = (key: keyof typeof profile, value: string) =>
     setProfile((current) => ({
       ...current,
@@ -2912,10 +2915,16 @@ export function Profile({
     });
   }, [account, config, totals.funded, editing]);
   return (
-    <div className="page-stack profile-page">
+    <div
+      id="profile-workspace"
+      className={`page-stack profile-page ${editing ? "profile-editing" : "profile-reading"}`}
+    >
       <section className="page-intro">
         <div>
-          <h2>Profile</h2>
+          <h2>
+            <UserRound size={22} aria-hidden="true" />
+            Profile
+          </h2>
         </div>
         <div className="profile-edit-actions">
           {editing && (
@@ -2929,6 +2938,7 @@ export function Profile({
           )}
           <button
             className="primary"
+            aria-label={editing ? "Save profile" : "Edit profile"}
             disabled={saving}
             onClick={async () => {
               if (editing) {
@@ -2953,11 +2963,13 @@ export function Profile({
           >
             {editing ? (
               <>
-                <Check /> {saving ? "Saving…" : "Save profile"}
+                <Check aria-hidden="true" /><span className="profile-label-desktop">{saving ? "Saving…" : "Save profile"}</span><span className="profile-label-mobile">{saving ? "Saving…" : "Save"}</span>
               </>
             ) : (
               <>
-                <Settings /> Edit profile
+                <Settings aria-hidden="true" />
+                <span className="profile-label-desktop">Edit profile</span>
+                <span className="profile-label-mobile">Edit</span>
               </>
             )}
           </button>
@@ -2965,10 +2977,17 @@ export function Profile({
       </section>
       <div className="profile-secondary-nav">
         <Button variant="outline" onClick={() => go("Sponsors")}>
+          <UsersRound size={16} aria-hidden="true" />
           Sponsors
         </Button>
-        <Button variant="outline" onClick={() => go("Security")}>
-          Security & activity
+        <Button
+          variant="outline"
+          aria-label="Security & activity"
+          onClick={() => go("Security")}
+        >
+          <ShieldCheck size={16} aria-hidden="true" />
+          <span className="profile-label-desktop">Security & activity</span>
+          <span className="profile-label-mobile">Security</span>
         </Button>
       </div>
       <section className="profile-hero">
@@ -2979,9 +2998,13 @@ export function Profile({
           <span>
             <MapPin /> {profile.home} <ArrowRight /> {profile.study}
           </span>
-          <p className="setup-directory-note">
-            Home: {getCountry(profile.home)?.currency ?? "—"} · Study:{" "}
-            {getCountry(profile.study)?.currency ?? "—"} · Budget:{" "}
+          <p
+            className="setup-directory-note profile-currencies"
+            aria-label="Home and study currencies"
+          >
+            <WalletCards size={13} aria-hidden="true" />
+            {getCountry(profile.home)?.currency ?? "—"}
+            <ArrowRight size={12} aria-hidden="true" />
             {getCountry(profile.study)?.currency ?? currency}
           </p>
         </div>
@@ -2990,7 +3013,10 @@ export function Profile({
         <section className="profile-section">
           <div className="section-heading">
             <div>
-              <h3>Study details</h3>
+              <h3>
+                <GraduationCap size={18} aria-hidden="true" />
+                Study
+              </h3>
             </div>
           </div>
           <div className="field-grid">
@@ -3008,46 +3034,65 @@ export function Profile({
                 ([key]) =>
                   editing || !["name", "home", "study", "status"].includes(key),
               )
-              .map(([key, label]) => (
-                <div className="setup-field" key={key}>
-                  {!(
-                    editing && ["home", "study", "university"].includes(key)
-                  ) && <label htmlFor={`profile-${key}`}>{label}</label>}
-                  {editing && (key === "home" || key === "study") ? (
-                    <SetupCountrySelect
-                      label={label}
-                      value={profile[key]}
-                      onChange={(value) => update(key, value)}
-                      disabled={saving}
-                    />
-                  ) : editing && key === "university" ? (
-                    <UniversitySelect
-                      country={profile.study}
-                      value={profile.university}
-                      onChange={(value) => update("university", value)}
-                      disabled={saving}
-                    />
-                  ) : editing ? (
-                    <Input
-                      id={`profile-${key}`}
-                      value={profile[key]}
-                      onChange={(e) => update(key, e.target.value)}
-                    />
-                  ) : (
-                    <strong className="profile-value">{profile[key]}</strong>
-                  )}
-                </div>
-              ))}
+              .map(([key, label]) => {
+                const Icon = profileFieldIcons[key];
+                return (
+                  <div
+                    className="setup-field profile-data-row"
+                    data-field={key}
+                    key={key}
+                  >
+                    {!editing && (
+                      <span className="profile-field-icon">
+                        <Icon size={17} aria-hidden="true" />
+                      </span>
+                    )}
+                    {!(
+                      editing && ["home", "study", "university"].includes(key)
+                    ) && <label htmlFor={`profile-${key}`}>{label}</label>}
+                    {editing && (key === "home" || key === "study") ? (
+                      <SetupCountrySelect
+                        label={label}
+                        value={profile[key]}
+                        onChange={(value) => update(key, value)}
+                        disabled={saving}
+                      />
+                    ) : editing && key === "university" ? (
+                      <UniversitySelect
+                        country={profile.study}
+                        value={profile.university}
+                        onChange={(value) => update("university", value)}
+                        disabled={saving}
+                      />
+                    ) : editing ? (
+                      <Input
+                        id={`profile-${key}`}
+                        value={profile[key]}
+                        onChange={(e) => update(key, e.target.value)}
+                      />
+                    ) : (
+                      <strong className="profile-value">
+                        {profile[key] || "—"}
+                      </strong>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </section>
         <section className="profile-section">
           <div className="section-heading">
             <div>
-              <h3>Funding</h3>
+              <h3>
+                <WalletCards size={18} aria-hidden="true" />
+                Funding
+              </h3>
             </div>
             {!editing && (
               <button
                 className="icon-text"
+                aria-label="Edit funding"
+                title="Edit funding"
                 onClick={() => {
                   setEditing(true);
                   window.requestAnimationFrame(() =>
@@ -3055,7 +3100,8 @@ export function Profile({
                   );
                 }}
               >
-                <Settings size={16} /> Edit funding
+                <Settings size={16} aria-hidden="true" />
+                <span className="profile-label-desktop">Edit funding</span>
               </button>
             )}
           </div>
@@ -3071,39 +3117,51 @@ export function Profile({
                 ([key]) =>
                   editing || !["name", "home", "study", "status"].includes(key),
               )
-              .map(([key, label]) => (
-                <label key={key}>
-                  <span>
-                    {key === "funding" && editing
-                      ? `Confirmed funding (${getCountry(profile.study)?.currency ?? currency})`
-                      : label}
-                  </span>
-                  {editing ? (
-                    <input
-                      id={`profile-${key}`}
-                      aria-label={
-                        key === "funding"
-                          ? `Confirmed funding in ${getCountry(profile.study)?.currency ?? currency}`
-                          : label
-                      }
-                      type={key === "funding" ? "number" : "text"}
-                      min={key === "funding" ? 0 : undefined}
-                      step={key === "funding" ? "0.01" : undefined}
-                      value={profile[key]}
-                      onChange={(e) => update(key, e.target.value)}
-                    />
-                  ) : (
-                    <strong className="profile-value">
-                      {key === "funding"
-                        ? formatCurrency(
-                            Number(profile.funding),
-                            getCountry(profile.study)?.currency ?? currency,
-                          )
-                        : profile[key]}
-                    </strong>
-                  )}
-                </label>
-              ))}
+              .map(([key, label]) => {
+                const Icon = profileFieldIcons[key];
+                return (
+                  <label
+                    className="profile-data-row"
+                    data-field={key}
+                    key={key}
+                  >
+                    {!editing && (
+                      <span className="profile-field-icon">
+                        <Icon size={17} aria-hidden="true" />
+                      </span>
+                    )}
+                    <span className="profile-data-label">
+                      {key === "funding" && editing
+                        ? `Confirmed funding (${getCountry(profile.study)?.currency ?? currency})`
+                        : label}
+                    </span>
+                    {editing ? (
+                      <input
+                        id={`profile-${key}`}
+                        aria-label={
+                          key === "funding"
+                            ? `Confirmed funding in ${getCountry(profile.study)?.currency ?? currency}`
+                            : label
+                        }
+                        type={key === "funding" ? "number" : "text"}
+                        min={key === "funding" ? 0 : undefined}
+                        step={key === "funding" ? "0.01" : undefined}
+                        value={profile[key]}
+                        onChange={(e) => update(key, e.target.value)}
+                      />
+                    ) : (
+                      <strong className="profile-value">
+                        {key === "funding"
+                          ? formatCurrency(
+                              Number(profile.funding),
+                              getCountry(profile.study)?.currency ?? currency,
+                            )
+                          : profile[key] || "—"}
+                      </strong>
+                    )}
+                  </label>
+                );
+              })}
           </div>
           <div className="profile-summary">
             <span>
@@ -3126,7 +3184,10 @@ export function Profile({
       <section className="profile-section country-accounts">
         <div className="section-heading">
           <div>
-            <h3>Country accounts</h3>
+            <h3>
+              <Landmark size={18} aria-hidden="true" />
+              Accounts
+            </h3>
           </div>
           <button className="secondary" onClick={() => setAddingCountry(true)}>
             <Plus size={16} /> Add account
@@ -3147,7 +3208,7 @@ export function Profile({
           ),
         )}
         {!config?.countryAccounts?.length && !addingCountry && (
-          <p className="country-account-hint">No additional accounts yet.</p>
+          <p className="country-account-hint">None yet.</p>
         )}
         {addingCountry && (
           <form
@@ -4220,10 +4281,16 @@ export function Wallet({
     </div>
   );
 }
-export function Security({ audit, config, receipts }: { audit: AuditEvent[]; config?: any; receipts?: import("react").ReactNode }) {
-  const currency = useWorkspaceCurrency();
+export function Security({
+  audit,
+  config,
+  receipts,
+}: {
+  audit: AuditEvent[];
+  config?: any;
+  receipts?: import("react").ReactNode;
+}) {
   const formatMoney = useWorkspaceMoney();
-
   const [activityOpen, setActivityOpen] = useState(false);
   const exportAudit = () => {
     const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
@@ -4239,92 +4306,122 @@ export function Security({ audit, config, receipts }: { audit: AuditEvent[]; con
     link.click();
     URL.revokeObjectURL(link.href);
   };
+  const visibleAudit = activityOpen ? audit : audit.slice(0, 5);
   return (
-    <div className="page-stack security-workspace">
+    <div id="security-center" className="page-stack security-workspace">
       <section className="page-intro">
-        <div>
-          <h2><ShieldCheck size={24} aria-hidden="true" /> Security center</h2>
-        </div>
+        <h2>
+          <ShieldCheck size={24} aria-hidden="true" />
+          Security center
+        </h2>
+        <span className="security-mode">Sandbox</span>
       </section>
-      <section className="security-grid">
-        <div className="card control">
-          <LockKeyhole />
+      <section className="security-grid" aria-label="Payment protections">
+        <div className="security-control">
+          <LockKeyhole aria-hidden="true" />
           <div>
-            <strong>Approval required</strong>
-            <p>Every payment requires explicit student approval.</p>
+            <strong>Owner approval</strong>
+            <span>
+              {config?.approvalRequired == null
+                ? "—"
+                : config.approvalRequired
+                  ? "Required"
+                  : "Off"}
+            </span>
           </div>
-          <span>
-            {config?.approvalRequired == null
-              ? "Unavailable"
-              : config.approvalRequired
-                ? "On"
-                : "Off"}
-          </span>
         </div>
-        <div className="card control">
-          <CircleDollarSign />
+        <div className="security-control">
+          <CircleDollarSign aria-hidden="true" />
           <div>
             <strong>Payment limit</strong>
-            <p>Single sandbox transaction maximum.</p>
+            <span>
+              {config?.paymentLimit == null
+                ? "—"
+                : formatMoney(config.paymentLimit)}
+            </span>
           </div>
-          <span>{formatMoney(config?.paymentLimit ?? 0)}</span>
         </div>
-        <div className="card control">
-          <Clock3 />
+        <div className="security-control">
+          <Clock3 aria-hidden="true" />
           <div>
-            <strong>Approval expiry</strong>
-            <p>Unused authorizations expire automatically.</p>
+            <strong>Approval expires</strong>
+            <span>
+              {config?.approvalExpiryMinutes == null
+                ? "—"
+                : `${config.approvalExpiryMinutes} min`}
+            </span>
           </div>
-          <span>{config?.approvalExpiryMinutes ?? 0} min</span>
         </div>
       </section>
-      {receipts && <section className="security-receipts" aria-label="Payment receipts">
-        <h3><ReceiptText size={18} aria-hidden="true" /> Receipts</h3>
-        {receipts}
-      </section>}
-      <button
-        className="disclosure-button"
-        aria-expanded={activityOpen}
-        onClick={() => setActivityOpen((open) => !open)}
-      >
-        {activityOpen
-          ? "Hide activity log"
-          : `View activity log (${audit.length})`}
-        <ChevronRight />
-      </button>
-      {activityOpen && (
-        <section className="card section-card">
-          <div className="section-heading">
-            <div>
-              <h3>Activity log</h3>
-            </div>
-            <button className="secondary" onClick={exportAudit}>
-              <History /> Export CSV
-            </button>
-          </div>
+      {receipts && (
+        <section className="security-receipts" aria-label="Payment receipts">
+          {receipts}
+        </section>
+      )}
+      <section className="security-activity">
+        <div className="security-section-heading">
+          <h3>
+            <History size={18} aria-hidden="true" />
+            Activity log <span className="security-count">{audit.length}</span>
+          </h3>
+          {audit.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportAudit}>
+              <Download size={15} aria-hidden="true" />
+              Export
+            </Button>
+          )}
+        </div>
+        {visibleAudit.length ? (
           <div
-            className="audit-table"
+            className="security-event-list"
             role="region"
             aria-label="Activity log"
-            tabIndex={0}
           >
-            <div className="audit-head">
-              <span>Event</span>
-              <span>Details</span>
-              <span>Actor</span>
-              <span>Time</span>
-            </div>
-            {audit.map((a) => (
-              <div className="audit-row" key={a.id}>
-                <strong>{a.type.replaceAll("_", " ")}</strong>
-                <span>{a.detail}</span>
-                <span>{a.actor}</span>
-                <span>{a.timestamp}</span>
+            {visibleAudit.map((a) => (
+              <div className="security-event" key={a.id}>
+                <span
+                  className="security-event-icon"
+                  data-kind={
+                    /PAYMENT|PROPOSAL|RECIPIENT/.test(a.type)
+                      ? "payment"
+                      : /AI|TOOL/.test(a.type)
+                        ? "agent"
+                        : "account"
+                  }
+                >
+                  <History size={16} aria-hidden="true" />
+                </span>
+                <div className="security-event-copy">
+                  <strong>
+                    {a.type
+                      .replaceAll("_", " ")
+                      .toLowerCase()
+                      .replace(/^./, (c) => c.toUpperCase())}
+                  </strong>
+                  <p>{a.detail}</p>
+                </div>
+                <div className="security-event-meta">
+                  <span>{a.timestamp}</span>
+                  <small>{a.actor}</small>
+                </div>
               </div>
             ))}
           </div>
-        </section>
-      )}
+        ) : (
+          <p className="security-empty">No activity yet.</p>
+        )}
+        {audit.length > 5 && (
+          <Button
+            variant="ghost"
+            className="security-show-all"
+            aria-expanded={activityOpen}
+            onClick={() => setActivityOpen((open) => !open)}
+          >
+            {activityOpen ? "Show recent" : `View all ${audit.length}`}
+            <ChevronRight size={15} aria-hidden="true" />
+          </Button>
+        )}
+      </section>
     </div>
   );
 }

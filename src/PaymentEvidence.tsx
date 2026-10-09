@@ -1,6 +1,17 @@
 import { useWorkspaceCurrency } from "./WorkspaceCurrency";
 import { convertMoney, formatCurrency } from "../shared/currency";
 import { useState } from "react";
+import {
+  ShieldCheck,
+  UserRound,
+  ReceiptText,
+  Download,
+  Check,
+  Clock,
+  ChevronRight,
+  Calculator,
+  Play,
+} from "lucide-react";
 import { convexApi, convexClient } from "./lib/convex";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -116,116 +127,237 @@ export default function PaymentEvidence({
   };
   return (
     <section className="payment-evidence">
-      <p className="payment-sandbox-note">Sandbox · No real funds move.</p>
-      <details open={!banking || !banking.recipientVerified}>
-        <summary>{!banking ? "Set up a sample payment" : !banking.recipientVerified ? "Confirm your recipient" : "Payment activity & receipts"}</summary>
-        <div className="payment-evidence-content">
+      <div className="evidence-recipient">
+        <div className="evidence-section-heading">
+          <h3>
+            <UserRound size={18} aria-hidden="true" />
+            Recipient
+          </h3>
+          <span
+            className={`evidence-badge ${banking?.recipientVerified ? "confirmed" : ""}`}
+          >
+            {banking?.recipientVerified ? (
+              <>
+                <ShieldCheck size={14} aria-hidden="true" />
+                Confirmed
+              </>
+            ) : (
+              <>
+                <Clock size={14} aria-hidden="true" />
+                {banking ? "Pending" : "Not set up"}
+              </>
+            )}
+          </span>
+        </div>
         {!banking ? (
-          <>
-            <p>
-              Load a {formatCurrency(convertMoney(2000, "GBP", currency), currency)} tuition scenario with a simulated US$5,000 wallet.
-              Your study plan stays separate.
-            </p>
+          <div className="evidence-setup">
+            <span>
+              Sample tuition ·{" "}
+              {formatCurrency(convertMoney(2000, "GBP", currency), currency)}
+            </span>
             <Button
               disabled={pending || !accountId}
               onClick={() => void run(false)}
             >
+              <Play size={15} aria-hidden="true" />
               Load payment sandbox
             </Button>
-          </>
-        ) : !banking.recipientVerified ? (
-          <>
-            <p>
-              Enter the account suffix{" "}
-              <strong>{banking.recipientAccountLast4}</strong> to confirm the recipient.
-            </p>
-            <Input
-              aria-label="Confirm recipient last four digits"
-              value={last4}
-              maxLength={4}
-              onChange={(e) => setLast4(e.target.value.replace(/\D/g, ""))}
-            />
-            <Button
-              disabled={pending || last4.length !== 4}
-              onClick={() => void run(true)}
-            >
-              Confirm sandbox recipient
-            </Button>
-          </>
-        ) : (
-          <p>
-            Recipient verified.
-          </p>
-        )}
-        {!current && banking?.recipientVerified && <p className="receipt-empty">No payment receipts yet.</p>}
-        {current && (
-          <div role="status" style={{ overflowWrap: "anywhere" }}>
-            <p>
-              <strong>{current.status.toUpperCase()}</strong> ·{" "}
-              {current.provider} · {current.recipient} · account ending{" "}
-              {current.recipientLast4}
-            </p>
-            <p>
-              Recipient receives {formatCurrency(current.amountMinor / 100, current.targetCurrency, 2)}.
-              Total {formatCurrency(current.totalMinor / 100, current.sourceCurrency, 2)}, including {formatCurrency(current.feeMinor / 100, current.sourceCurrency, 2)} fee.
-            </p>
-            {current.remainingGBPMinor !== undefined && (
-              <p>
-                Estimated funds after payment: {formatCurrency(current.remainingGBPMinor / 100, current.targetCurrency, 2)}. Protected
-                living-cost reserve: {formatCurrency((current.protectedReserveMinor ?? 0) / 100, current.targetCurrency, 2)}.
-              </p>
-            )}
-            <p>
-              {current.reference
-                ? `Receipt: ${current.reference}`
-                : `Quote expires ${new Date(current.expiresAt).toLocaleTimeString()}. Approval covers this exact proposal.`}
-            </p>
-            {current.deadline && (
-              <p>
-                Tuition deadline: {current.deadline} (UTC date). Safety buffer:{" "}
-                {current.bufferBusinessDays ?? 1} business day(s). These terms
-                belong to this proposal.
-              </p>
-            )}
           </div>
-        )}
-        {ledger.map((entry) => (
-          <p key={entry.reference} style={{ overflowWrap: "anywhere" }}>
-            {entry.reference}: {entry.currency}{" "}
-            {(entry.beforeMinor / 100).toFixed(2)} →{" "}
-            {(entry.afterMinor / 100).toFixed(2)} after a{" "}
-            {(entry.debitMinor / 100).toFixed(2)} debit.
+        ) : !banking.recipientVerified ? (
+          <form
+            className="evidence-confirm-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (last4.length === 4) void run(true);
+            }}
+          >
+            <label htmlFor="recipient-last-four">
+              Match account ending{" "}
+              <strong>{banking.recipientAccountLast4 ?? "—"}</strong>
+            </label>
+            <div className="evidence-confirm-controls">
+              <Input
+                id="recipient-last-four"
+                aria-label="Confirm recipient last four digits"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="4 digits"
+                value={last4}
+                maxLength={4}
+                onChange={(e) => setLast4(e.target.value.replace(/\D/g, ""))}
+              />
+              <Button
+                type="submit"
+                aria-label="Confirm sandbox recipient"
+                disabled={pending || !accountId || last4.length !== 4}
+              >
+                <Check size={15} aria-hidden="true" />
+                {pending ? "Confirming…" : "Confirm"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <p className="evidence-recipient-note">
+            {banking.recipientAccountLast4
+              ? `Account ending ${banking.recipientAccountLast4} · `
+              : ""}
+            Owner-confirmed sample recipient
           </p>
-        ))}
-        <Button
-          variant="outline"
-          onClick={download}
-          disabled={!proposals.length}
-        >
-          Download execution evidence
-        </Button>
-        {tools.length > 0 && (
-          <details style={{ marginTop: 16 }}>
+        )}
+        {error && (
+          <p role="alert" className="evidence-error">
+            {error}
+          </p>
+        )}
+      </div>
+      <div className="evidence-receipts">
+        <div className="evidence-section-heading">
+          <h3>
+            <ReceiptText size={18} aria-hidden="true" />
+            Receipts
+          </h3>
+          {(proposals.length > 0 || ledger.length > 0 || tools.length > 0) && (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="Download execution evidence"
+              onClick={download}
+            >
+              <Download size={15} aria-hidden="true" />
+              Export
+            </Button>
+          )}
+        </div>
+        {current ? (
+          <details className="evidence-receipt-details">
             <summary>
-              Agent calculation evidence ({tools.length} recent tool calls)
+              <ReceiptText size={16} aria-hidden="true" />
+              <span>Payment activity &amp; receipts</span>
+              <span className="evidence-badge">{current.status}</span>
+              <ChevronRight size={15} aria-hidden="true" />
             </summary>
-            <p>
-              These are recorded tool results. Review the calculation separately
-              from the AI’s explanation. Your export includes this financial
-              information.
-            </p>
+            <div className="payment-evidence-content" role="status">
+              <div className="evidence-payment-title">
+                <strong>{current.recipient}</strong>
+                <span>
+                  {current.provider} · •••• {current.recipientLast4}
+                </span>
+              </div>
+              <dl className="evidence-payment-facts">
+                <div>
+                  <dt>Recipient receives</dt>
+                  <dd>
+                    {formatCurrency(
+                      current.amountMinor / 100,
+                      current.targetCurrency,
+                      2,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Total debit</dt>
+                  <dd>
+                    {formatCurrency(
+                      current.totalMinor / 100,
+                      current.sourceCurrency,
+                      2,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Fee</dt>
+                  <dd>
+                    {formatCurrency(
+                      current.feeMinor / 100,
+                      current.sourceCurrency,
+                      2,
+                    )}
+                  </dd>
+                </div>
+                {current.remainingGBPMinor !== undefined && (
+                  <>
+                    <div>
+                      <dt>Funds after payment</dt>
+                      <dd>
+                        {formatCurrency(
+                          current.remainingGBPMinor / 100,
+                          current.targetCurrency,
+                          2,
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Protected reserve</dt>
+                      <dd>
+                        {formatCurrency(
+                          (current.protectedReserveMinor ?? 0) / 100,
+                          current.targetCurrency,
+                          2,
+                        )}
+                      </dd>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <dt>{current.reference ? "Reference" : "Quote expires"}</dt>
+                  <dd>
+                    {current.reference ??
+                      new Date(current.expiresAt).toLocaleTimeString()}
+                  </dd>
+                </div>
+                {current.deadline && (
+                  <>
+                    <div>
+                      <dt>Deadline (UTC)</dt>
+                      <dd>{current.deadline}</dd>
+                    </div>
+                    <div>
+                      <dt>Safety buffer</dt>
+                      <dd>{current.bufferBusinessDays ?? 1} business day(s)</dd>
+                    </div>
+                  </>
+                )}
+              </dl>
+              {ledger.map((entry) => (
+                <div className="evidence-ledger" key={entry.reference}>
+                  <small>{entry.reference}</small>
+                  <span>
+                    {entry.currency} {(entry.beforeMinor / 100).toFixed(2)} →{" "}
+                    {(entry.afterMinor / 100).toFixed(2)}
+                  </span>
+                  <small>
+                    Debit ·{" "}
+                    {formatCurrency(entry.debitMinor / 100, entry.currency, 2)}
+                  </small>
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : (
+          <p className="security-empty receipt-empty">
+            No payment receipts yet.
+          </p>
+        )}
+      </div>
+      {tools.length > 0 && (
+        <details className="evidence-tools">
+          <summary>
+            <Calculator size={16} aria-hidden="true" />
+            Agent calculations
+            <span className="evidence-badge">{tools.length}</span>
+            <ChevronRight size={15} aria-hidden="true" />
+          </summary>
+          <div className="payment-evidence-content">
             {tools.map((tool, index) => (
-              <details key={`${tool.timestamp}-${index}`}>
+              <details
+                className="evidence-tool"
+                key={`${tool.timestamp}-${index}`}
+              >
                 <summary>
-                  {tool.name} · {new Date(tool.timestamp).toLocaleString()}
+                  {tool.name.replaceAll("_", " ")}
+                  <small>{new Date(tool.timestamp).toLocaleString()}</small>
                 </summary>
-                <pre
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "anywhere",
-                    fontSize: 12,
-                  }}
-                >
+                <pre>
                   {JSON.stringify(
                     { arguments: tool.arguments, result: tool.result },
                     null,
@@ -234,11 +366,10 @@ export default function PaymentEvidence({
                 </pre>
               </details>
             ))}
-          </details>
-        )}
-        {error && <p role="alert">{error}</p>}
-        </div>
-      </details>
+          </div>
+        </details>
+      )}
+      <p className="payment-sandbox-note">Sandbox · No real funds move.</p>
     </section>
   );
 }

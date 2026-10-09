@@ -940,11 +940,6 @@
 :root[data-theme] .app-clean .security-grid {
   border: 0;
 }
-:root[data-theme] .app-clean .security-grid .control {
-  padding: 22px 0 !important;
-  border: 0 !important;
-  border-top: 1px solid var(--color-line) !important;
-}
 :root[data-theme] .app-clean .security-workspace > .disclosure-button {
   margin-left: 0;
   max-width: none;

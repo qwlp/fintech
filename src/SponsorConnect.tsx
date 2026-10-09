@@ -1,5 +1,5 @@
 import { Dialog } from "radix-ui";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowUpRight,
   UserPlus,
@@ -7,7 +7,6 @@ import {
   Copy,
   Check,
   QrCode,
-  KeyRound,
   RefreshCw,
   Users,
   Unplug,
@@ -52,7 +51,6 @@ export default function SponsorConnect({
   );
   const [inviteExpanded, setInviteExpanded] = useState(false);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
-  const [method, setMethod] = useState<"code" | "qr">("code");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -260,7 +258,7 @@ export default function SponsorConnect({
       )}
     </>
   );
-  if (String(role) === "Sponsor")
+  if (role === "Sponsor")
     return (
       <motion.section
         className="sponsor-connect sponsor-accept"
@@ -288,7 +286,7 @@ export default function SponsorConnect({
   return (
     <Dialog.Root open={inviteExpanded} onOpenChange={setInviteExpanded}>
       <motion.section
-        className={`sponsor-connect ${role === "Sponsor" ? "sponsor-accept" : ""}`}
+        className="sponsor-connect"
         aria-label="Sponsor connections"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -320,8 +318,8 @@ export default function SponsorConnect({
               <div className="invite-modal-heading">
                 <div>
                   <Dialog.Title>Invite a sponsor</Dialog.Title>
-                  <Dialog.Description>
-                    Share a code or QR to connect.
+                  <Dialog.Description className="sr-only">
+                    Scan the QR or copy the code to connect.
                   </Dialog.Description>
                 </div>
                 <Dialog.Close
@@ -335,104 +333,54 @@ export default function SponsorConnect({
                 <div className="invite-main">
                   {invite ? (
                     <>
-                      <div className="invite-toolbar">
-                        <div
-                          className="invite-switch"
-                          aria-label="Invitation format"
-                        >
-                          <button
-                            type="button"
-                            aria-pressed={method === "code"}
-                            onClick={() => setMethod("code")}
-                            className={method === "code" ? "selected" : ""}
-                          >
-                            <KeyRound size={15} />
-                            Code
-                          </button>
-                          <button
-                            type="button"
-                            aria-pressed={method === "qr"}
-                            onClick={() => setMethod("qr")}
-                            className={method === "qr" ? "selected" : ""}
-                          >
-                            <QrCode size={15} />
-                            QR code
-                          </button>
+                      <div className="invite-display invite-combined">
+                        <div className="invite-qr">
+                          <QRCodeSVG
+                            value={link}
+                            size={160}
+                            marginSize={4}
+                            title="Sponsor invitation QR code"
+                          />
                         </div>
-                      </div>
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.div
-                          key={method}
-                          className={`invite-display ${method}`}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          transition={{ duration: 0.18 }}
+                        <div
+                          className="invite-digits"
+                          aria-label="Invitation code"
                         >
-                          {method === "code" ? (
-                            <>
-                              <span className="invite-caption">
-                                YOUR INVITATION CODE
-                              </span>
-                              <div className="invite-digits">
-                                {invite.code
-                                  .match(/.{1,4}/g)
-                                  ?.map((part, i) => (
-                                    <span key={i}>{part}</span>
-                                  ))}
-                              </div>
-                              <Button
-                                className="invite-copy"
-                                disabled={busy}
-                                onClick={() =>
-                                  run(
-                                    () =>
-                                      navigator.clipboard.writeText(
-                                        invite.code,
-                                      ),
-                                    "Code copied",
-                                  )
-                                }
-                              >
-                                {message === "Code copied" ? (
-                                  <Check size={16} />
-                                ) : (
-                                  <Copy size={16} />
-                                )}
-                                {message === "Code copied"
-                                  ? "Copied"
-                                  : "Copy code"}
-                              </Button>
-                            </>
+                          {invite.code.match(/.{1,4}/g)?.map((part, i) => (
+                            <span key={i}>{part}</span>
+                          ))}
+                        </div>
+                        <Button
+                          className="invite-copy"
+                          aria-label="Copy code"
+                          disabled={busy}
+                          onClick={() =>
+                            run(
+                              () => navigator.clipboard.writeText(invite.code),
+                              "Code copied",
+                            )
+                          }
+                        >
+                          {message === "Code copied" ? (
+                            <Check size={16} />
                           ) : (
-                            <>
-                              <div className="invite-qr">
-                                <QRCodeSVG
-                                  value={link}
-                                  size={148}
-                                  marginSize={2}
-                                  title="Sponsor invitation QR code"
-                                />
-                              </div>
-                              <span className="invite-caption">
-                                SCAN TO CONNECT
-                              </span>
-                            </>
+                            <Copy size={16} />
                           )}
-                        </motion.div>
-                      </AnimatePresence>
+                          {message === "Code copied" ? "Copied" : "Copy"}
+                        </Button>
+                      </div>
                       <div className="invite-footer">
                         <span>
-                          Expires in{" "}
                           {Math.max(
                             1,
                             Math.ceil((invite.expiresAt - now) / 3600000),
                           )}
-                          h · Single use
+                          h left · Single use
                         </span>
                         <button
                           disabled={busy}
-                          title="Generate a new invitation and invalidate the current one"
+                          aria-label="New code"
+                          title="Generate a new invitation"
                           onClick={() =>
                             run(() => create({}), "New invitation ready")
                           }
@@ -441,7 +389,6 @@ export default function SponsorConnect({
                             size={14}
                             className={busy ? "connect-spin" : ""}
                           />
-                          New code
                         </button>
                       </div>
                     </>
@@ -450,8 +397,6 @@ export default function SponsorConnect({
                       <div className="invite-start-symbol">
                         <QrCode size={36} />
                       </div>
-                      <h3>A little support goes a long way.</h3>
-                      <p>Share a code or QR with someone you trust.</p>
                       <Button
                         disabled={busy || !data}
                         onClick={() =>

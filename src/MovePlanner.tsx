@@ -1,5 +1,34 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, CalendarDays, Wallet, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Wallet,
+  Plane,
+  FileCheck,
+  GraduationCap,
+  House,
+  ShieldCheck,
+  BookOpen,
+  Package,
+  Coffee,
+  HandCoins,
+  Check,
+  ChevronRight,
+  SlidersHorizontal,
+  Layers,
+  Info,
+  Save,
+  ArrowRight,
+  Bus,
+  Phone,
+  Shirt,
+  Utensils,
+  HeartPulse,
+  Fingerprint,
+  BadgePercent,
+  UserRound,
+  Clock,
+} from "lucide-react";
 import profiles from "../shared/move-planner-data.json";
 import {
   calculateMove,
@@ -73,6 +102,44 @@ const groups: {
   },
   { name: "Funding & payment", fields: [], alternatives: "Funding / Payment" },
 ];
+const categoryIcons = [
+  Wallet,
+  Plane,
+  FileCheck,
+  GraduationCap,
+  House,
+  ShieldCheck,
+  BookOpen,
+  Package,
+  Coffee,
+  HandCoins,
+];
+const fieldIcons: Partial<Record<MoveField, typeof Wallet>> = {
+  flight: Plane,
+  visa: FileCheck,
+  holdFund: Wallet,
+  health: HeartPulse,
+  medical: HeartPulse,
+  biometrics: Fingerprint,
+  tuition: GraduationCap,
+  rent: House,
+  insurance: ShieldCheck,
+  books: BookOpen,
+  settling: Package,
+  food: Utensils,
+  transport: Bus,
+  phone: Phone,
+  laundry: Shirt,
+  personal: UserRound,
+  social: Coffee,
+  monthlyLiving: Wallet,
+};
+const settingIcons: Record<string, typeof Wallet> = {
+  "University estimates": GraduationCap,
+  "Academic months": CalendarDays,
+  Deposit: House,
+  "Living expense basis": Clock,
+};
 const housing = [
   [1200, 2400, 3500, 6500],
   [1500, 2700, 4350, 4000],
@@ -118,7 +185,6 @@ const insurance = [
   [3885, 2750],
 ];
 export default function MovePlanner({
-  go,
   studyCountry,
   university,
   annualTuition = 0,
@@ -229,6 +295,10 @@ export default function MovePlanner({
   }, [config, initialUniversity, annualTuition, currency]);
   const total = calculateMove(amounts, months, settings, excluded);
   const group = groups.find((g) => g.name === category);
+  const CategoryIcon =
+    categoryIcons[
+      ["Your costs", ...groups.map((g) => g.name)].indexOf(category ?? "")
+    ] ?? Wallet;
   const alternatives =
     profile && group?.alternatives
       ? Object.entries(profile.alternatives).find(([name]) =>
@@ -241,9 +311,13 @@ export default function MovePlanner({
     options: { value: string; label: string }[],
     onChange: (value: string) => void,
   ) {
+    const Icon = settingIcons[label] ?? SlidersHorizontal;
     return (
       <label className="move-field">
-        <span>{label}</span>
+        <span>
+          <Icon size={15} aria-hidden="true" />
+          {label}
+        </span>
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger aria-label={label}>
             <SelectValue />
@@ -262,39 +336,51 @@ export default function MovePlanner({
   function fields(rows: [MoveField, string][]) {
     return (
       <div className="move-fields">
-        {rows.map(([key, label]) => (
-          <label className="move-field" key={key}>
-            <span>
-              <Checkbox
-                aria-label={`Include ${label}`}
-                checked={!excluded.includes(key)}
-                onCheckedChange={(checked) =>
-                  setExcluded((e) =>
-                    checked
-                      ? e.filter((k) => k !== key)
-                      : [...new Set([...e, key])],
-                  )
-                }
-              />{" "}
-              {label} · {currency}
-            </span>
-            <Input
-              aria-label={`${label} in ${currency}`}
-              type="number"
-              min="0"
-              step="0.01"
-              value={amounts[key] ?? 0}
-              onChange={(e) => update(key, Number(e.target.value))}
-            />
-          </label>
-        ))}
+        {rows.map(([key, label]) => {
+          const Icon = fieldIcons[key] ?? Wallet;
+          return (
+            <label
+              className={`move-field ${excluded.includes(key) ? "move-field-excluded" : ""}`}
+              key={key}
+            >
+              <span>
+                <Checkbox
+                  aria-label={`Include ${label}`}
+                  checked={!excluded.includes(key)}
+                  onCheckedChange={(checked) =>
+                    setExcluded((e) =>
+                      checked
+                        ? e.filter((k) => k !== key)
+                        : [...new Set([...e, key])],
+                    )
+                  }
+                />{" "}
+                <Icon size={16} aria-hidden="true" />
+                {label}
+              </span>
+              <Input
+                aria-label={`${label} in ${currency}`}
+                type="number"
+                min="0"
+                step="0.01"
+                value={amounts[key] ?? 0}
+                onChange={(e) => update(key, Number(e.target.value))}
+              />
+            </label>
+          );
+        })}
       </div>
     );
   }
   return (
-    <div className="move-board move-planner-complete">
+    <div id="move-planner" className="move-board move-planner-complete">
       <section className="move-board-header">
-        <h2>Plan your arrival</h2>
+        <div>
+          <h2>
+            <Plane size={24} aria-hidden="true" />
+            Plan your arrival
+          </h2>
+        </div>
         <DatePicker
           className="planner-date-picker"
           label="Planned arrival"
@@ -304,7 +390,10 @@ export default function MovePlanner({
       </section>
       <section className="arrival-summary">
         <div>
-          <span>Total first-year cost</span>
+          <span>
+            <Wallet size={16} aria-hidden="true" />
+            First-year budget
+          </span>
           <strong aria-live="polite">{money(total.total)}</strong>
           <small>
             {months} academic months ·{" "}
@@ -313,19 +402,22 @@ export default function MovePlanner({
         </div>
         <div className="arrival-summary-breakdown">
           <div>
-            <small>Cost to arrive · sponsor view</small>
+            <small>
+              <Plane size={16} aria-hidden="true" />
+              Arrival costs
+            </small>
             <strong>{money(total.arrival)}</strong>
           </div>
           <div>
-            <small>Contingency · {settings.contingency}%</small>
+            <small>
+              <ShieldCheck size={16} aria-hidden="true" />
+              Buffer · {settings.contingency}%
+            </small>
             <strong>{money(total.contingency)}</strong>
           </div>
         </div>
-        <Button variant="outline" onClick={() => go("AI Agent")}>
-          <Sparkles size={16} /> Get planning help
-        </Button>
       </section>
-      <section className="move-plan-settings">
+      <section className="move-plan-settings" aria-label="Plan settings">
         {choice(
           "University estimates",
           String(settings.university),
@@ -364,7 +456,10 @@ export default function MovePlanner({
             setSettings((s) => ({ ...s, depositMonths: Number(value) })),
         )}
         <label className="move-field">
-          <span>Contingency % · 10 recommended</span>
+          <span>
+            <BadgePercent size={15} aria-hidden="true" />
+            Buffer %
+          </span>
           <Input
             aria-label="Contingency percentage"
             type="number"
@@ -383,26 +478,35 @@ export default function MovePlanner({
           />
         </label>
       </section>
-      <p className="planner-estimate-note">
-        Editable sample estimates, not live quotes or verified visa
-        requirements. Currency conversions use the site's illustrative rates.
-        Confirm prices and requirements before booking. Tuition, books, settling
-        in, medical costs and funds held must be entered separately.
-      </p>
-      <section className="planner-category-layout">
+      <section
+        className={`planner-category-layout ${category ? "has-category" : ""}`}
+      >
         <div className="planner-categories" aria-label="Planning categories">
-          {["Your costs", ...groups.map((g) => g.name)].map((name) => (
-            <button
-              key={name}
-              aria-pressed={category === name}
-              onClick={() => setCategory(name)}
-            >
-              <span>
-                <Wallet size={18} />
-                {name}
-              </span>
-            </button>
-          ))}
+          <span className="planner-nav-label">YOUR BUDGET</span>
+          {["Your costs", ...groups.map((g) => g.name)].map((name, index) => {
+            const Icon = categoryIcons[index];
+            const amount = total.breakdown.find(
+              (row) => row.name === name,
+            )?.amount;
+            return (
+              <button
+                key={name}
+                aria-label={name}
+                aria-pressed={category === name}
+                onClick={() => setCategory(name)}
+              >
+                <span>
+                  <Icon size={18} />
+                  {name}
+                </span>
+                {amount !== undefined ? (
+                  <small>{money(amount)}</small>
+                ) : (
+                  <ChevronRight size={14} />
+                )}
+              </button>
+            );
+          })}
         </div>
         <div className="planner-category-detail">
           {category ? (
@@ -415,190 +519,319 @@ export default function MovePlanner({
                 <ArrowLeft size={16} />
                 Back to categories
               </Button>
-              <h3>{category}</h3>
+              <div className="planner-detail-heading">
+                <div className="planner-category-title">
+                  <span className="planner-heading-icon">
+                    <CategoryIcon size={23} aria-hidden="true" />
+                  </span>
+                  <h3>{category}</h3>
+                </div>
+                {category !== "Funding & payment" && (
+                  <div className="planner-category-total">
+                    <small>Total · {currency}</small>
+                    <strong>
+                      {money(
+                        category === "Your costs"
+                          ? total.total
+                          : (total.breakdown.find(
+                              (row) => row.name === category,
+                            )?.amount ?? 0),
+                      )}
+                    </strong>
+                  </div>
+                )}
+              </div>
               {category === "Your costs" ? (
                 <>
-                  <p className="move-help">
-                    Edit each category to build your full study budget.
-                  </p>
                   <dl className="move-cost-breakdown">
                     {total.breakdown.map((row) => (
                       <div key={row.name}>
-                        <dt>{row.name}</dt>
+                        <dt>
+                          <span className="planner-breakdown-icon">
+                            {(() => {
+                              const Icon =
+                                categoryIcons[
+                                  [
+                                    "Your costs",
+                                    ...groups.map((g) => g.name),
+                                  ].indexOf(row.name)
+                                ] ?? ShieldCheck;
+                              return <Icon size={17} aria-hidden="true" />;
+                            })()}
+                          </span>
+                          {row.name}
+                        </dt>
                         <dd>{money(row.amount)}</dd>
                       </div>
                     ))}
                   </dl>
-                  <p>
+                  <p className="planner-context-note">
                     Daily expenses: {money(total.daily)} · Monthly living:{" "}
                     {money(total.monthly)}
                   </p>
                 </>
               ) : (
                 <>
-                  {alternatives && (
-                    <div className="move-alternatives">
-                      {alternatives.rows.map((row, index) => (
-                        <article key={row[0]}>
-                          <strong>{row[0]}</strong>
-                          <span>{row[1]}</span>
-                          <p>{row.slice(2).join(" · ")}</p>
-                          {!["Visa package", "Funding & payment"].includes(
-                            category!,
-                          ) && (
-                            <Button
-                              variant="outline"
-                              aria-pressed={
-                                (category === "Flights"
-                                  ? settings.flightOption
-                                  : category === "Accommodation"
-                                    ? settings.housing
-                                    : category === "Insurance"
-                                      ? settings.insuranceOption
-                                      : settings.lifestyle) === index
-                              }
-                              onClick={() => {
-                                const key =
-                                  category === "Flights"
-                                    ? "flightOption"
-                                    : category === "Accommodation"
-                                      ? "housing"
-                                      : category === "Insurance"
-                                        ? "insuranceOption"
-                                        : "lifestyle";
-                                const next = { ...settings, [key]: index };
-                                setSettings(next);
-                                const id = settings.university;
-                                if (key === "flightOption")
-                                  update(
-                                    "flight",
-                                    convertMoney(
-                                      flights[id][index],
-                                      "USD",
-                                      currency,
-                                    ),
-                                  );
-                                else if (key === "housing")
-                                  update(
-                                    "rent",
-                                    convertMoney(
-                                      housing[id][index],
-                                      profile.currency,
-                                      currency,
-                                    ),
-                                  );
-                                else if (key === "insuranceOption")
-                                  update(
-                                    "insurance",
-                                    convertMoney(
-                                      insurance[id][index],
-                                      profile.currency,
-                                      currency,
-                                    ),
-                                  );
-                                else {
-                                  const d = convertMoney(
-                                    daily[id][index],
-                                    profile.currency,
-                                    currency,
-                                  );
-                                  setAmounts((a) => ({
-                                    ...a,
-                                    food: d * 0.5,
-                                    transport: d * 0.15,
-                                    phone: d * 0.05,
-                                    laundry: d * 0.05,
-                                    personal: d * 0.15,
-                                    social: d * 0.1,
-                                    monthlyLiving: d * 30,
-                                  }));
-                                }
-                              }}
-                            >
-                              Use sample estimate
-                            </Button>
-                          )}
-                          {["Visa package", "Funding & payment"].includes(
-                            category!,
-                          ) && (
-                            <Button
-                              variant="outline"
-                              aria-pressed={
-                                (category === "Visa package"
-                                  ? settings.proofOption
-                                  : settings.fundingOption) === index
-                              }
-                              onClick={() =>
-                                setSettings((s) => ({
-                                  ...s,
-                                  [category === "Visa package"
-                                    ? "proofOption"
-                                    : "fundingOption"]: index,
-                                }))
-                              }
-                            >
-                              Select approach
-                            </Button>
-                          )}
-                        </article>
-                      ))}
+                  {!!group?.fields.length && (
+                    <div className="planner-amount-editor">
+                      <div className="planner-editor-heading">
+                        <strong>
+                          <SlidersHorizontal size={16} aria-hidden="true" />
+                          Amounts
+                        </strong>
+                        <span className="planner-currency-badge">
+                          {currency}
+                        </span>
+                      </div>
+                      {category === "Living expenses" &&
+                        choice(
+                          "Living expense basis",
+                          settings.livingMode,
+                          [
+                            {
+                              value: "daily",
+                              label: "Daily expenses × 30 × academic months",
+                            },
+                            {
+                              value: "monthly",
+                              label: "Monthly living × academic months",
+                            },
+                          ],
+                          (value) =>
+                            setSettings((s) => ({
+                              ...s,
+                              livingMode: value as "daily" | "monthly",
+                            })),
+                        )}
+                      {group &&
+                        fields(
+                          category === "Living expenses" &&
+                            settings.livingMode === "monthly"
+                            ? [["monthlyLiving", "Monthly living"]]
+                            : group.fields,
+                        )}
                     </div>
                   )}
-                  {category === "Living expenses" &&
-                    choice(
-                      "Living expense basis",
-                      settings.livingMode,
-                      [
-                        {
-                          value: "daily",
-                          label: "Daily expenses × 30 × academic months",
-                        },
-                        {
-                          value: "monthly",
-                          label: "Monthly living × academic months",
-                        },
-                      ],
-                      (value) =>
-                        setSettings((s) => ({
-                          ...s,
-                          livingMode: value as "daily" | "monthly",
-                        })),
-                    )}
-                  {group &&
-                    fields(
-                      category === "Living expenses" &&
-                        settings.livingMode === "monthly"
-                        ? [["monthlyLiving", "Monthly living"]]
-                        : group.fields,
-                    )}
+                  {alternatives && (
+                    <section className="planner-estimates">
+                      <div className="planner-estimates-heading">
+                        <h4>
+                          <Layers size={16} aria-hidden="true" />
+                          Options
+                        </h4>
+                        <span className="planner-currency-badge">
+                          {category === "Funding & payment"
+                            ? "Approaches"
+                            : "Samples"}
+                        </span>
+                      </div>
+                      <div className="move-alternatives">
+                        {alternatives.rows.map((row, index) => (
+                          <article
+                            key={row[0]}
+                            data-selected={
+                              (category === "Flights"
+                                ? settings.flightOption
+                                : category === "Accommodation"
+                                  ? settings.housing
+                                  : category === "Insurance"
+                                    ? settings.insuranceOption
+                                    : category === "Visa package"
+                                      ? settings.proofOption
+                                      : category === "Funding & payment"
+                                        ? settings.fundingOption
+                                        : settings.lifestyle) === index
+                            }
+                          >
+                            <div className="planner-option-copy">
+                              <strong>
+                                <CategoryIcon size={18} aria-hidden="true" />
+                                {row[0]}
+                              </strong>
+                              <details className="planner-option-details">
+                                <summary aria-label={`Details for ${row[0]}`}>
+                                  <Info size={14} aria-hidden="true" />
+                                  <span>Details</span>
+                                </summary>
+                                <p>{row.slice(2).join(" · ")}</p>
+                              </details>
+                            </div>
+                            <span className="planner-option-price">
+                              {row[1]}
+                            </span>
+                            {!["Visa package", "Funding & payment"].includes(
+                              category!,
+                            ) && (
+                              <Button
+                                variant="outline"
+                                aria-label="Use sample estimate"
+                                aria-pressed={
+                                  (category === "Flights"
+                                    ? settings.flightOption
+                                    : category === "Accommodation"
+                                      ? settings.housing
+                                      : category === "Insurance"
+                                        ? settings.insuranceOption
+                                        : settings.lifestyle) === index
+                                }
+                                onClick={() => {
+                                  const key =
+                                    category === "Flights"
+                                      ? "flightOption"
+                                      : category === "Accommodation"
+                                        ? "housing"
+                                        : category === "Insurance"
+                                          ? "insuranceOption"
+                                          : "lifestyle";
+                                  const next = { ...settings, [key]: index };
+                                  setSettings(next);
+                                  const id = settings.university;
+                                  if (key === "flightOption")
+                                    update(
+                                      "flight",
+                                      convertMoney(
+                                        flights[id][index],
+                                        "USD",
+                                        currency,
+                                      ),
+                                    );
+                                  else if (key === "housing")
+                                    update(
+                                      "rent",
+                                      convertMoney(
+                                        housing[id][index],
+                                        profile.currency,
+                                        currency,
+                                      ),
+                                    );
+                                  else if (key === "insuranceOption")
+                                    update(
+                                      "insurance",
+                                      convertMoney(
+                                        insurance[id][index],
+                                        profile.currency,
+                                        currency,
+                                      ),
+                                    );
+                                  else {
+                                    const d = convertMoney(
+                                      daily[id][index],
+                                      profile.currency,
+                                      currency,
+                                    );
+                                    setAmounts((a) => ({
+                                      ...a,
+                                      food: d * 0.5,
+                                      transport: d * 0.15,
+                                      phone: d * 0.05,
+                                      laundry: d * 0.05,
+                                      personal: d * 0.15,
+                                      social: d * 0.1,
+                                      monthlyLiving: d * 30,
+                                    }));
+                                  }
+                                }}
+                              >
+                                <Check
+                                  size={14}
+                                  className="planner-option-check"
+                                />
+                                <span className="planner-option-use">
+                                  <ArrowRight size={14} aria-hidden="true" />
+                                  Use estimate
+                                </span>
+                                <span className="planner-option-selected">
+                                  Selected
+                                </span>
+                              </Button>
+                            )}
+                            {["Visa package", "Funding & payment"].includes(
+                              category!,
+                            ) && (
+                              <Button
+                                variant="outline"
+                                aria-label="Select approach"
+                                aria-pressed={
+                                  (category === "Visa package"
+                                    ? settings.proofOption
+                                    : settings.fundingOption) === index
+                                }
+                                onClick={() =>
+                                  setSettings((s) => ({
+                                    ...s,
+                                    [category === "Visa package"
+                                      ? "proofOption"
+                                      : "fundingOption"]: index,
+                                  }))
+                                }
+                              >
+                                <Check
+                                  size={14}
+                                  className="planner-option-check"
+                                />
+                                <span className="planner-option-use">
+                                  <ArrowRight size={14} aria-hidden="true" />
+                                  Choose
+                                </span>
+                                <span className="planner-option-selected">
+                                  Selected
+                                </span>
+                              </Button>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  )}
                   {category === "Accommodation" && (
-                    <p>
-                      Rent × {months} months + {settings.depositMonths}-month
-                      deposit ({money(total.deposit)}). Annual and weekly
-                      samples are normalized to monthly rent; meal bundles may
-                      overlap food costs.
-                    </p>
+                    <details className="planner-budget-notes">
+                      <summary>
+                        <Info size={15} aria-hidden="true" />
+                        Budget notes
+                        <ChevronRight size={14} aria-hidden="true" />
+                      </summary>
+                      <p>
+                        Rent × {months} months + {settings.depositMonths}-month
+                        deposit ({money(total.deposit)}). Annual and weekly
+                        samples are normalized to monthly rent; meal bundles may
+                        overlap food costs.
+                      </p>
+                    </details>
                   )}
                   {category === "Visa package" && (
-                    <p>
-                      Hold funds are included in this planning total as
-                      requested. They represent money held, and may also cover
-                      tuition or living costs. UK health surcharge is counted
-                      here once; optional insurance top-up is separate. Enter
-                      surcharge for your full visa duration.
-                    </p>
+                    <details className="planner-budget-notes">
+                      <summary>
+                        <Info size={15} aria-hidden="true" />
+                        Budget notes
+                        <ChevronRight size={14} aria-hidden="true" />
+                      </summary>
+                      <p>
+                        Hold funds are included in this planning total as
+                        requested. They represent money held, and may also cover
+                        tuition or living costs. UK health surcharge is counted
+                        here once; optional insurance top-up is separate. Enter
+                        surcharge for your full visa duration.
+                      </p>
+                    </details>
                   )}
                   {category === "Funding & payment" && (
-                    <p>
-                      Selecting an approach records your plan. Scholarships and
-                      loans need separate approval; choosing Sponsor Mode does
-                      not authorize a payment.
-                    </p>
+                    <details className="planner-budget-notes">
+                      <summary>
+                        <Info size={15} aria-hidden="true" />
+                        Budget notes
+                        <ChevronRight size={14} aria-hidden="true" />
+                      </summary>
+                      <p>
+                        Selecting an approach records your plan. Scholarships
+                        and loans need separate approval; choosing Sponsor Mode
+                        does not authorize a payment.
+                      </p>
+                    </details>
                   )}
                   {!profile && alternatives === undefined && (
                     <p className="move-help">
-                      Choose a supported university for sample alternatives, or
-                      enter your own figures.
+                      Enter your own amounts, or select a university for
+                      samples.
                     </p>
                   )}
                 </>
@@ -610,6 +843,16 @@ export default function MovePlanner({
               <p>Choose a category to edit your plan.</p>
             </>
           )}
+        </div>
+      </section>
+      <div className="planner-save-bar">
+        <div className="planner-save-summary">
+          <span>Your first-year budget</span>
+          <strong>
+            {money(total.total)} <small>{currency}</small>
+          </strong>
+        </div>
+        <div className="planner-save-action">
           <Button
             disabled={saving || !accountId || !date}
             onClick={async () => {
@@ -634,17 +877,20 @@ export default function MovePlanner({
               }
             }}
           >
+            <Save size={16} aria-hidden="true" />
             {saving ? "Saving…" : "Save move plan"}
           </Button>
           {!date && (
             <p className="move-help">
-              Choose an arrival date to save your plan.
+              <CalendarDays size={14} aria-hidden="true" />
+              Set arrival date to save
             </p>
           )}
           {message && <p role="status">{message}</p>}
         </div>
-      </section>
+      </div>
       <Button
+        variant="ghost"
         className="planner-overview-toggle"
         aria-expanded={overview}
         onClick={() => setOverview((o) => !o)}
@@ -660,7 +906,20 @@ export default function MovePlanner({
           <dl className="move-cost-breakdown">
             {total.breakdown.map((row) => (
               <div key={row.name}>
-                <dt>{row.name}</dt>
+                <dt>
+                  <span className="planner-breakdown-icon">
+                    {(() => {
+                      const Icon =
+                        categoryIcons[
+                          ["Your costs", ...groups.map((g) => g.name)].indexOf(
+                            row.name,
+                          )
+                        ] ?? ShieldCheck;
+                      return <Icon size={17} aria-hidden="true" />;
+                    })()}
+                  </span>
+                  {row.name}
+                </dt>
                 <dd>{money(row.amount)}</dd>
               </div>
             ))}

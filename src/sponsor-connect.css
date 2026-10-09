@@ -684,3 +684,52 @@
   background: #172232;
   border-color: #334155;
 }
+
+/* One invitation: QR and copyable code together. */
+.sponsor-connect.invite-modal {
+  width: min(380px, calc(100vw - 32px));
+  padding: 24px;
+}
+.sponsor-connect.invite-modal .invite-modal-heading {
+  margin-bottom: 20px;
+}
+.sponsor-connect.invite-modal .invite-display.invite-combined {
+  min-height: 0;
+  padding: 0;
+  gap: 16px;
+}
+.sponsor-connect.invite-modal .invite-combined .invite-qr {
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sponsor-connect.invite-modal .invite-combined .invite-digits {
+  width: auto;
+  gap: 6px;
+}
+.sponsor-connect.invite-modal .invite-combined .invite-digits span {
+  font-size: clamp(16px, 5vw, 21px);
+  letter-spacing: 1px;
+}
+.sponsor-connect.invite-modal
+  .invite-combined
+  .invite-digits
+  span
+  + span::before {
+  margin-right: 6px;
+}
+.sponsor-connect.invite-modal .invite-copy {
+  min-width: 0;
+  padding: 8px 16px;
+}
+.sponsor-connect.invite-modal .invite-footer {
+  margin-top: 20px;
+  padding: 12px 0 0;
+}
+.sponsor-connect.invite-modal .invite-footer button {
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  border: 1px solid var(--connect-line);
+  border-radius: 6px;
+}

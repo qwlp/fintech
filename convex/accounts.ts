@@ -948,6 +948,16 @@ export const chatContext = internalQuery({
         course: account.course ?? "",
         courseStart:
           typeof profile?.courseStart === "string" ? profile.courseStart : "",
+        financialStatus:
+          typeof profile?.financialStatus === "string"
+            ? profile.financialStatus
+            : "",
+        sponsorSupport:
+          typeof profile?.sponsorSupport === "string"
+            ? profile.sponsorSupport
+            : "",
+        confirmedFunding: totalFunding,
+        fundingCurrency: studyCurrency(account.countryTo),
       },
       currency: studyCurrency(account.countryTo),
       totalCost,
