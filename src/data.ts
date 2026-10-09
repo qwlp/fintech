@@ -122,7 +122,7 @@ export const wallets: Wallet[] = [
 export const routes: PaymentRoute[] = [
   {
     id: "wise",
-    provider: "Provider A",
+    provider: "Wise",
     sourceAmount: 2574.6,
     fee: 8.4,
     fxRate: 0.774,
@@ -131,7 +131,7 @@ export const routes: PaymentRoute[] = [
   },
   {
     id: "swift",
-    provider: "Bank SWIFT",
+    provider: "SWIFT bank transfer",
     sourceAmount: 2607,
     fee: 34,
     fxRate: 0.768,
@@ -139,7 +139,7 @@ export const routes: PaymentRoute[] = [
   },
   {
     id: "card",
-    provider: "International card",
+    provider: "Debit / credit card",
     sourceAmount: 2598,
     fee: 26,
     fxRate: 0.77,

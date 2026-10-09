@@ -110,6 +110,22 @@ for (const width of [1440, 390]) {
       ),
     ).toBe(true);
     await page.getByRole("button", { name: "Finish setup" }).click();
+    const confirmation = page.getByRole("alertdialog");
+    await expect(confirmation).toContainText(
+      "Are you sure this is the amount?",
+    );
+    await expect(confirmation).toContainText("£12,000.00");
+    await expect(confirmation).toContainText("GBP");
+    expect(
+      await page.evaluate(() => (window as any).savedSetup),
+    ).toBeUndefined();
+    await confirmation.getByRole("button", { name: "Edit amount" }).click();
+    await expect(confirmation).toHaveCount(0);
+    await expect(page.getByLabel("Confirmed funding (GBP)")).toHaveValue(
+      "12000",
+    );
+    await page.getByRole("button", { name: "Finish setup" }).click();
+    await page.getByRole("button", { name: "Yes, confirm amount" }).click();
     await expect(
       page.getByRole("heading", { name: "You’re all set." }),
     ).toBeVisible();
@@ -184,6 +200,7 @@ test("country search, destination reset and custom university", async ({
     .click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Finish setup" }).click();
+  await page.getByRole("button", { name: "Yes, confirm amount" }).click();
   expect(await page.evaluate(() => (window as any).savedSetup)).toMatchObject({
     countryTo: "Germany",
     university: "My German University",

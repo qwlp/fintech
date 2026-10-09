@@ -1,4 +1,5 @@
 import { walletValue } from "../shared/currency";
+import { routeProviderName } from "../shared/payment-routes";
 // Shared by the server, UI and evaluations. All inputs are sandbox observations.
 export type DecisionRoute = {
   sourceCurrency?: string;
@@ -197,7 +198,7 @@ export function assessTuition(input: DecisionInput) {
         sourceCurrency,
         targetCurrency,
         routeKey: route.key,
-        provider: route.provider,
+        provider: routeProviderName(route.provider),
         totalUSD: totalValid ? totalMinor! / 100 : null,
         feeUSD: route.fee,
         rateGBPPerUSD: route.fxRate,

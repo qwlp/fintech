@@ -14,6 +14,7 @@ import { useMutation } from "convex/react";
 import type { Doc } from "../convex/_generated/dataModel";
 import { convexApi } from "./lib/convex";
 import Brand from "./Brand";
+import FundingConfirmation from "./FundingConfirmation";
 import UniversitySelect from "./UniversitySelect";
 import { convertMoney, studyCurrency } from "../shared/currency";
 import { getCountry } from "../shared/study";
@@ -46,6 +47,7 @@ export default function Setup({
   const [direction, setDirection] = useState(1);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmingFunding, setConfirmingFunding] = useState(false);
   const [error, setError] = useState("");
   const startDate = config?.courseStart ? new Date(config.courseStart) : null;
   const startValue = /^\d{4}-\d{2}$/.test(config?.courseStart ?? "")
@@ -121,11 +123,30 @@ export default function Setup({
       setStep(step + 1);
       return;
     }
+    if (!sponsor) {
+      const amount = Number(values.fundingAmount);
+      if (
+        !values.fundingAmount.trim() ||
+        !Number.isFinite(amount) ||
+        amount < 0
+      ) {
+        setError("Enter a valid confirmed funding amount of zero or more.");
+        return;
+      }
+      setConfirmingFunding(true);
+      return;
+    }
+    await saveSetup();
+  }
+  async function saveSetup() {
+    if (busy) return;
     setBusy(true);
     try {
       await save({ ...values, fundingAmount: Number(values.fundingAmount) });
+      setConfirmingFunding(false);
       setSaved(true);
     } catch {
+      setConfirmingFunding(false);
       setError("Couldn’t save. Please try again.");
     } finally {
       setBusy(false);
@@ -140,6 +161,14 @@ export default function Setup({
         : Wallet;
   return (
     <main className="setup-page">
+      <FundingConfirmation
+        open={confirmingFunding}
+        amount={Number(values.fundingAmount)}
+        currency={studyCurrency(values.countryTo)}
+        busy={busy}
+        onOpenChange={setConfirmingFunding}
+        onConfirm={() => void saveSetup()}
+      />
       <header className="setup-header">
         <Brand />
         <button onClick={account.setupComplete ? onDone : onSignOut}>

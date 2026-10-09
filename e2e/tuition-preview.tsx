@@ -85,6 +85,18 @@ function Preview() {
                     quoteExpiresAt: expiresAt,
                   },
                   {
+                    key: "swift",
+                    provider: "Bank SWIFT",
+                    fee: 34,
+                    sourceCurrency: "USD",
+                    targetCurrency: currency,
+                    fxRate: 0.768 * currencyRate("GBP", currency),
+                    delivery: "3–5 business days",
+                    maxBusinessDays: 5,
+                    quotedAt: observedAt,
+                    quoteExpiresAt: expiresAt,
+                  },
+                  {
                     key: "sandbox-fast",
                     provider: "Sandbox Express",
                     fee: 26,

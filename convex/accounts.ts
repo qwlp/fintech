@@ -1,4 +1,5 @@
 import { validateMoveSettings } from "../shared/move-planner";
+import { routeProviderName } from "../shared/payment-routes";
 import {
   mutationGeneric as mutation,
   actionGeneric as action,
@@ -108,7 +109,10 @@ export const bootstrap = query({
       funding,
       sponsors,
       wallets,
-      paymentRoutes,
+      paymentRoutes: paymentRoutes.map((route) => ({
+        ...route,
+        provider: routeProviderName(route.provider),
+      })),
       auditEvents,
       messages,
       notifications,
@@ -237,7 +241,7 @@ export const seedDemo = internalMutation({
     for (const route of [
       {
         key: "wise",
-        provider: "Provider A",
+        provider: "Wise",
         sourceAmount: 2574.6,
         fee: 8.4,
         fxRate: 0.774,
@@ -246,7 +250,7 @@ export const seedDemo = internalMutation({
       },
       {
         key: "swift",
-        provider: "Bank SWIFT",
+        provider: "SWIFT bank transfer",
         sourceAmount: 2607,
         fee: 34,
         fxRate: 0.768,
@@ -254,7 +258,7 @@ export const seedDemo = internalMutation({
       },
       {
         key: "card",
-        provider: "International card",
+        provider: "Debit / credit card",
         sourceAmount: 2598,
         fee: 26,
         fxRate: 0.77,
@@ -1377,7 +1381,7 @@ export const initializePaymentSandbox = mutation({
     const routes = [
       {
         key: "sandbox-standard",
-        provider: "Sandbox Standard",
+        provider: "Wise",
         fxRate: 0.774,
         fee: 8.4,
         delivery: "1–2 business days",
@@ -1386,7 +1390,7 @@ export const initializePaymentSandbox = mutation({
       },
       {
         key: "sandbox-bank",
-        provider: "Sandbox Bank",
+        provider: "SWIFT bank transfer",
         fxRate: 0.768,
         fee: 34,
         delivery: "3–5 business days",
@@ -1395,7 +1399,7 @@ export const initializePaymentSandbox = mutation({
       },
       {
         key: "sandbox-fast",
-        provider: "Sandbox Express",
+        provider: "Debit / credit card",
         fxRate: 0.77,
         fee: 26,
         delivery: "Within 1 business day",

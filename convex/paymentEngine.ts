@@ -1,4 +1,5 @@
 import { convertMoney, studyCurrency, walletValue } from "../shared/currency";
+import { routeProviderName } from "../shared/payment-routes";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireAccount } from "./ownership";
@@ -135,7 +136,7 @@ export async function paymentTransition(
       recipient: banking.recipient,
       recipientLast4: banking.recipientAccountLast4,
       routeKey: route.key,
-      provider: route.provider,
+      provider: routeProviderName(route.provider),
       fxRate: route.fxRate,
       sourceCurrency,
       targetCurrency: currency,

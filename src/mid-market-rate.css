@@ -1,0 +1,83 @@
+.tuition-decision .tuition-decision-heading {
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.mid-market-rate {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+}
+.mid-market-rate-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.mid-market-rate-label {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.mid-market-rate-copy > strong {
+  font-size: 18px;
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.mid-market-rate-copy > small {
+  display: grid;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.mid-market-rate-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-ink);
+}
+.mid-market-rate-chart {
+  width: 90px;
+  height: 44px;
+  flex-shrink: 0;
+  color: var(--color-accent);
+}
+.mid-market-rate-source {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--color-muted);
+  border-radius: 6px;
+}
+.mid-market-rate-source:hover {
+  color: var(--color-ink);
+  background: var(--color-primary-soft);
+}
+.mid-market-rate-source:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 600px) {
+  .mid-market-rate {
+    width: 100%;
+    gap: 10px;
+    padding: 12px;
+  }
+  .mid-market-rate-copy {
+    flex: 1;
+  }
+  .mid-market-rate-copy > strong {
+    font-size: 16px;
+  }
+  .mid-market-rate-chart {
+    width: 58px;
+  }
+}

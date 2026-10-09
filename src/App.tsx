@@ -36,6 +36,7 @@ import Brand from "./Brand";
 import PaymentWorkspace from "./PaymentWorkspace";
 import PaymentEvidence from "./PaymentEvidence";
 import TuitionDecision from "./TuitionDecision";
+import FundingConfirmation from "./FundingConfirmation";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
@@ -122,6 +123,7 @@ import {
   fundingGap,
   monthlyBurn,
   runway,
+  resolvePlanFunding,
   sumCosts,
 } from "./lib/finance";
 import type { AuditEvent, PaymentStatus } from "./types";
@@ -446,9 +448,10 @@ function App({ onSignOut }: { onSignOut: () => void }) {
   const visibleFunding =
     database?.funding.map((item) => ({ ...item, id: item.key })) ?? funding;
   const planTotal = sumCosts(visibleCosts as any);
-  const planFunded =
-    database?.config?.profile?.fundingAmount ??
-    confirmedFunding(visibleFunding as any);
+  const planFunded = resolvePlanFunding(
+    visibleFunding,
+    database?.config?.profile?.fundingAmount,
+  ).total;
   const planGap = fundingGap(planTotal, planFunded);
   const planCoverage = fundingCoverage(planTotal, planFunded);
   const paymentStatus = executingPayment
@@ -1442,10 +1445,12 @@ function OverviewDashboard({
     return ReceiptText;
   };
   const planCosts = database?.costs ?? costs;
-  const planFunding = database?.funding ?? funding;
+  const { sources: planFunding, total: fundedTotal } = resolvePlanFunding(
+    database?.funding ?? funding,
+    database?.config?.profile?.fundingAmount,
+  );
   const planTotal = planCosts.reduce((sum, item) => sum + item.amount, 0);
   const confirmed = planFunding.filter((item) => item.status === "confirmed");
-  const fundedTotal = confirmed.reduce((sum, item) => sum + item.amount, 0);
   const gap = fundingGap(planTotal, fundedTotal);
   const coverage = fundingCoverage(planTotal, fundedTotal);
   const fundingChartData = [
@@ -2853,6 +2858,7 @@ export function Profile({
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmingFunding, setConfirmingFunding] = useState(false);
   const [addingCountry, setAddingCountry] = useState(false);
   const [country, setCountry] = useState("");
   const [accountLabel, setAccountLabel] = useState("");
@@ -2914,11 +2920,32 @@ export function Profile({
       funding: String(totals.funded),
     });
   }, [account, config, totals.funded, editing]);
+  const saveProfileEdits = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const saved = await onSave(profile);
+      setConfirmingFunding(false);
+      if (!saved) return;
+      announce("Profile saved");
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <div
       id="profile-workspace"
       className={`page-stack profile-page ${editing ? "profile-editing" : "profile-reading"}`}
     >
+      <FundingConfirmation
+        open={confirmingFunding}
+        amount={Number(profile.funding)}
+        currency={studyCurrency(profile.study)}
+        busy={saving}
+        onOpenChange={setConfirmingFunding}
+        onConfirm={() => void saveProfileEdits()}
+      />
       <section className="page-intro">
         <div>
           <h2>
@@ -2952,11 +2979,15 @@ export function Profile({
                   );
                   return;
                 }
-                setSaving(true);
-                const saved = await onSave(profile);
-                setSaving(false);
-                if (!saved) return;
-                announce("Profile saved");
+                if (
+                  Number(profile.funding) !== totals.funded ||
+                  studyCurrency(profile.study) !== currency
+                ) {
+                  setConfirmingFunding(true);
+                } else {
+                  await saveProfileEdits();
+                }
+                return;
               }
               setEditing(!editing);
             }}

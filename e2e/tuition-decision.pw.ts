@@ -54,16 +54,16 @@ for (const width of [1440, 390])
       ).toContainText(/20 [A-Za-z]+ \d{4}/);
       await page.getByLabel("Protected living funds in GBP").fill("1500");
       await expect(
-        page.getByRole("button", { name: "Choose Sandbox Express" }),
+        page.getByRole("button", { name: "Choose Debit / credit card" }),
       ).toBeDisabled();
       await page.getByRole("button", { name: "Save plan" }).click();
       await expect(page.getByRole("status")).toContainText(
         "Tuition plan saved",
       );
       await page
-        .getByRole("button", { name: "Choose Sandbox Express" })
+        .getByRole("button", { name: "Choose Debit / credit card" })
         .click();
-      await expect(page.locator(".tuition-route").last()).toContainText(
+      await expect(page.locator(".tuition-route").filter({ hasText: "Debit / credit card" })).toContainText(
         "Selected",
       );
       await page
@@ -74,7 +74,7 @@ for (const width of [1440, 390])
       );
       await page
         .getByRole("button", {
-          name: "Details for Sandbox Standard",
+          name: "Details for Wise",
           exact: true,
         })
         .click();
@@ -88,7 +88,7 @@ for (const width of [1440, 390])
       await page.getByRole("button", { name: "Expire quotes" }).click();
       await page
         .getByRole("button", {
-          name: "Details for Sandbox Standard",
+          name: "Details for Wise",
           exact: true,
         })
         .click();
@@ -104,7 +104,7 @@ for (const width of [1440, 390])
         .click();
       await page
         .getByRole("button", {
-          name: "Details for Sandbox Standard",
+          name: "Details for Wise",
           exact: true,
         })
         .click();

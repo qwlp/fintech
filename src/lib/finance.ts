@@ -6,6 +6,48 @@ export const confirmedFunding = (items: FundingSource[]) =>
   items
     .filter((i) => i.status === "confirmed")
     .reduce((sum, item) => sum + item.amount, 0);
+type PlanFundingSource = {
+  name: string;
+  type: string;
+  amount: number;
+  status: string;
+  available: string;
+};
+
+// Setup/profile store a total rather than an itemized funding breakdown.
+// Preserve a matching breakdown; otherwise show the declared total once.
+export function resolvePlanFunding(
+  items: PlanFundingSource[],
+  declaredAmount: unknown,
+) {
+  const itemizedTotal = items
+    .filter((item) => item.status === "confirmed")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const total =
+    typeof declaredAmount === "number" &&
+    Number.isFinite(declaredAmount) &&
+    declaredAmount >= 0
+      ? declaredAmount
+      : itemizedTotal;
+  const sources: PlanFundingSource[] =
+    Math.round(total * 100) === Math.round(itemizedTotal * 100)
+      ? items
+      : [
+          ...(total > 0
+            ? [
+                {
+                  name: "Confirmed funding",
+                  type: "Declared funding",
+                  amount: total,
+                  status: "confirmed",
+                  available: "Reported in your profile",
+                },
+              ]
+            : []),
+          ...items.filter((item) => item.status !== "confirmed"),
+        ];
+  return { total, sources };
+}
 export const fundingGap = (cost: number, funding: number) =>
   Math.max(0, cost - funding);
 export const fundingCoverage = (cost: number, funding: number) =>

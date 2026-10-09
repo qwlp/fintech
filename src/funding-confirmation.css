@@ -1,0 +1,68 @@
+.funding-confirmation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  background: color-mix(in srgb, var(--color-ink) 35%, transparent);
+  backdrop-filter: blur(4px);
+}
+.funding-confirmation-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 221;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 28px;
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--color-ink) 18%, transparent);
+}
+.funding-confirmation-dialog > svg {
+  color: var(--color-accent);
+}
+.funding-confirmation-dialog h2 {
+  margin: 16px 0 10px;
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+}
+.funding-confirmation-dialog p {
+  margin: 8px 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.funding-confirmation-amount {
+  display: block;
+  margin: 16px 0;
+  font-size: 28px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.funding-confirmation-amount > span {
+  font-size: 13px;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+.funding-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+@media (max-width: 420px) {
+  .funding-confirmation-dialog {
+    padding: 20px;
+  }
+  .funding-confirmation-actions {
+    flex-direction: column-reverse;
+  }
+  .funding-confirmation-actions > button {
+    width: 100%;
+  }
+}

@@ -2,6 +2,7 @@ import { useWorkspaceCurrency } from "./WorkspaceCurrency";
 import { formatCurrency } from "../shared/currency";
 import { Dialog } from "radix-ui";
 import InfoHelp from "./InfoHelp";
+import MidMarketRate from "./MidMarketRate";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -145,7 +146,7 @@ export default function TuitionDecision(props: Props) {
         <div>
           <h2 id="tuition-decision-heading">Choose a route</h2>
         </div>
-        <span className="tuition-sandbox">USD → {currency}</span>
+        <MidMarketRate source={props.routes[0]?.sourceCurrency ?? "USD"} target={currency} />
       </div>
       <details className="payment-plan-settings" open={!banking.tuitionDeadline || dirty}>
         <summary className="payment-plan-summary"><span><CalendarDays size={17} /> Payment plan</span><span>{banking.tuitionDeadline || "Set deadline"}<ChevronDown size={16} /></span></summary>
@@ -247,7 +248,7 @@ export default function TuitionDecision(props: Props) {
               >
                 <div className="tuition-route-title">
                   <strong>
-                    {route.routeKey.includes("card") ? <CreditCard size={18} /> : <Landmark size={18} />}
+                    {route.routeKey.includes("card") || route.routeKey === "sandbox-fast" ? <CreditCard size={18} /> : <Landmark size={18} />}
                     {route.provider}
                   </strong>
                   <span>
