@@ -112,9 +112,9 @@ export const wallets: Wallet[] = [
     label: "UK current account",
   },
   {
-    currency: "KHR",
-    symbol: "៛",
-    amount: 1200000,
+    currency: "CNY",
+    symbol: "¥",
+    amount: 2106.8,
     gbpValue: 229,
     label: "Home account",
   },

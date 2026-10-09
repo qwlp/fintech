@@ -15,7 +15,7 @@ it("persists the expanded plan for its owner and rejects invalid settings", asyn
       initials: "S",
       role: "Student",
       planName: "Study",
-      countryFrom: "Cambodia",
+      countryFrom: "China",
       countryTo: "United Kingdom",
       university: "University of Manchester",
       course: "Course",

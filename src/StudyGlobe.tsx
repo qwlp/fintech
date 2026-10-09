@@ -97,10 +97,8 @@ export default function StudyGlobe({
     }
     const cities = [
       [51, -0.1],
-      [14, 100],
-      [1, 104],
-      [35, 139],
-      [-34, 151],
+      [40, 116],
+      [30, 120],
       [40, -74],
     ];
     const routeMaterial = new THREE.MeshStandardMaterial({

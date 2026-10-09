@@ -1,9 +1,23 @@
+import AgentFundingChange from "./AgentFundingChange";
+
 export type ToolResult = { name: string; result: unknown };
 const labels: Record<string, string> = {
   compare_payment_routes: "Tuition route comparison",
   stress_test_fx: "Currency stress scenario",
   simulate_budget: "Monthly budget scenario",
   prepare_tuition_payment: "Payment proposal",
+  read_workspace: "Workspace details",
+  update_tuition_details: "Tuition details",
+  update_tuition_plan: "Tuition plan",
+  update_move_plan: "Move Planner",
+  update_profile: "Profile",
+  update_budget_item: "Budget item",
+  update_funding_source: "Funding source",
+  select_payment_route: "Payment route",
+  refresh_payment_quotes: "Sandbox quotes",
+  set_checklist_item: "Checklist",
+  create_rate_alert: "Rate alert",
+  add_country_account: "Country account",
 };
 const money = (value: unknown, currency: string) =>
   typeof value === "number" && Number.isFinite(value)
@@ -19,15 +33,37 @@ export default function AgentCalculation({ tool }: { tool: ToolResult }) {
   )
     return null;
   const result = tool.result as Record<string, any>;
+  if (
+    result.executionId &&
+    ["pending_confirmation", "saved", "cancelled"].includes(result.status)
+  ) {
+    return <AgentFundingChange initial={result as any} />;
+  }
   return (
     <details className="agent-calculation">
       <summary>
-        {labels[tool.name] ?? "Calculation details"} · recorded result
+        {labels[tool.name] ?? "Tool details"} ·{" "}
+        {result.status === "saved" ? "saved" : "recorded result"}
       </summary>
       {typeof result.error === "string" ? (
-        <p>Calculation could not complete: {result.error}</p>
+        <p>Action could not complete: {result.error}</p>
       ) : (
         <>
+          {result.status === "saved" && (
+            <>
+              <p>Your requested changes were saved.</p>
+              <SavedChanges
+                changes={result.changes}
+                currency={result.currency ?? "GBP"}
+              />
+            </>
+          )}
+          {tool.name === "read_workspace" && (
+            <p>
+              Read the latest saved profile, tuition, Move Planner, budget and
+              funding details. No records changed.
+            </p>
+          )}
           {tool.name === "compare_payment_routes" && (
             <>
               <p>{result.explanation}</p>
@@ -124,13 +160,113 @@ export default function AgentCalculation({ tool }: { tool: ToolResult }) {
               <p>{result.assumptions}</p>
             )}
           <small>
-            {result.sandbox
-              ? "Simulated account data. No real funds move."
-              : "Hypothetical calculation; account records stay unchanged."}{" "}
+            {result.status === "saved"
+              ? "Workspace records updated. No funds moved."
+              : result.status === "read"
+                ? "Current workspace records."
+                : result.sandbox
+                  ? "Simulated account data. No real funds move."
+                  : "Hypothetical calculation; account records stay unchanged."}{" "}
             Check these values separately from the AI’s explanation.
           </small>
         </>
       )}
     </details>
+  );
+}
+
+const fieldLabels: Record<string, string> = {
+  budgetAmounts: "Planner costs",
+  plannerSettings: "Planner settings",
+  totals: "Planner totals",
+  source: "Funding source",
+  amount: "Amount",
+  confirmedFunding: "Total confirmed funding",
+  fundingAmount: "Total confirmed funding",
+  livingReserve: "Living reserve",
+  protectedReserveGBP: "Living reserve",
+  last4: "Recipient account last four digits",
+  recipientConfirmed: "Recipient confirmed",
+  arrivalDate: "Arrival date",
+  months: "Academic months",
+  excludedCosts: "Excluded costs",
+  selectedRoute: "Selected route",
+};
+function SavedChanges({
+  changes,
+  currency,
+  monetary = false,
+}: {
+  changes: unknown;
+  currency: string;
+  monetary?: boolean;
+}) {
+  if (!changes || typeof changes !== "object") return null;
+  return (
+    <dl className="agent-saved-changes">
+      {Object.entries(changes).map(([key, value]) => (
+        <div key={key}>
+          <dt>
+            {fieldLabels[key] ??
+              key
+                .replace(/([A-Z])/g, " $1")
+                .replace(/^./, (letter) => letter.toUpperCase())}
+          </dt>
+          <dd>
+            {value && typeof value === "object" && !Array.isArray(value) ? (
+              <SavedChanges
+                changes={value}
+                currency={currency}
+                monetary={key === "budgetAmounts"}
+              />
+            ) : Array.isArray(value) ? (
+              value.length ? (
+                value.map((item, index) =>
+                  item && typeof item === "object" ? (
+                    <SavedChanges
+                      key={index}
+                      changes={item}
+                      currency={currency}
+                    />
+                  ) : (
+                    <span key={index}>
+                      {index ? ", " : ""}
+                      {String(item)}
+                    </span>
+                  ),
+                )
+              ) : (
+                "None"
+              )
+            ) : typeof value === "number" &&
+              (monetary ||
+                [
+                  "amount",
+                  "confirmedFunding",
+                  "fundingAmount",
+                  "livingReserve",
+                  "protectedReserveGBP",
+                  "total",
+                  "subtotal",
+                  "arrival",
+                  "monthly",
+                  "daily",
+                  "deposit",
+                  "visaPackage",
+                ].includes(key)) ? (
+              money(value, currency)
+            ) : typeof value === "boolean" ? (
+              value ? (
+                "Yes"
+              ) : (
+                "No"
+              )
+            ) : (
+              String(value ?? "Not set")
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }

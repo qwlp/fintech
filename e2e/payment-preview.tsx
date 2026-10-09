@@ -10,7 +10,7 @@ const pendingRecipient =
   new URLSearchParams(location.search).get("recipient") === "pending";
 const proposal = {
   _id: "proposal-demo",
-  recipient: "Example UK University",
+  recipient: "University of Manchester",
   recipientLast4: "1842",
   provider: "Sandbox Standard",
   amountMinor: 200000,

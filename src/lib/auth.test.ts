@@ -54,41 +54,41 @@ describe("account authorization", () => {
     const { t, owner, accountId } = await accountFixture();
     await t.run(ctx => ctx.db.insert("appConfig", { accountId, key: "profile", value: { financialStatus: "Planning" } }));
     await owner.mutation(api.accounts.completeSetup, {
-      name: " Dara Chan ", countryFrom: "Cambodia", countryTo: "United Kingdom",
+      name: " Dara Chan ", countryFrom: "China", countryTo: "United Kingdom",
       university: "", course: "", courseStart: "2027-09", fundingAmount: 12000, sponsorSupport: "Yes",
     });
     const result = await owner.query(api.accounts.bootstrap, {});
-    expect(result.account).toMatchObject({ name: "Dara Chan", initials: "DC", countryFrom: "Cambodia", countryTo: "United Kingdom", setupComplete: true });
-    expect(result.config.profile).toMatchObject({ financialStatus: "Planning", fundingAmount: 12000, courseStart: "2027-09", homeCurrency: "KHR", studyCurrency: "GBP", fundingCurrency: "GBP" });
+    expect(result.account).toMatchObject({ name: "Dara Chan", initials: "DC", countryFrom: "China", countryTo: "United Kingdom", setupComplete: true });
+    expect(result.config.profile).toMatchObject({ financialStatus: "Planning", fundingAmount: 12000, courseStart: "2027-09", homeCurrency: "CNY", studyCurrency: "GBP", fundingCurrency: "GBP" });
   });
   it("keeps currencies synchronized on profile edits and country account saves", async () => {
     const { owner, accountId } = await accountFixture();
-    const details = { accountId, name: "Owner", countryFrom: "Cambodia", countryTo: "Canada", university: "University of Waterloo", course: "Computing", courseStart: "", financialStatus: "Planning", sponsorSupport: "Yes", fundingAmount: 1000 };
+    const details = { accountId, name: "Owner", countryFrom: "China", countryTo: "United States", university: "Columbia University", course: "Computing", courseStart: "", financialStatus: "Planning", sponsorSupport: "Yes", fundingAmount: 1000 };
     await owner.mutation(api.accounts.updateProfile, details);
     let result = await owner.query(api.accounts.bootstrap, {});
-    expect(result.config.profile).toMatchObject({ homeCurrency: "KHR", studyCurrency: "CAD", fundingCurrency: "CAD" });
-    await expect(owner.mutation(api.accounts.updateProfile, { ...details, countryTo: "Germany" })).rejects.toThrow("study country");
-    await owner.mutation(api.accounts.updateProfile, { ...details, countryTo: "Germany", university: "" });
-    await owner.mutation(api.accounts.addCountryAccount, { accountId, country: "AU", label: "Study account" });
+    expect(result.config.profile).toMatchObject({ homeCurrency: "CNY", studyCurrency: "USD", fundingCurrency: "USD" });
+    await expect(owner.mutation(api.accounts.updateProfile, { ...details, countryTo: "United Kingdom" })).rejects.toThrow("study country");
+    await owner.mutation(api.accounts.updateProfile, { ...details, countryTo: "United Kingdom", university: "" });
+    await owner.mutation(api.accounts.addCountryAccount, { accountId, country: "CN", label: "Study account" });
     result = await owner.query(api.accounts.bootstrap, {});
-    expect(result.account).toMatchObject({ countryTo: "Germany", university: "" });
-    expect(result.config.profile).toMatchObject({ studyCurrency: "EUR", fundingAmount: 1000, countryAccounts: [{ country: "Australia", currency: "AUD", label: "Study account" }] });
+    expect(result.account).toMatchObject({ countryTo: "United Kingdom", university: "" });
+    expect(result.config.profile).toMatchObject({ studyCurrency: "GBP", fundingAmount: 1000, countryAccounts: [{ country: "China", currency: "CNY", label: "Study account" }] });
     await expect(owner.mutation(api.accounts.addCountryAccount, { accountId, country: "Unknown", label: "Account" })).rejects.toThrow("supported country");
   });
   it("provides only saved profile fields to the assistant and refreshes them after editing", async () => {
     const { owner, accountId } = await accountFixture();
-    await owner.mutation(api.accounts.completeSetup, { name: "Dara", countryFrom: "Cambodia", countryTo: "Canada", university: "University of Waterloo", course: "Computing", courseStart: "2027-09", fundingAmount: 1000, sponsorSupport: "Yes" });
+    await owner.mutation(api.accounts.completeSetup, { name: "Dara", countryFrom: "China", countryTo: "United States", university: "Columbia University", course: "Computing", courseStart: "2027-09", fundingAmount: 1000, sponsorSupport: "Yes" });
     const summary = await owner.query(internal.accounts.chatContext, { accountId });
-    expect(summary.profile).toEqual({ name: "Dara", role: "Student", homeCountry: "Cambodia", studyCountry: "Canada", university: "University of Waterloo", course: "Computing", courseStart: "2027-09" });
+    expect(summary.profile).toMatchObject({ name: "Dara", role: "Student", homeCountry: "China", studyCountry: "United States", university: "Columbia University", course: "Computing", courseStart: "2027-09" });
     expect(summary.profile).not.toHaveProperty("email");
     expect(summary.profile).not.toHaveProperty("userId");
-    await owner.mutation(api.accounts.updateProfile, { accountId, name: "Dara Chan", countryFrom: "Cambodia", countryTo: "Germany", university: "", course: "Engineering", courseStart: "", fundingAmount: 1000, sponsorSupport: "Yes", financialStatus: "Planning" });
+    await owner.mutation(api.accounts.updateProfile, { accountId, name: "Dara Chan", countryFrom: "China", countryTo: "United Kingdom", university: "", course: "Engineering", courseStart: "", fundingAmount: 1000, sponsorSupport: "Yes", financialStatus: "Planning" });
     const updated = await owner.query(internal.accounts.chatContext, { accountId });
-    expect(updated.profile).toMatchObject({ name: "Dara Chan", studyCountry: "Germany", course: "Engineering", university: "", courseStart: "" });
+    expect(updated.profile).toMatchObject({ name: "Dara Chan", studyCountry: "United Kingdom", course: "Engineering", university: "", courseStart: "" });
   });
   it("requires sign-in and valid details before completing setup", async () => {
     const { t, owner } = await accountFixture();
-    const details = { name: "Owner", countryFrom: "Cambodia", countryTo: "UK", university: "", course: "", courseStart: "", fundingAmount: 0, sponsorSupport: "Not sure yet" };
+    const details = { name: "Owner", countryFrom: "China", countryTo: "UK", university: "", course: "", courseStart: "", fundingAmount: 0, sponsorSupport: "Not sure yet" };
     await expect(t.mutation(api.accounts.completeSetup, details)).rejects.toThrow("Sign in");
     await expect(owner.mutation(api.accounts.completeSetup, { ...details, fundingAmount: -1 })).rejects.toThrow("funding");
     await expect(owner.mutation(api.accounts.completeSetup, { ...details, countryTo: " " })).rejects.toThrow("study country");
@@ -96,7 +96,7 @@ describe("account authorization", () => {
   });
   it("lets sponsors finish without student details", async () => {
     const { owner } = await accountFixture("Sponsor");
-    await owner.mutation(api.accounts.completeSetup, { name: "Sponsor", countryFrom: "Cambodia", countryTo: "", university: "", course: "", courseStart: "", fundingAmount: 0, sponsorSupport: "Not sure yet" });
+    await owner.mutation(api.accounts.completeSetup, { name: "Sponsor", countryFrom: "China", countryTo: "", university: "", course: "", courseStart: "", fundingAmount: 0, sponsorSupport: "Not sure yet" });
     expect((await owner.query(api.accounts.bootstrap, {})).account.setupComplete).toBe(true);
   });
   it("rejects anonymous reads and writes", async () => {

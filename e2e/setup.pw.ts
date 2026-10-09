@@ -50,14 +50,14 @@ for (const width of [1440, 390]) {
       "0px",
     );
     await page.getByRole("combobox", { name: "Home country" }).click();
-    await expect(page.getByRole("option")).toHaveCount(7);
+    await expect(page.getByRole("option")).toHaveCount(3);
     await expect(page.getByRole("option").first()).toHaveCSS(
       "border-top-width",
       "0px",
     );
     await expect(page.locator(".setup-country-menu")).toHaveCSS("opacity", "1");
     await page.screenshot({ path: `/tmp/movewise-countries-${width}.png` });
-    await page.getByRole("option", { name: "Cambodia", exact: true }).click();
+    await page.getByRole("option", { name: "China", exact: true }).click();
     await page.getByRole("combobox", { name: "Study country" }).click();
     await page
       .getByRole("option", { name: "United Kingdom", exact: true })
@@ -69,8 +69,10 @@ for (const width of [1440, 390]) {
     await page.getByRole("combobox", { name: "University · optional" }).click();
     await page
       .getByRole("textbox", { name: "Search universities" })
-      .fill("bristol");
-    await page.getByRole("option", { name: "University of Bristol" }).click();
+      .fill("manchester");
+    await page
+      .getByRole("option", { name: "University of Manchester" })
+      .click();
     await page.getByRole("button", { name: "Start date: Choose date" }).click();
     await expect(page.locator(".ui-calendar")).toBeVisible();
     await expect(page.locator(".ui-popover")).toHaveCSS("opacity", "1");
@@ -88,11 +90,11 @@ for (const width of [1440, 390]) {
     await page.getByRole("button", { name: "Back" }).click();
     await expect(
       page.getByRole("combobox", { name: "Home country" }),
-    ).toContainText("Cambodia");
+    ).toContainText("China");
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(
       page.getByRole("combobox", { name: "University · optional" }),
-    ).toContainText("University of Bristol");
+    ).toContainText("University of Manchester");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Confirmed funding (GBP)").fill("12000");
     await page.getByLabel("Sponsor support").selectOption("Yes");
@@ -131,9 +133,9 @@ for (const width of [1440, 390]) {
     ).toBeVisible();
     expect(await page.evaluate(() => (window as any).savedSetup)).toMatchObject(
       {
-        countryFrom: "Cambodia",
+        countryFrom: "China",
         countryTo: "United Kingdom",
-        university: "University of Bristol",
+        university: "University of Manchester",
         fundingAmount: 12000,
         sponsorSupport: "Yes",
       },
@@ -145,7 +147,7 @@ for (const width of [1440, 390]) {
 test("sponsor setup and save failure", async ({ page }) => {
   await openSetup(page, "Sponsor", true);
   await page.getByRole("combobox", { name: "Home country" }).click();
-  await page.getByRole("option", { name: "Cambodia", exact: true }).click();
+  await page.getByRole("option", { name: "China", exact: true }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(
     page.getByRole("heading", { name: "Ready to support." }),
@@ -159,34 +161,36 @@ test("sponsor setup and save failure", async ({ page }) => {
   ).toBeEnabled();
 });
 
-test("country search, destination reset and custom university", async ({
+test("country search, destination reset and rejection of unlisted universities", async ({
   page,
 }) => {
   await openSetup(page);
   await page.getByRole("combobox", { name: "Home country" }).click();
-  await page.getByRole("textbox", { name: "Search home country" }).fill("KHR");
+  await page.getByRole("textbox", { name: "Search home country" }).fill("CNY");
   await expect(page.getByRole("option")).toHaveCount(1);
-  await page.getByRole("option", { name: "Cambodia", exact: true }).click();
+  await page.getByRole("option", { name: "China", exact: true }).click();
   await page.getByRole("combobox", { name: "Study country" }).click();
-  await page.getByRole("option", { name: "Canada", exact: true }).click();
+  await page
+    .getByRole("option", { name: "United States", exact: true })
+    .click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(
-    page.getByText("Study currency: CAD.", { exact: false }),
+    page.getByText("Study currency: USD.", { exact: false }),
   ).toBeVisible();
   await page.getByRole("combobox", { name: "University · optional" }).click();
   await page
     .getByRole("textbox", { name: "Search universities" })
-    .fill("waterloo");
+    .fill("columbia");
   await page
     .getByRole("textbox", { name: "Search universities" })
     .press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(
     page.getByRole("combobox", { name: "University · optional" }),
-  ).toContainText("University of Waterloo");
+  ).toContainText("Columbia University");
   await page.getByRole("button", { name: "Back" }).click();
   await page.getByRole("combobox", { name: "Study country" }).click();
-  await page.getByRole("option", { name: "Germany", exact: true }).click();
+  await page.getByRole("option", { name: "China", exact: true }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(
     page.getByRole("combobox", { name: "University · optional" }),
@@ -195,14 +199,21 @@ test("country search, destination reset and custom university", async ({
   await page
     .getByRole("textbox", { name: "Search universities" })
     .fill("My German University");
+  await expect(page.getByRole("option")).toHaveCount(0);
+  await expect(
+    page.getByText("No matching universities in the approved list."),
+  ).toBeVisible();
   await page
-    .getByRole("option", { name: "Use “My German University”" })
+    .getByRole("textbox", { name: "Search universities" })
+    .fill("tsinghua");
+  await page
+    .getByRole("option", { name: "Tsinghua University", exact: true })
     .click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Finish setup" }).click();
   await page.getByRole("button", { name: "Yes, confirm amount" }).click();
   expect(await page.evaluate(() => (window as any).savedSetup)).toMatchObject({
-    countryTo: "Germany",
-    university: "My German University",
+    countryTo: "China",
+    university: "Tsinghua University",
   });
 });

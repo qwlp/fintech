@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../convex/schema";
 import { api } from "../convex/_generated/api";
-import { countries } from "../shared/study";
+import { countries, universities } from "../shared/study";
 import { convertMoney, currencyRate, walletValue } from "../shared/currency";
 import { assessTuition, quoteFingerprint } from "../convex/tuitionDecision";
 const modules = import.meta.glob("../convex/**/*.ts");
@@ -19,9 +19,9 @@ async function fixture(country: string) {
       initials: "S",
       role: "Student",
       planName: "Study",
-      countryFrom: "Cambodia",
+      countryFrom: "China",
       countryTo: country,
-      university: "My university",
+      university: universities[country][0],
       course: "Course",
       setupComplete: true,
       paymentStatus: "not_started",
@@ -63,7 +63,7 @@ async function fixture(country: string) {
 const profile = (accountId: any, countryTo: string, fundingAmount: number) => ({
   accountId,
   name: "Student",
-  countryFrom: "Cambodia",
+  countryFrom: "China",
   countryTo,
   university: "",
   course: "Course",
@@ -89,7 +89,7 @@ describe("workspace currency accounting", () => {
       expect(state.config.banking).toMatchObject({
         currency,
         paymentAmount: convertMoney(2000, "GBP", currency),
-        recipient: "My university",
+        recipient: universities[name][0],
       });
       expect(state.config.security.paymentLimit).toBe(
         convertMoney(2500, "GBP", currency),
@@ -155,7 +155,7 @@ describe("workspace currency accounting", () => {
     },
   );
   it("cancels an approved payment on destination change and preserves native balances", async () => {
-    const { owner, accountId } = await fixture("Canada");
+    const { owner, accountId } = await fixture("United States");
     const proposal = (await owner.mutation(api.accounts.transitionPayment, {
       accountId,
       next: "prepared",
@@ -168,26 +168,26 @@ describe("workspace currency accounting", () => {
     const before = await owner.query(api.accounts.bootstrap, {});
     await owner.mutation(
       api.accounts.updateProfile,
-      profile(accountId, "Germany", convertMoney(1000, "GBP", "EUR")),
+      profile(accountId, "United Kingdom", convertMoney(1000, "GBP", "GBP")),
     );
     const after = await owner.query(api.accounts.bootstrap, {});
     expect(after.account.paymentStatus).toBe("not_started");
     expect(after.paymentProposals[0]).toMatchObject({
       status: "cancelled",
-      targetCurrency: "CAD",
+      targetCurrency: "USD",
       amountMinor: proposal.amountMinor,
     });
     expect(after.wallets).toEqual(before.wallets);
     expect(after.config.banking).toMatchObject({
-      currency: "EUR",
-      paymentAmount: 2340,
+      currency: "GBP",
+      paymentAmount: 2000,
       recipientVerified: false,
       recipient: "",
       recipientAccountLast4: "",
     });
     expect(
       after.paymentRoutes.every(
-        (r) => r.targetCurrency === "EUR" && r.quoteExpiresAt === 0,
+        (r) => r.targetCurrency === "GBP" && r.quoteExpiresAt === 0,
       ),
     ).toBe(true);
     await expect(
@@ -202,7 +202,7 @@ describe("workspace currency accounting", () => {
     ).toHaveLength(0);
   });
   it("keeps completed receipts in their original currency after rebasing a plan", async () => {
-    const { owner, accountId } = await fixture("Australia");
+    const { owner, accountId } = await fixture("United States");
     const proposal = (await owner.mutation(api.accounts.transitionPayment, {
       accountId,
       next: "prepared",
@@ -226,8 +226,8 @@ describe("workspace currency accounting", () => {
     expect(after.ledgerEntries).toEqual(before.ledgerEntries);
     expect(after.paymentProposals[0]).toMatchObject({
       status: "completed",
-      targetCurrency: "AUD",
-      amountMinor: 390000,
+      targetCurrency: "USD",
+      amountMinor: Math.round(convertMoney(2000, "GBP", "USD") * 100),
     });
     expect(after.config.profile.workspaceCurrency).toBe("CNY");
   });
@@ -239,7 +239,7 @@ describe("workspace currency accounting", () => {
       fxRate: 1,
       delivery: "1 day",
       sourceCurrency: "USD",
-      targetCurrency: "CAD",
+      targetCurrency: "USD",
       quotedAt: 1,
       quoteExpiresAt: 100,
       maxBusinessDays: 1,
@@ -247,11 +247,11 @@ describe("workspace currency accounting", () => {
     expect(quoteFingerprint(100, "Recipient", "1234", route)).not.toBe(
       quoteFingerprint(100, "Recipient", "1234", {
         ...route,
-        targetCurrency: "EUR",
+        targetCurrency: "GBP",
       }),
     );
     const result = assessTuition({
-      currency: "EUR",
+      currency: "GBP",
       amountGBP: 100,
       reserveGBP: 0,
       wallets: [{ currency: "USD", amount: 1000, gbpValue: 774 }],

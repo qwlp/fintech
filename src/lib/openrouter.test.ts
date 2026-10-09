@@ -167,6 +167,94 @@ describe("bounded AI tool execution", () => {
       second.tools.some((t: any) => /approve|execute/.test(t.function.name)),
     ).toBe(false);
   });
+  it("reads saved values, exposes editing tools and reports pending funding honestly", async () => {
+    vi.stubEnv("OPENROUTER_KEY", "test-key");
+    const pending = {
+      status: "pending_confirmation",
+      amount: 22000,
+      currency: "GBP",
+      executionId: "pending1",
+    };
+    const execute = vi.fn(async (name: string) =>
+      name === "read_workspace"
+        ? { status: "read", confirmedFunding: 19000, currency: "GBP" }
+        : pending,
+    );
+    const call = (id: string, name: string, args: object) =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                tool_calls: [
+                  {
+                    id,
+                    type: "function",
+                    function: { name, arguments: JSON.stringify(args) },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(call("read", "read_workspace", {}))
+      .mockResolvedValueOnce(
+        call("edit", "update_profile", { confirmedFunding: 22000 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content:
+                    "Please confirm £22,000 in the chat card. It has not been saved yet.",
+                },
+              },
+            ],
+          }),
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    expect(
+      await requestReply(
+        context,
+        "Set my confirmed funding to £22,000",
+        execute,
+      ),
+    ).toContain("not been saved");
+    expect(execute.mock.calls).toEqual([
+      ["read_workspace", {}],
+      ["update_profile", { confirmedFunding: 22000 }],
+    ]);
+    const body = JSON.parse(fetchMock.mock.calls[2][1].body);
+    expect(body.messages.at(-1)).toMatchObject({
+      role: "tool",
+      content: JSON.stringify(pending),
+    });
+    const names = body.tools.map((tool: any) => tool.function.name);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "update_tuition_details",
+        "update_tuition_plan",
+        "update_move_plan",
+        "update_budget_item",
+        "update_funding_source",
+        "set_checklist_item",
+      ]),
+    );
+    expect(
+      names.some((name: string) => /approve|execute|confirm/i.test(name)),
+    ).toBe(false);
+    expect(body.messages[0].content).toContain("Apply only requested changes");
+    expect(body.messages[0].content).toContain(
+      "You have no tool to confirm it",
+    );
+  });
   it("rejects hallucinated approval tools without executing them", async () => {
     vi.stubEnv("OPENROUTER_KEY", "test-key");
     const execute = vi.fn();

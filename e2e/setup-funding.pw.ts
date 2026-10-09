@@ -22,7 +22,7 @@ for (const width of [390, 1440]) {
         import '/src/dashboard-visual.css';
         import '/src/dark-mode.css';
         const state = {
-          account: { _id: 'student', role: 'Student', setupComplete: true, countryFrom: 'Cambodia', countryTo: 'China', university: 'My University', name: 'Dara', initials: 'D', planName: 'Study', paymentStatus: 'not_started', selectedRoute: '', sponsorRequestSent: false },
+          account: { _id: 'student', role: 'Student', setupComplete: true, countryFrom: 'China', countryTo: 'China', university: 'Tsinghua University', name: 'Dara', initials: 'D', planName: 'Study', paymentStatus: 'not_started', selectedRoute: '', sponsorRequestSent: false },
           config: { profile: { fundingAmount: 19000, fundingCurrency: 'CNY', workspaceCurrency: 'CNY' } },
           costs: [{ key: 'tuition', name: 'Tuition', category: 'Recurring', amount: 30000, due: 'Soon' }],
           funding: [], sponsors: [], wallets: [], paymentRoutes: [], auditEvents: [], messages: [], notifications: [], checklist: [], sponsorRequests: [], rateAlerts: [], paymentProposals: [], ledgerEntries: []

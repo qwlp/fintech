@@ -13,9 +13,9 @@ for (const theme of ["light", "dark"]) {
     );
     await page.goto("/move-preview");
     for (const name of [
-      "Tsinghua University (Beijing)",
-      "King’s College London (KCL)",
-      "UCLA (Los Angeles)",
+      "Tsinghua University",
+      "King's College London",
+      "UCLA",
     ]) {
       await page
         .getByRole("combobox", { name: "University estimates" })

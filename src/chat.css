@@ -901,6 +901,21 @@
   color: var(--color-muted, #65717f);
 }
 
+.agent-funding-change {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+}
+.agent-funding-change p { margin: 8px 0; font-size: 13px; }
+.agent-funding-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.agent-saved-changes { display: grid; gap: 8px; font-size: 12px; }
+.agent-saved-changes > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 10px; }
+.agent-saved-changes dt { color: var(--color-muted); }
+.agent-saved-changes dd { margin: 0; overflow-wrap: anywhere; }
+
 /* A single compact row leaves mobile space for the conversation. */
 @media (max-width: 800px) {
   .assistant-page .assistant-toolbar {

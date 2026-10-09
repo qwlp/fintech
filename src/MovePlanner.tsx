@@ -422,7 +422,7 @@ export default function MovePlanner({
           "University estimates",
           String(settings.university),
           [
-            { value: "-1", label: "Custom university · enter your costs" },
+            { value: "-1", label: "Enter your own costs" },
             ...profiles
               .filter((p) => !studyCountry || p.country === studyCountry)
               .map((p) => ({ value: String(p.id), label: p.name })),

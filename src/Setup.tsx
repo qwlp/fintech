@@ -17,7 +17,11 @@ import Brand from "./Brand";
 import FundingConfirmation from "./FundingConfirmation";
 import UniversitySelect from "./UniversitySelect";
 import { convertMoney, studyCurrency } from "../shared/currency";
-import { getCountry } from "../shared/study";
+import {
+  getCountry,
+  getUniversity,
+  needsStudySelectionUpdate,
+} from "../shared/study";
 import SetupCountrySelect from "./SetupCountrySelect";
 import { DatePicker } from "./components/ui/date-picker";
 import { Button } from "./components/ui/button";
@@ -35,11 +39,13 @@ export default function Setup({
     courseStart?: string;
     fundingAmount?: number;
     sponsorSupport?: string;
+    fundingCurrency?: string;
   };
   onDone: () => void;
   onSignOut: () => void;
 }) {
   const sponsor = account.role === "Sponsor";
+  const canClose = account.setupComplete && !needsStudySelectionUpdate(account);
   const steps = sponsor
     ? ["About you", "Ready"]
     : ["Your move", "Your studies", "Your funding"];
@@ -57,18 +63,21 @@ export default function Setup({
       : "";
   const [values, setValues] = useState({
     name: account.name,
-    countryFrom: getCountry(account.countryFrom)?.name ?? account.countryFrom,
-    countryTo: getCountry(account.countryTo)?.name ?? account.countryTo,
-    university: account.university,
+    countryFrom: getCountry(account.countryFrom)?.name ?? "",
+    countryTo: getCountry(account.countryTo)?.name ?? "",
+    university: getUniversity(account.countryTo, account.university) ?? "",
     course: account.course,
     courseStart: startValue,
     fundingAmount: String(config?.fundingAmount ?? 0),
     sponsorSupport: config?.sponsorSupport ?? "Not sure yet",
   });
+  const [draftCurrency, setDraftCurrency] = useState(
+    config?.fundingCurrency ?? studyCurrency(account.countryTo),
+  );
   const save = useMutation(convexApi.completeSetup);
   const reduced = useReducedMotion();
   const heading = useRef<HTMLHeadingElement>(null);
-  const update = (key: keyof typeof values, value: string) =>
+  const update = (key: keyof typeof values, value: string) => {
     setValues((prev) => ({
       ...prev,
       [key]: value,
@@ -78,13 +87,15 @@ export default function Setup({
             fundingAmount: String(
               convertMoney(
                 Number(prev.fundingAmount),
-                studyCurrency(prev.countryTo),
+                draftCurrency,
                 studyCurrency(value),
               ),
             ),
           }
         : {}),
     }));
+    if (key === "countryTo") setDraftCurrency(studyCurrency(value));
+  };
   const field = (
     key: keyof typeof values,
     label: string,
@@ -171,9 +182,14 @@ export default function Setup({
       />
       <header className="setup-header">
         <Brand />
-        <button onClick={account.setupComplete ? onDone : onSignOut}>
-          {account.setupComplete && <X size={16} aria-hidden="true" />}
-          {account.setupComplete ? "Close" : "Sign out"}
+        <button onClick={canClose ? onDone : onSignOut}>
+          {canClose ? (
+            <>
+              <X size={16} aria-hidden="true" /> Close
+            </>
+          ) : (
+            "Sign out"
+          )}
         </button>
       </header>
       <motion.section

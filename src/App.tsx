@@ -19,7 +19,7 @@ import InfoHelp from "./InfoHelp";
 import AgentTour from "./AgentTour";
 import SectionHelp from "./SectionHelp";
 import UniversitySelect from "./UniversitySelect";
-import { countries, getCountry } from "../shared/study";
+import { countries, getCountry, getUniversity } from "../shared/study";
 import SetupCountrySelect from "./SetupCountrySelect";
 import "./brief.css";
 import "./security.css";
@@ -2719,10 +2719,10 @@ function Plan({ announce }: { announce: (message: string) => void }) {
     <div className="page-stack">
       <section className="page-intro">
         <div>
-          <span className="eyebrow">Cambodia → United Kingdom</span>
+          <span className="eyebrow">China → United Kingdom</span>
           <h2>Your study-abroad plan</h2>
           <p>
-            MSc Financial Technology · Example UK University · September 2026
+            MSc Financial Technology · University of Manchester · September 2026
           </p>
         </div>
         <button
@@ -2866,12 +2866,10 @@ export function Profile({
   const [profile, setProfile] = useState({
     name: account?.name ?? "",
     home:
-      getCountry(account?.countryFrom ?? "")?.name ??
-      account?.countryFrom ??
-      "",
+      getCountry(account?.countryFrom ?? "")?.name ?? "",
     study:
-      getCountry(account?.countryTo ?? "")?.name ?? account?.countryTo ?? "",
-    university: account?.university ?? "",
+      getCountry(account?.countryTo ?? "")?.name ?? "",
+    university: getUniversity(account?.countryTo ?? "", account?.university ?? "") ?? "",
     course: account?.course ?? "",
     start: config?.courseStart ?? "",
     status: config?.financialStatus ?? "",
@@ -2910,9 +2908,9 @@ export function Profile({
     if (!account || editing) return;
     setProfile({
       name: account.name,
-      home: getCountry(account.countryFrom)?.name ?? account.countryFrom,
-      study: getCountry(account.countryTo)?.name ?? account.countryTo,
-      university: account.university,
+      home: getCountry(account.countryFrom)?.name ?? "",
+      study: getCountry(account.countryTo)?.name ?? "",
+      university: getUniversity(account.countryTo, account.university) ?? "",
       course: account.course,
       start: config?.courseStart ?? "",
       status: config?.financialStatus ?? "",
@@ -3224,7 +3222,7 @@ export function Profile({
             <Plus size={16} /> Add account
           </button>
         </div>
-        {(config?.countryAccounts ?? []).map(
+        {(config?.countryAccounts ?? []).filter((item: { country: string }) => getCountry(item.country)).map(
           (item: { country: string; label: string }, index: number) => (
             <div className="line-item" key={`${item.country}-${index}`}>
               <MapPin size={18} />
@@ -3238,7 +3236,7 @@ export function Profile({
             </div>
           ),
         )}
-        {!config?.countryAccounts?.length && !addingCountry && (
+        {!(config?.countryAccounts ?? []).some((item: { country: string }) => getCountry(item.country)) && !addingCountry && (
           <p className="country-account-hint">None yet.</p>
         )}
         {addingCountry && (
@@ -3327,7 +3325,7 @@ function LegacyMovePlanner({
   const legacyRoutes = [
     {
       name: "Direct flight",
-      detail: "Phnom Penh → London · 1 stop",
+      detail: "Beijing → London · 1 stop",
       time: "16h 40m",
       cost: convertMoneyText("£610", "GBP", currency),
       ease: "Easiest",
@@ -3335,14 +3333,14 @@ function LegacyMovePlanner({
     },
     {
       name: "Budget flight",
-      detail: "Phnom Penh → Bangkok → London · 2 stops",
+      detail: "Beijing → Shanghai → London · 2 stops",
       time: "22h 10m",
       cost: convertMoneyText("£480", "GBP", currency),
       ease: "More effort",
     },
     {
       name: "Flexible flight",
-      detail: "Phnom Penh → Singapore → London · 1 stop",
+      detail: "Beijing → Guangzhou → London · 1 stop",
       time: "18h 25m",
       cost: convertMoneyText("£545", "GBP", currency),
       ease: "Good balance",
@@ -3361,7 +3359,7 @@ function LegacyMovePlanner({
     <div className="page-stack move-page">
       <section className="page-intro">
         <div>
-          <span className="eyebrow">Cambodia → United Kingdom</span>
+          <span className="eyebrow">China → United Kingdom</span>
           <h2>Move planner</h2>
           <p>
             Arrival requirements, real living costs, routes, and transport in
@@ -3684,7 +3682,7 @@ export function Payments({
         }).format(amount)
       : "—";
   const recipient =
-    activeProposal?.recipient ?? config?.recipient ?? "Example UK University";
+    activeProposal?.recipient ?? config?.recipient ?? "University of Manchester";
   const locked = status !== "not_started";
   const currentStep =
     status === "not_started" ? 1 : status === "prepared" ? 2 : 3;

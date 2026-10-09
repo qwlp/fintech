@@ -1,23 +1,27 @@
 import { useId, useState } from "react";
 import { Popover } from "radix-ui";
 import { Check, ChevronDown, Search } from "lucide-react";
-import { universities } from "../shared/study";
+import { universities, getCountry, getUniversity } from "../shared/study";
 
 export default function UniversitySelect({
   country,
   value,
   onChange,
   disabled = false,
+  label = "University · optional",
+  allowClear = true,
 }: {
   country: string;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  label?: string;
+  allowClear?: boolean;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const names = universities[country] ?? [];
+  const names = universities[getCountry(country)?.name ?? ""] ?? [];
   const search = query.trim();
   const matches = names.filter((name) =>
     name.toLowerCase().includes(search.toLowerCase()),
@@ -28,7 +32,7 @@ export default function UniversitySelect({
   };
   return (
     <div className="setup-field">
-      <span id={`${id}-label`}>University · optional</span>
+      <span id={`${id}-label`}>{label}</span>
       <Popover.Root
         open={open}
         onOpenChange={(next) => {
@@ -47,7 +51,7 @@ export default function UniversitySelect({
             disabled={disabled || !country}
           >
             <span className={!value ? "is-placeholder" : ""}>
-              {value || "Search for your university"}
+              {getUniversity(country, value) || "Search for your university"}
             </span>
             <ChevronDown size={19} />
           </button>
@@ -119,22 +123,9 @@ export default function UniversitySelect({
                 </button>
               ))}
               {!matches.length && (
-                <p>No matching universities. You can add yours below.</p>
+                <p>No matching universities in the approved list.</p>
               )}
-              {search &&
-                !names.some(
-                  (name) => name.toLowerCase() === search.toLowerCase(),
-                ) && (
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={false}
-                    onClick={() => choose(search)}
-                  >
-                    Use “{search}”
-                  </button>
-                )}
-              {value && (
+              {value && allowClear && (
                 <button
                   type="button"
                   role="option"
@@ -146,7 +137,7 @@ export default function UniversitySelect({
               )}
             </div>
             <p className="setup-directory-note">
-              Suggestions in {country}. Search to add an unlisted university.
+              Approved universities in {country}.
             </p>
           </Popover.Content>
         </Popover.Portal>

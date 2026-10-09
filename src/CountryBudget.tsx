@@ -20,22 +20,10 @@ const destinations = [
     funding: "24000",
   },
   {
-    name: "Australia",
-    tuition: "24000",
-    living: "2000",
-    funding: "32000",
-  },
-  {
-    name: "Canada",
-    tuition: "16000",
-    living: "1400",
-    funding: "24000",
-  },
-  {
-    name: "Germany",
-    tuition: "4000",
-    living: "900",
-    funding: "10000",
+    name: "China",
+    tuition: "40000",
+    living: "5000",
+    funding: "80000",
   },
 ].map((destination) => ({ ...destination, ...getCountry(destination.name)! }));
 type Budget = {

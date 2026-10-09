@@ -1,13 +1,10 @@
+import { universities as studyUniversities } from "../../shared/study";
 export type TuitionCountry = "US" | "UK" | "China";
 export type TuitionRoute = "bank" | "platform" | "card";
 export const universities: Record<TuitionCountry, string[]> = {
-  US: ["Columbia University", "University of Southern California", "UCLA"],
-  UK: [
-    "King’s College London",
-    "University of Manchester",
-    "University of Edinburgh",
-  ],
-  China: ["Tsinghua University", "Peking University", "Zhejiang University"],
+  US: studyUniversities["United States"],
+  UK: studyUniversities["United Kingdom"],
+  China: studyUniversities.China,
 };
 export function tuitionEstimates(
   origin: TuitionCountry,

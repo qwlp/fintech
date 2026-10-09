@@ -1,5 +1,7 @@
 import { validateMoveSettings } from "../shared/move-planner";
 import { routeProviderName } from "../shared/payment-routes";
+import { isWorkspaceTool } from "../shared/agent-tools";
+import { runWorkspaceTool, resolveFundingChange } from "./agentTools";
 import {
   mutationGeneric as mutation,
   actionGeneric as action,
@@ -15,7 +17,7 @@ import {
   walletValue,
   sandboxRouteGBPPerUSD,
 } from "../shared/currency";
-import { getCountry, validateStudySelection } from "../shared/study";
+import { getCountry, getUniversity, universities, validateStudySelection } from "../shared/study";
 
 import { requireAccount } from "./ownership";
 import { internal } from "./_generated/api";
@@ -152,9 +154,9 @@ export const seedDemo = internalMutation({
       initials: "DC",
       role: "Student",
       planName: "UK Study Plan",
-      countryFrom: "Cambodia",
+      countryFrom: "China",
       countryTo: "United Kingdom",
-      university: "Example UK University",
+      university: "University of Manchester",
       course: "MSc Financial Technology",
       paymentStatus: "not_started",
       selectedRoute: "wise",
@@ -230,9 +232,9 @@ export const seedDemo = internalMutation({
         label: "UK current account",
       },
       {
-        currency: "KHR",
-        symbol: "៛",
-        amount: 1200000,
+        currency: "CNY",
+        symbol: "¥",
+        amount: 2106.8,
         gbpValue: 229,
         label: "Home account",
       },
@@ -342,7 +344,7 @@ export const seedDemo = internalMutation({
         routes: [
           [
             "Direct flight",
-            "Phnom Penh → London · 1 stop",
+            "Beijing → London · 1 stop",
             "16h 40m",
             "£610",
             "Easiest",
@@ -350,7 +352,7 @@ export const seedDemo = internalMutation({
           ],
           [
             "Budget flight",
-            "Phnom Penh → Bangkok → London · 2 stops",
+            "Beijing → Shanghai → London · 2 stops",
             "22h 10m",
             "£480",
             "More effort",
@@ -358,7 +360,7 @@ export const seedDemo = internalMutation({
           ],
           [
             "Flexible flight",
-            "Phnom Penh → Singapore → London · 1 stop",
+            "Beijing → Guangzhou → London · 1 stop",
             "18h 25m",
             "£545",
             "Good balance",
@@ -379,7 +381,7 @@ export const seedDemo = internalMutation({
         reason:
           "No monthly fee, local GBP details, fee-free domestic payments, and a nearby branch.",
         swift: "EXUKGB2L",
-        recipient: "Example UK University",
+        recipient: "University of Manchester",
         sendBy: "05 Oct 2026",
         paymentAmount: 2000,
         recipientAccountLast4: "1842",
@@ -540,7 +542,7 @@ export const completeSetup = mutation({
         .join(""),
       countryFrom: getCountry(args.countryFrom)!.name,
       countryTo: getCountry(args.countryTo)?.name ?? "",
-      university: args.university.trim(),
+      university: getUniversity(args.countryTo, args.university) ?? "",
       course: args.course.trim(),
       setupComplete: true,
     });
@@ -587,7 +589,7 @@ export const updateProfile = mutation({
       throw new Error("Invalid confirmed funding amount");
     account.countryFrom = getCountry(account.countryFrom)!.name;
     account.countryTo = getCountry(account.countryTo)?.name ?? "";
-    account.university = account.university.trim();
+    account.university = getUniversity(account.countryTo, account.university) ?? "";
     const initials = account.name
       .split(/\s+/)
       .filter(Boolean)
@@ -768,7 +770,7 @@ export const ensureConfig = mutation({
         routes: [
           [
             "Direct flight",
-            "Phnom Penh → London · 1 stop",
+            "Beijing → London · 1 stop",
             "16h 40m",
             "£610",
             "Easiest",
@@ -776,7 +778,7 @@ export const ensureConfig = mutation({
           ],
           [
             "Budget flight",
-            "Phnom Penh → Bangkok → London · 2 stops",
+            "Beijing → Shanghai → London · 2 stops",
             "22h 10m",
             "£480",
             "More effort",
@@ -797,7 +799,7 @@ export const ensureConfig = mutation({
         reason:
           "No monthly fee, local GBP details,fee-free domestic payments, and a nearby branch.",
         swift: "EXUKGB2L",
-        recipient: "Example UK University",
+        recipient: "University of Manchester",
         sendBy: "05 Oct 2026",
         paymentAmount: 2000,
         recipientAccountLast4: "1842",
@@ -1056,7 +1058,7 @@ export const sendMessage = action({
     } catch (error) {
       if (!toolResults.length) throw error;
       reply =
-        "The AI explanation could not complete. Review the recorded calculation details below. If a payment proposal was prepared, it remains available in Payments for your review. These tools cannot approve or execute a payment; no funds moved. Check the current proposal before trying preparation again.";
+        "The AI explanation could not complete. Review the recorded tool results below: successful edits are saved, and funding changes marked pending still need your confirmation. Any prepared payment remains in Payments for review. No funds moved. Check saved changes before retrying.";
     }
     await ctx.runMutation(internal.accounts.saveChatExchange, {
       accountId,
@@ -1143,17 +1145,33 @@ export const runAgentTool = internalMutation({
       v.literal("simulate_budget"),
       v.literal("prepare_tuition_payment"),
       v.literal("stress_test_fx"),
+      v.literal("read_workspace"),
+      v.literal("update_tuition_details"),
+      v.literal("update_tuition_plan"),
+      v.literal("update_move_plan"),
+      v.literal("update_profile"),
+      v.literal("update_budget_item"),
+      v.literal("update_funding_source"),
+      v.literal("select_payment_route"),
+      v.literal("refresh_payment_quotes"),
+      v.literal("set_checklist_item"),
+      v.literal("create_rate_alert"),
+      v.literal("add_country_account"),
     ),
     arguments: v.any(),
     requestText: v.string(),
   },
-  handler: async (ctx, { accountId, name, arguments: args, requestText }) => {
+  handler: async (
+    ctx,
+    { accountId, name, arguments: args, requestText },
+  ): Promise<any> => {
     const account = await requireAccount(ctx, accountId);
     if (account.role !== "Student") throw new Error("Student account required");
     if (!account.aiConsentAt)
       throw new Error("AI processing consent has been revoked");
     if (!args || typeof args !== "object" || Array.isArray(args))
       throw new Error("Invalid tool arguments");
+    if (isWorkspaceTool(name)) return runWorkspaceTool(ctx, accountId, name, args);
     const keys = Object.keys(args);
     if (
       keys.some(
@@ -1324,6 +1342,31 @@ export const runAgentTool = internalMutation({
   },
 });
 
+export const agentFundingChange = query({
+  args: { executionId: v.id("toolExecutions") },
+  handler: async (ctx, { executionId }) => {
+    const row = await ctx.db.get(executionId);
+    if (!row) throw new Error("Funding change not found");
+    await requireAccount(ctx, row.accountId);
+    if (!["update_profile", "update_funding_source"].includes(row.name))
+      throw new Error("Not a funding change");
+    if (!row.result?.executionId) throw new Error("Not a pending funding change");
+    return {
+      executionId,
+      status: row.result.status,
+      amount: row.result.amount,
+      currency: row.result.currency,
+      expiresAt: row.result.expiresAt,
+    };
+  },
+});
+
+export const resolveAgentFundingChange = mutation({
+  args: { executionId: v.id("toolExecutions"), confirm: v.boolean() },
+  handler: async (ctx, { executionId, confirm }): Promise<any> =>
+    resolveFundingChange(ctx, executionId, confirm),
+});
+
 export const initializePaymentSandbox = mutation({
   args: { accountId: v.id("accounts") },
   handler: async (ctx, { accountId }) => {
@@ -1342,8 +1385,8 @@ export const initializePaymentSandbox = mutation({
       key: "banking",
       value: {
         recipient:
-          account.university ||
-          `Example ${account.countryTo || "UK"} University`,
+          getUniversity(account.countryTo, account.university) ||
+          universities[getCountry(account.countryTo)?.name ?? ""]?.[0] || "",
         currency,
         recipientAccountLast4: "1842",
         paymentAmount: convertMoney(2000, "GBP", currency),
@@ -1602,6 +1645,8 @@ export const updatePaymentDetails = mutation({
       !/^\d{4}$/.test(last4)
     )
       throw new Error("Invalid payment details");
+    if (!getUniversity(account.countryTo, recipient))
+      throw new Error("Choose a listed university in your study country");
     const rows = await ctx.db
       .query("appConfig")
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
@@ -1613,7 +1658,7 @@ export const updatePaymentDetails = mutation({
         ...banking.value,
         currency: studyCurrency(account.countryTo),
         paymentAmount: Math.round(amount * 100) / 100,
-        recipient: recipient.trim(),
+        recipient: getUniversity(account.countryTo, recipient)!,
         recipientAccountLast4: last4,
         recipientVerified: false,
       },

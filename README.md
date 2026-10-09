@@ -32,6 +32,10 @@ Create a Student account, finish onboarding, and open the workspace. New account
 8. Open **Payments → Payment demo**. Review the immutable recipient, total, rate, expiry and protected reserve; check consent and approve. Send the payment.
 9. Review the unique receipt, wallet debit and audit trail. Download execution evidence as JSON.
 
+The agent can also save requested profile, tuition, Move Planner, budget and funding changes; select existing payment routes; refresh sandbox quotes; update the departure checklist; and add rate alerts or country-account labels. For example, ask “Set my Move Planner rent to £900 per month” or “Set my tuition deadline to 2027-09-15.” It reads current values before editing and preserves fields you did not ask to change. Only China, the United Kingdom and the United States and their listed universities are supported.
+
+Changes to confirmed funding show an amount-confirmation card in chat and remain pending until the owner confirms. Pending changes expire after 30 minutes and cannot overwrite funding/profile changes saved since the card was created. These edits update planning records, not wallet balances. Recipient confirmation, payment approval and sending remain separate owner actions in Payments.
+
 The recommendation is the cheapest fresh route that meets the saved deadline with a safety buffer, covers the USD debit and retains your living reserve. Blocked routes show their reasons and an illustrative USD funding top-up. Delivery counts Monday–Friday in UTC; holidays, bank cutoffs and university processing are excluded. Pending sponsor commitments never count as wallet cash.
 
 Quotes expire after ten minutes. Changing provider requires resetting the proposal and obtaining fresh approval. Reset cancels outstanding proposals, but never reverses a completed ledger debit or replenishes the wallet. Repeated execution of a completed proposal returns its existing receipt without debiting again.

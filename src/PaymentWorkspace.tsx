@@ -1,5 +1,7 @@
 import { convertMoney } from "../shared/currency";
 import { useWorkspaceCurrency } from "./WorkspaceCurrency";
+import { countries, getUniversity } from "../shared/study";
+import UniversitySelect from "./UniversitySelect";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Landmark,
@@ -48,6 +50,8 @@ export default function PaymentWorkspace({
   }) => Promise<void>;
 }) {
   const currency = useWorkspaceCurrency();
+  const country =
+    countries.find((item) => item.currency === currency)?.name ?? "";
   const [view, setView] = useState(initialView);
   const [reviewing, setReviewing] = useState(paymentStatus !== "not_started");
   const [editing, setEditing] = useState(false);
@@ -99,7 +103,6 @@ export default function PaymentWorkspace({
               <ArrowLeftRight size={16} /> Exchange
             </TabsTrigger>
           )}
-
         </TabsList>
         <TabsContent value="tuition">
           {amount !== undefined && !reviewing && (
@@ -156,11 +159,11 @@ export default function PaymentWorkspace({
                   if (
                     !Number.isFinite(details.amount) ||
                     details.amount <= 0 ||
-                    !details.recipient ||
+                    !getUniversity(country, details.recipient) ||
                     !/^\d{4}$/.test(details.last4)
                   )
                     throw new Error(
-                      "Enter a positive amount, recipient and four account digits.",
+                      "Enter a positive amount, select a listed university and enter four account digits.",
                     );
                   if (onEdit) await onEdit(details);
                   else {
@@ -199,18 +202,14 @@ export default function PaymentWorkspace({
                   }
                 />
               </label>
-              <label>
-                University / recipient
-                <Input
-                  required
-                  maxLength={160}
-                  value={draft.recipient}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setDraft({ ...draft, recipient: e.target.value })
-                  }
-                />
-              </label>
+              <UniversitySelect
+                label="University / recipient"
+                allowClear={false}
+                country={country}
+                value={draft.recipient}
+                disabled={busy}
+                onChange={(value) => setDraft({ ...draft, recipient: value })}
+              />
               <label>
                 Recipient account last four digits
                 <Input
@@ -245,12 +244,12 @@ export default function PaymentWorkspace({
             <>
               <div className="payment-choose-view">{plan}</div>
               <div className="payment-review-actions">
-              <Button
-                className="payment-review-next"
-                onClick={() => setReviewing(true)}
-              >
-                Review payment <ArrowRight size={16} />
-              </Button>
+                <Button
+                  className="payment-review-next"
+                  onClick={() => setReviewing(true)}
+                >
+                  Review payment <ArrowRight size={16} />
+                </Button>
               </div>
             </>
           ) : (
@@ -269,7 +268,6 @@ export default function PaymentWorkspace({
         </TabsContent>
         <TabsContent value="balances">{balances}</TabsContent>
         <TabsContent value="exchange">{exchange}</TabsContent>
-
       </Tabs>
     </section>
   );

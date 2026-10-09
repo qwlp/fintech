@@ -44,7 +44,7 @@ export default function SetupCountrySelect({
                   {selectedCountry.flag}
                 </span>
               )}
-              {value || "Choose a country"}
+              {selectedCountry?.name || "Choose a country"}
             </span>
             <ChevronDown size={19} />
           </button>

@@ -1,4 +1,5 @@
 import SponsorDashboard from "./SponsorDashboard";
+import { needsStudySelectionUpdate } from "../shared/study";
 import Brand from "./Brand";
 import {
   Component,
@@ -316,10 +317,14 @@ function AccountWorkspace() {
   const accountData = useQuery(convexApi.bootstrap, {});
   const { signOut } = useAuthActions();
   const [error, setError] = useState("");
+  const needsSetup = !!accountData && (
+    accountData.account.setupComplete === false ||
+    needsStudySelectionUpdate(accountData.account)
+  );
   useEffect(() => {
-    if (accountData?.account.setupComplete === false && hash !== "#setup")
+    if (needsSetup && hash !== "#setup")
       location.hash = "setup";
-  }, [accountData?.account.setupComplete, hash]);
+  }, [needsSetup, hash]);
   const logout = async () => {
     try {
       await signOut();
@@ -334,7 +339,7 @@ function AccountWorkspace() {
         Loading your account…
       </main>
     );
-  if (hash === "#setup" || accountData.account.setupComplete === false)
+  if (hash === "#setup" || needsSetup)
     return (
       <Setup
         account={accountData.account}

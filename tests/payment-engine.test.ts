@@ -18,9 +18,9 @@ async function fixture() {
       role: "Student",
       initials: "S",
       planName: "Study",
-      countryFrom: "Cambodia",
+      countryFrom: "China",
       countryTo: "UK",
-      university: "Example",
+      university: "University of Manchester",
       course: "Course",
       paymentStatus: "not_started",
       selectedRoute: "",
@@ -509,7 +509,7 @@ describe("sandbox payment authorization and accounting", () => {
     });
     const state = await owner.query(api.accounts.bootstrap, {});
     expect(state.ledgerEntries[0].receivedMinor).toBe(200000);
-    expect(state.ledgerEntries[0].recipient).toBe("Example");
+    expect(state.ledgerEntries[0].recipient).toBe("University of Manchester");
   });
   it("protects living funds at preparation and again at execution", async () => {
     const { t, owner, accountId, proposal } = await prepared();
@@ -620,6 +620,14 @@ describe("sandbox payment authorization and accounting", () => {
 });
 
 describe("editable tuition and shared quote", () => {
+  it("rejects unlisted institutions and institutions in another country", async () => {
+    const { owner, accountId } = await fixture();
+    for (const recipient of ["University of Oxford", "My University", "Peking University"]) {
+      await expect(owner.mutation(api.accounts.updatePaymentDetails, {
+        accountId, amount: 2000, recipient, last4: "1842",
+      })).rejects.toThrow("listed university");
+    }
+  });
   it("recalculates from saved details, clears recipient verification and preserves quote through approval", async () => {
     const { owner, accountId } = await fixture();
     await owner.mutation(api.accounts.verifySandboxRecipient, {
@@ -629,7 +637,7 @@ describe("editable tuition and shared quote", () => {
     await owner.mutation(api.accounts.updatePaymentDetails, {
       accountId,
       amount: 1500.25,
-      recipient: "Corrected University",
+      recipient: "University of Edinburgh",
       last4: "9876",
     });
     const state = await owner.query(api.accounts.bootstrap, {});
@@ -660,7 +668,7 @@ describe("editable tuition and shared quote", () => {
     }).routes[0];
     const fingerprint = quoteFingerprint(
       1500.25,
-      "Corrected University",
+      "University of Edinburgh",
       "9876",
       route,
     );
@@ -670,7 +678,7 @@ describe("editable tuition and shared quote", () => {
       expectedQuote: fingerprint,
     });
     expect(proposal!.totalMinor / 100).toBe(comparison.totalUSD);
-    expect(proposal!.recipient).toBe("Corrected University");
+    expect(proposal!.recipient).toBe("University of Edinburgh");
     await owner.mutation(api.accounts.transitionPayment, {
       accountId,
       next: "approved",
@@ -781,9 +789,9 @@ describe("profile country persistence", () => {
     await owner.mutation(api.accounts.updateProfile, {
       accountId,
       name: "Student",
-      countryFrom: "Australia",
+      countryFrom: "China",
       countryTo: "United Kingdom",
-      university: "Example",
+      university: "University of Manchester",
       course: "Computing",
       courseStart: "2026-11-01",
       financialStatus: "Funded",
@@ -791,7 +799,7 @@ describe("profile country persistence", () => {
       fundingAmount: 5000,
     });
     const reloaded = await owner.query(api.accounts.bootstrap, {});
-    expect(reloaded.account.countryFrom).toBe("Australia");
+    expect(reloaded.account.countryFrom).toBe("China");
     expect(reloaded.account.countryTo).toBe("United Kingdom");
   });
 });

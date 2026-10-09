@@ -1,7 +1,7 @@
 [
   {
     "id": 0,
-    "name": "Tsinghua University (Beijing)",
+    "name": "Tsinghua University",
     "country": "China",
     "currency": "CNY",
     "alternatives": {
@@ -164,7 +164,7 @@
   },
   {
     "id": 1,
-    "name": "Peking University – PKU (Beijing)",
+    "name": "Peking University",
     "country": "China",
     "currency": "CNY",
     "alternatives": {
@@ -287,7 +287,7 @@
   },
   {
     "id": 2,
-    "name": "Zhejiang University – ZJU (Hangzhou)",
+    "name": "Zhejiang University",
     "country": "China",
     "currency": "CNY",
     "alternatives": {
@@ -394,7 +394,7 @@
   },
   {
     "id": 3,
-    "name": "King’s College London (KCL)",
+    "name": "King's College London",
     "country": "United Kingdom",
     "currency": "GBP",
     "alternatives": {
@@ -753,7 +753,7 @@
   },
   {
     "id": 6,
-    "name": "Columbia University (New York)",
+    "name": "Columbia University",
     "country": "United States",
     "currency": "USD",
     "alternatives": {
@@ -886,7 +886,7 @@
   },
   {
     "id": 7,
-    "name": "University of Southern California – USC (Los Angeles)",
+    "name": "University of Southern California",
     "country": "United States",
     "currency": "USD",
     "alternatives": {
@@ -994,7 +994,7 @@
   },
   {
     "id": 8,
-    "name": "UCLA (Los Angeles)",
+    "name": "UCLA",
     "country": "United States",
     "currency": "USD",
     "alternatives": {

@@ -19,9 +19,9 @@ function Preview() {
   const [account, setAccount] = useState({
     name: "Test Student",
     initials: "TS",
-    countryFrom: "Cambodia",
+    countryFrom: "China",
     countryTo: "United Kingdom",
-    university: "Example University",
+    university: "University of Manchester",
     course: "Computing",
   });
   return (

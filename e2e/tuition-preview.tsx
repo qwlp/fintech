@@ -1,6 +1,6 @@
 import { WorkspaceCurrencyProvider } from "../src/WorkspaceCurrency";
 import { convertMoney, currencyRate } from "../shared/currency";
-import { countries } from "../shared/study";
+import { countries, universities } from "../shared/study";
 import { Wallet, ExchangeWorkspace } from "../src/App";
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
@@ -21,7 +21,7 @@ const converted = (value: number) => convertMoney(value, "GBP", currency);
 function Preview() {
   const [banking, setBanking] = useState({
     paymentAmount: converted(2000),
-    recipient: "Example UK University",
+    recipient: universities[country][0],
     recipientAccountLast4: "1842",
     tuitionDeadline: new Date(observedAt + 14 * 86400000)
       .toISOString()
