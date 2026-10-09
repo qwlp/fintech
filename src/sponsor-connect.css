@@ -733,3 +733,117 @@
   border: 1px solid var(--connect-line);
   border-radius: 6px;
 }
+
+.sponsor-profile-request {
+  display: grid;
+  gap: 16px;
+  max-width: 560px;
+}
+.sponsor-profile-request label {
+  display: grid;
+  gap: 8px;
+}
+.sponsor-request-history {
+  display: grid;
+  gap: 6px;
+  padding: 16px 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.sponsor-profile-details {
+  width: 100%;
+}
+.sponsor-profile-details:empty {
+  display: none;
+}
+.sponsor-profile-details .sponsor-reference-panel {
+  margin: 0 0 16px;
+  padding: 20px;
+  background: #f7faff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+.sponsor-profile-history {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 16px;
+}
+.sponsor-profile-history summary {
+  cursor: pointer;
+  padding: 14px 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.sponsor-profile-history summary span {
+  margin-left: 6px;
+  color: #718096;
+}
+.sponsor-request-heading,
+.sponsor-request-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sponsor-request-meta {
+  color: #718096;
+  font-size: 12px;
+}
+
+.app-clean .sponsor-reference-panel.privacy {
+  max-width: none;
+  width: 100%;
+}
+.sponsor-reference-panel.privacy > p {
+  max-width: 650px;
+}
+.sponsor-privacy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 360px));
+  justify-content: start;
+  align-items: start;
+  gap: 20px;
+  margin-top: 28px;
+}
+.sponsor-privacy-card {
+  min-width: 0;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 24px;
+  background: var(--color-surface);
+}
+.sponsor-privacy-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.sponsor-privacy-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-canvas);
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+.sponsor-privacy-identity h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.sponsor-privacy-identity div > span {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.sponsor-privacy-card .sponsor-permission {
+  font-size: 14px;
+  margin: 18px 0;
+}
+.sponsor-privacy-card .sponsor-permission:last-child {
+  margin-bottom: 0;
+}

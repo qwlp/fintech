@@ -1,10 +1,17 @@
 import { convertMoney, studyCurrency } from "../shared/currency";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import schema from "./schema";
 import { requireAccount } from "./ownership";
 
 export const overview = query({
   args: {},
+  returns: v.object({
+    invite: v.union(schema.doc("sponsorInvites"), v.null()),
+    links: v.array(
+      v.object({ id: v.id("sponsors"), name: v.string(), key: v.string() }),
+    ),
+  }),
   handler: async (ctx) => {
     const account = await requireAccount(ctx);
     if (account.role === "Student") {
@@ -21,7 +28,7 @@ export const overview = query({
           invites.find((i) => !i.usedAt && i.expiresAt > Date.now()) ?? null,
         links: links
           .filter((l) => l.sponsorAccountId)
-          .map((l) => ({ id: l._id, name: l.name })),
+          .map((l) => ({ id: l._id, name: l.name, key: l.key })),
       };
     }
     const links = await ctx.db
@@ -33,6 +40,7 @@ export const overview = query({
       links: await Promise.all(
         links.map(async (l) => ({
           id: l._id,
+          key: l.key,
           name: (await ctx.db.get(l.accountId))?.name ?? "Student",
         })),
       ),

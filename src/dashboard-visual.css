@@ -240,20 +240,9 @@
   display: flex;
   gap: 9px;
   align-items: center;
-  font-size: 12px;
-  color: var(--color-muted);
-}
-.budget-share-track {
-  height: 4px;
-  flex: 1;
-  background: var(--color-line);
-  border-radius: 2px;
-}
-.budget-share-track i {
-  display: block;
-  height: 100%;
-  background: var(--color-accent);
-  border-radius: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-ink);
 }
 .budget-distribution > span:last-child {
   width: 30px;
@@ -458,9 +447,6 @@
     content: "Share";
     font-size: 12px;
   }
-  .budget-share-track {
-    display: none;
-  }
   .budget-category {
     gap: 8px;
     font-size: 12px;
@@ -650,7 +636,7 @@
 }
 .visual-dashboard .budget-table-head,
 .visual-dashboard .budget-table-row {
-  grid-template-columns: minmax(0, 1fr) 76px 80px;
+  grid-template-columns: minmax(0, 1fr) 48px 80px;
   gap: 12px;
 }
 .visual-dashboard .budget-table-row {
@@ -659,9 +645,6 @@
 .visual-dashboard .budget-category {
   gap: 8px;
   line-height: 1.4;
-}
-.visual-dashboard .budget-share-track {
-  min-width: 24px;
 }
 .funding-coverage-summary {
   margin-bottom: 24px;
@@ -738,8 +721,5 @@
   .visual-dashboard .budget-table-row {
     grid-template-columns: minmax(0, 1fr) 38px 72px;
     gap: 8px;
-  }
-  .visual-dashboard .budget-share-track {
-    display: none;
   }
 }

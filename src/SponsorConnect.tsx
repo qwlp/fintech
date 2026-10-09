@@ -36,8 +36,12 @@ function readCode(value: string) {
 
 export default function SponsorConnect({
   role,
+  renderSponsorAction,
+  renderSponsorDetails,
 }: {
   role: "Student" | "Sponsor";
+  renderSponsorDetails?: (sponsor: { key: string; name: string }) => ReactNode;
+  renderSponsorAction?: (sponsor: { key: string; name: string }) => ReactNode;
 }) {
   const data = useQuery(api.sponsorLinks.overview, {});
   const create = useMutation(api.sponsorLinks.createInvite);
@@ -222,6 +226,7 @@ export default function SponsorConnect({
                   <Check size={13} />
                   {role === "Student" && "Connected"}
                 </span>
+                {role === "Student" && renderSponsorAction?.(l)}
                 {disconnecting === l.id ? (
                   <div className="disconnect-confirm">
                     <span>Disconnect?</span>
@@ -251,6 +256,7 @@ export default function SponsorConnect({
                     <Unplug size={17} />
                   </button>
                 )}
+                {role === "Student" && renderSponsorDetails?.(l)}
               </div>
             ))
           )}

@@ -38,7 +38,7 @@ async function fixture() {
   };
 }
 describe("sponsor invitations", () => {
-  it("connects once, exposes only names, and allows the student to revoke access", async () => {
+  it("connects once, exposes connection identity, and allows the student to revoke access", async () => {
     const { student, sponsor, other } = await fixture();
     await student.client.mutation(api.sponsorLinks.createInvite, {});
     const invite = (await student.client.query(api.sponsorLinks.overview, {}))
@@ -51,7 +51,11 @@ describe("sponsor invitations", () => {
     });
     const overview = await sponsor.client.query(api.sponsorLinks.overview, {});
     expect(overview.links).toHaveLength(1);
-    expect(Object.keys(overview.links[0]).sort()).toEqual(["id", "name"]);
+    expect(Object.keys(overview.links[0]).sort()).toEqual([
+      "id",
+      "key",
+      "name",
+    ]);
     expect(overview.links[0].name).toBe("Student");
     await expect(
       other.client.mutation(api.sponsorLinks.connect, { code: invite.code }),
@@ -67,6 +71,47 @@ describe("sponsor invitations", () => {
     expect(
       (await sponsor.client.query(api.sponsorLinks.overview, {})).links,
     ).toEqual([]);
+  });
+  it("routes contribution requests to the selected sponsor", async () => {
+    const { student, sponsor, other } = await fixture();
+    for (const person of [sponsor, other]) {
+      await student.client.mutation(api.sponsorLinks.createInvite, {});
+      const invite = (await student.client.query(api.sponsorLinks.overview, {}))
+        .invite!;
+      await person.client.mutation(api.sponsorLinks.connect, {
+        code: invite.code,
+      });
+    }
+    const links = (await student.client.query(api.sponsorLinks.overview, {}))
+      .links;
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      await student.client.mutation(api.accounts.setSponsorPermission, {
+        accountId: student.accountId,
+        sponsorKey: link.key,
+        permission: "Funding requests",
+        enabled: true,
+      });
+    }
+    const recipient = links.find((link) => link.name === "Other")!;
+    await student.client.mutation(api.accounts.createSponsorRequest, {
+      accountId: student.accountId,
+      sponsorKey: recipient.key,
+      amount: 250,
+      purpose: "Living expenses",
+      neededBy: "2026-11-15",
+    });
+    expect(
+      (await sponsor.client.query(api.sponsorLinks.dashboard, {}))[0].requests,
+    ).toEqual([]);
+    const requests = (
+      await other.client.query(api.sponsorLinks.dashboard, {})
+    )[0].requests;
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({
+      amount: 250,
+      purpose: "Living expenses",
+    });
   });
   it("rejects expired, replaced, anonymous, and wrong-role invitations", async () => {
     const { t, student, sponsor } = await fixture();
