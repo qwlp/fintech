@@ -2,6 +2,8 @@ import { Dialog } from "radix-ui";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowUpRight,
+  UserPlus,
+  ShieldCheck,
   Copy,
   Check,
   QrCode,
@@ -12,7 +14,7 @@ import {
   X,
   LoaderCircle,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { QRCodeSVG } from "qrcode.react";
 import type { IScannerControls } from "@zxing/browser";
@@ -126,6 +128,163 @@ export default function SponsorConnect({
   const link = invite
     ? `${location.origin}${location.pathname}#register-sponsor?invite=${invite.code}`
     : "";
+  const acceptForm = (
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const parsed = readCode(code);
+          if (!parsed) {
+            setMessage(
+              "Enter the 12-character invitation code or paste the invitation link.",
+            );
+            return;
+          }
+          void run(async () => {
+            await connect({ code: parsed });
+            setCode("");
+            sessionStorage.removeItem("sponsor-invite");
+            if (location.hash.includes("invite=")) location.hash = "";
+          }, "Connected to student.");
+        }}
+      >
+        <label htmlFor="sponsor-invite-code">Invitation code or link</label>
+        <Input
+          spellCheck={false}
+          autoCapitalize="characters"
+          id="sponsor-invite-code"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="ABCD-EF12-3456"
+          autoComplete="off"
+          required
+        />
+        <div className="connection-actions">
+          <Button type="submit" disabled={busy || !data || !code.trim()}>
+            {busy ? (
+              <LoaderCircle size={16} className="connect-spin" />
+            ) : (
+              <ArrowUpRight size={16} />
+            )}
+            {busy ? "Connecting…" : "Connect"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            aria-pressed={scanning}
+            aria-label={scanning ? "Stop camera" : "Scan QR"}
+            title={scanning ? "Stop camera" : "Scan QR"}
+            size="icon"
+            onClick={() => setScanning((s) => !s)}
+          >
+            <QrCode size={16} />
+          </Button>
+        </div>
+      </form>
+      {scanning && (
+        <video
+          ref={video}
+          className="invite-camera"
+          autoPlay
+          muted
+          playsInline
+          aria-label="Invitation QR scanner"
+        />
+      )}
+    </>
+  );
+  const connectionList = (
+    <>
+      {!!data?.links.length && (
+        <div className="connection-list">
+          {!data ? (
+            <p>Loading connections…</p>
+          ) : !data.links.length ? (
+            <p>No connections yet.</p>
+          ) : (
+            data.links.map((l) => (
+              <div className="connection-row" key={l.id}>
+                <div className="connection-avatar">
+                  {l.name
+                    .split(" ")
+                    .map((p) => p[0])
+                    .slice(0, 2)
+                    .join("")}
+                </div>
+                <div className="connection-identity">
+                  <strong>{l.name}</strong>
+                  <span>{role === "Student" ? "Sponsor" : "Student"}</span>
+                </div>
+                <span
+                  className="connection-badge"
+                  title="Connected"
+                  aria-label="Connected"
+                >
+                  <Check size={13} />
+                  {role === "Student" && "Connected"}
+                </span>
+                {disconnecting === l.id ? (
+                  <div className="disconnect-confirm">
+                    <span>Disconnect?</span>
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        run(async () => {
+                          await disconnect({ id: l.id });
+                          setDisconnecting(null);
+                        }, "Connection removed.")
+                      }
+                    >
+                      Remove
+                    </button>
+                    <button onClick={() => setDisconnecting(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="disconnect-action"
+                    disabled={busy}
+                    aria-label={`Disconnect ${l.name}`}
+                    title={`Disconnect ${l.name}`}
+                    onClick={() => setDisconnecting(l.id)}
+                  >
+                    <Unplug size={17} />
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </>
+  );
+  if (String(role) === "Sponsor")
+    return (
+      <motion.section
+        className="sponsor-connect sponsor-accept"
+        aria-label="Sponsor connections"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
+        <SponsorConnectionLayout
+          invitation={
+            <>
+              {acceptForm}
+              {message && (
+                <p className="connection-message" role="status">
+                  {message}
+                </p>
+              )}
+            </>
+          }
+          connections={connectionList}
+          count={data?.links.length}
+        />
+      </motion.section>
+    );
   return (
     <Dialog.Root open={inviteExpanded} onOpenChange={setInviteExpanded}>
       <motion.section
@@ -152,17 +311,6 @@ export default function SponsorConnect({
                 + Invite sponsor
               </Button>
             </Dialog.Trigger>
-          </div>
-        )}
-        {role === "Sponsor" && (
-          <div className="connect-heading">
-            <div className="connect-icon">
-              <Users size={22} />
-            </div>
-            <div>
-              <h2>Connect to a student</h2>
-              <p>Use the code or QR they shared with you.</p>
-            </div>
           </div>
         )}
         {role === "Student" ? (
@@ -334,70 +482,7 @@ export default function SponsorConnect({
             </Dialog.Content>
           </Dialog.Portal>
         ) : (
-          <>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const parsed = readCode(code);
-                if (!parsed) {
-                  setMessage(
-                    "Enter the 12-character invitation code or paste the invitation link.",
-                  );
-                  return;
-                }
-                void run(async () => {
-                  await connect({ code: parsed });
-                  setCode("");
-                  sessionStorage.removeItem("sponsor-invite");
-                  if (location.hash.includes("invite=")) location.hash = "";
-                }, "Connected to student.");
-              }}
-            >
-              <label htmlFor="sponsor-invite-code">
-                Invitation code or link
-              </label>
-              <Input
-                spellCheck={false}
-                autoCapitalize="characters"
-                id="sponsor-invite-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="ABCD-EF12-3456"
-                autoComplete="off"
-                required
-              />
-              <div className="connection-actions">
-                <Button type="submit" disabled={busy || !data || !code.trim()}>
-                  {busy ? (
-                    <LoaderCircle size={16} className="connect-spin" />
-                  ) : (
-                    <ArrowUpRight size={16} />
-                  )}
-                  {busy ? "Connecting…" : "Connect"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  aria-pressed={scanning}
-                  onClick={() => setScanning((s) => !s)}
-                >
-                  <QrCode size={16} />
-                  {scanning ? "Stop camera" : "Scan QR"}
-                </Button>
-              </div>
-            </form>
-            {scanning && (
-              <video
-                ref={video}
-                className="invite-camera"
-                autoPlay
-                muted
-                playsInline
-                aria-label="Invitation QR scanner"
-              />
-            )}
-          </>
+          acceptForm
         )}
         {message &&
           !inviteExpanded &&
@@ -408,66 +493,55 @@ export default function SponsorConnect({
               {message}
             </p>
           )}
-        {!!data?.links.length && (
-          <div className="connection-list">
-            {role === "Sponsor" && <h3>Students you support</h3>}
-            {!data ? (
-              <p>Loading connections…</p>
-            ) : !data.links.length ? (
-              <p>No connections yet.</p>
-            ) : (
-              data.links.map((l) => (
-                <div className="connection-row" key={l.id}>
-                  <div className="connection-avatar">
-                    {l.name
-                      .split(" ")
-                      .map((p) => p[0])
-                      .slice(0, 2)
-                      .join("")}
-                  </div>
-                  <div className="connection-identity">
-                    <strong>{l.name}</strong>
-                    <span>{role === "Student" ? "Sponsor" : "Student"}</span>
-                  </div>
-                  <span className="connection-badge">
-                    <Check size={13} />
-                    Connected
-                  </span>
-                  {disconnecting === l.id ? (
-                    <div className="disconnect-confirm">
-                      <span>Disconnect?</span>
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          run(async () => {
-                            await disconnect({ id: l.id });
-                            setDisconnecting(null);
-                          }, "Connection removed.")
-                        }
-                      >
-                        Remove
-                      </button>
-                      <button onClick={() => setDisconnecting(null)}>
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className="disconnect-action"
-                      disabled={busy}
-                      aria-label={`Disconnect ${l.name}`}
-                      title={`Disconnect ${l.name}`}
-                      onClick={() => setDisconnecting(l.id)}
-                    >
-                      <Unplug size={17} />
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        )}
+        {connectionList}
       </motion.section>
     </Dialog.Root>
+  );
+}
+
+export function SponsorConnectionLayout({
+  invitation,
+  connections,
+  count,
+}: {
+  invitation: ReactNode;
+  connections: ReactNode;
+  count?: number;
+}) {
+  return (
+    <div className="sd-connection-layout">
+      <section className="sd-invite-card" aria-label="Add student">
+        <div className="sd-connection-card-heading">
+          <span className="sd-connection-symbol">
+            <UserPlus size={21} />
+          </span>
+          <h2>Add student</h2>
+        </div>
+        <p className="sd-invite-hint">Paste an invite or scan QR.</p>
+        {invitation}
+        <div className="sd-invite-privacy">
+          <ShieldCheck size={15} />
+          <span>Student-controlled access</span>
+        </div>
+      </section>
+      <section className="sd-linked-students" aria-label="Connected students">
+        <div className="sd-connection-card-heading">
+          <h2>Students</h2>
+          {count !== undefined && <span className="sd-count">{count}</span>}
+        </div>
+        {count === undefined ? (
+          <div className="sd-empty" role="status">
+            <LoaderCircle className="connect-spin" size={24} />
+          </div>
+        ) : count > 0 ? (
+          connections
+        ) : (
+          <div className="sd-empty">
+            <Users size={28} />
+            <h3>No connections yet</h3>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

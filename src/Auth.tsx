@@ -347,27 +347,14 @@ function AccountWorkspace() {
     );
   if (accountData.account.role === "Sponsor")
     return (
-      <main className="sponsor-workspace">
-        <header>
-          <Brand href="/" />
-          <Button
-            variant="outline"
-            onClick={() => {
-              location.hash = "setup";
-            }}
-          >
-            Set up account
-          </Button>
-          <Button variant="outline" onClick={logout}>
-            <LogOut size={16} />
-            Sign out
-          </Button>
-        </header>
-        <section className="sponsor-account-content">
-          <SponsorDashboard name={accountData.account.name} />
-          {error && <p role="alert">{error}</p>}
-        </section>
-      </main>
+      <SponsorDashboard
+        name={accountData.account.name}
+        onSignOut={logout}
+        onSetup={() => {
+          location.hash = "setup";
+        }}
+        error={error}
+      />
     );
   return (
     <>
