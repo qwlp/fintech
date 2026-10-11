@@ -3,12 +3,22 @@
   align-items: center;
   justify-content: center;
   vertical-align: middle;
-  padding: 7px;
+  width: 29px;
+  height: 29px;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
   border: 0;
   border-radius: 50%;
   background: transparent;
   color: var(--color-muted);
   cursor: pointer;
+}
+.info-help > svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 .info-help:focus-visible,
 .mobile-bottom-nav button:focus-visible,

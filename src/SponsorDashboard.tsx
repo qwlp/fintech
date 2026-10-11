@@ -691,10 +691,10 @@ export function SponsorDashboardView({
                                   <div>
                                     <Input
                                       id="annual-commitment"
-                                      type="number"
+                                      money
                                       min="0"
                                       max="1000000000"
-                                      step="0.01"
+
                                       required
                                       autoFocus
                                       disabled={busy}

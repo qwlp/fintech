@@ -17,17 +17,33 @@ for (const width of [1440, 390]) {
       }),
     );
     await page.goto("/payment-preview");
-    await expect(page.getByRole("heading", { name: "Security center" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Receipts", exact: true })).toBeVisible();
-    await page
-      .getByText("Payment activity & receipts", { exact: true })
-      .click();
+    await expect(
+      page.getByRole("heading", { name: "Security", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Payment safeguards" }),
+    ).toBeVisible();
+    await expect(page.locator(".security-event")).toHaveCount(3);
+    await expect(
+      page
+        .getByText("Sandbox proposal prepared for owner review", {
+          exact: true,
+        })
+        .first(),
+    ).not.toBeVisible();
+    await page.getByRole("button", { name: "Show all activity" }).click();
+    await expect(page.locator(".security-event")).toHaveCount(7);
+    await page.getByText("Payment history", { exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Payment details", exact: true }),
+    ).toBeVisible();
+    await page.getByText("View latest payment", { exact: true }).click();
     await expect(page.getByRole("status")).toContainText("US$2,592.38");
     await expect(page.getByRole("status")).toContainText("£2,000.00");
     await expect(page.locator("main")).toContainText("5000.00 → 2407.62");
     const download = page.waitForEvent("download");
     await page
-      .getByRole("button", { name: "Download execution evidence" })
+      .getByRole("button", { name: "Download payment history" })
       .click();
     expect((await download).suggestedFilename()).toBe(
       "movewise-sandbox-evidence.json",

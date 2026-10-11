@@ -1,3 +1,4 @@
+import { routeProviderName } from "../shared/payment-routes";
 import { useWorkspaceCurrency } from "./WorkspaceCurrency";
 import { convertMoney, formatCurrency } from "../shared/currency";
 import { useState } from "react";
@@ -9,12 +10,10 @@ import {
   Check,
   Clock,
   ChevronRight,
-  Calculator,
   Play,
 } from "lucide-react";
 import { convexApi, convexClient } from "./lib/convex";
 import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
 import "./tuition-decision.css";
 
 type Proposal = {
@@ -57,7 +56,11 @@ export default function PaymentEvidence({
   tools = [],
 }: {
   accountId?: string;
-  banking?: { recipientVerified?: boolean; recipientAccountLast4?: string };
+  banking?: {
+    recipientVerified?: boolean;
+    recipientAccountLast4?: string;
+    recipient?: string;
+  };
   proposals: Proposal[];
   ledger: Ledger[];
   audit: unknown[];
@@ -69,7 +72,6 @@ export default function PaymentEvidence({
   }[];
 }) {
   const currency = useWorkspaceCurrency();
-  const [last4, setLast4] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const current = proposals
@@ -83,7 +85,7 @@ export default function PaymentEvidence({
       if (verify)
         await convexClient.mutation(convexApi.verifySandboxRecipient, {
           accountId: accountId as any,
-          last4,
+          last4: banking?.recipientAccountLast4 ?? "",
         });
       else
         await convexClient.mutation(convexApi.initializePaymentSandbox, {
@@ -131,7 +133,7 @@ export default function PaymentEvidence({
         <div className="evidence-section-heading">
           <h3>
             <UserRound size={18} aria-hidden="true" />
-            Recipient
+            University account
           </h3>
           <span
             className={`evidence-badge ${banking?.recipientVerified ? "confirmed" : ""}`}
@@ -144,7 +146,7 @@ export default function PaymentEvidence({
             ) : (
               <>
                 <Clock size={14} aria-hidden="true" />
-                {banking ? "Pending" : "Not set up"}
+                {banking ? "Needs confirmation" : "Not set up"}
               </>
             )}
           </span>
@@ -160,48 +162,34 @@ export default function PaymentEvidence({
               onClick={() => void run(false)}
             >
               <Play size={15} aria-hidden="true" />
-              Load payment sandbox
+              Set up demo payment
             </Button>
           </div>
         ) : !banking.recipientVerified ? (
-          <form
-            className="evidence-confirm-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (last4.length === 4) void run(true);
-            }}
-          >
-            <label htmlFor="recipient-last-four">
-              Match account ending{" "}
-              <strong>{banking.recipientAccountLast4 ?? "—"}</strong>
-            </label>
-            <div className="evidence-confirm-controls">
-              <Input
-                id="recipient-last-four"
-                aria-label="Confirm recipient last four digits"
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="4 digits"
-                value={last4}
-                maxLength={4}
-                onChange={(e) => setLast4(e.target.value.replace(/\D/g, ""))}
-              />
-              <Button
-                type="submit"
-                aria-label="Confirm sandbox recipient"
-                disabled={pending || !accountId || last4.length !== 4}
-              >
-                <Check size={15} aria-hidden="true" />
-                {pending ? "Confirming…" : "Confirm"}
-              </Button>
+          <div className="evidence-confirm-form">
+            <div className="evidence-destination-copy">
+              <strong>
+                {banking.recipient || current?.recipient || "Your university"}
+              </strong>
+              <p>Confirm this is the university you want to pay.</p>
             </div>
-          </form>
+            <Button
+              aria-label="Confirm university account"
+              disabled={
+                pending ||
+                !accountId ||
+                !/^\d{4}$/.test(banking.recipientAccountLast4 ?? "")
+              }
+              onClick={() => void run(true)}
+            >
+              <Check size={15} aria-hidden="true" />
+              {pending ? "Confirming…" : "Confirm university account"}
+            </Button>
+          </div>
         ) : (
           <p className="evidence-recipient-note">
-            {banking.recipientAccountLast4
-              ? `Account ending ${banking.recipientAccountLast4} · `
-              : ""}
-            Owner-confirmed sample recipient
+            {banking.recipient || current?.recipient || "University account"} ·
+            Confirmed by you
           </p>
         )}
         {error && (
@@ -214,17 +202,17 @@ export default function PaymentEvidence({
         <div className="evidence-section-heading">
           <h3>
             <ReceiptText size={18} aria-hidden="true" />
-            Receipts
+            Payment details
           </h3>
           {(proposals.length > 0 || ledger.length > 0 || tools.length > 0) && (
             <Button
               variant="outline"
               size="sm"
-              aria-label="Download execution evidence"
+              aria-label="Download payment history"
               onClick={download}
             >
               <Download size={15} aria-hidden="true" />
-              Export
+              Download
             </Button>
           )}
         </div>
@@ -232,20 +220,32 @@ export default function PaymentEvidence({
           <details className="evidence-receipt-details">
             <summary>
               <ReceiptText size={16} aria-hidden="true" />
-              <span>Payment activity &amp; receipts</span>
-              <span className="evidence-badge">{current.status}</span>
+              <span>View latest payment</span>
+              <span className="evidence-badge">
+                {(
+                  {
+                    completed: "Complete",
+                    prepared: "Ready to review",
+                    approved: "Approved",
+                    processing: "Sending",
+                    failed: "Unsuccessful",
+                    expired: "Needs a new price",
+                  } as Record<string, string>
+                )[current.status] ?? "In progress"}
+              </span>
               <ChevronRight size={15} aria-hidden="true" />
             </summary>
             <div className="payment-evidence-content" role="status">
               <div className="evidence-payment-title">
                 <strong>{current.recipient}</strong>
                 <span>
-                  {current.provider} · •••• {current.recipientLast4}
+                  {routeProviderName(current.provider)} · ••••{" "}
+                  {current.recipientLast4}
                 </span>
               </div>
               <dl className="evidence-payment-facts">
                 <div>
-                  <dt>Recipient receives</dt>
+                  <dt>University receives</dt>
                   <dd>
                     {formatCurrency(
                       current.amountMinor / 100,
@@ -255,7 +255,7 @@ export default function PaymentEvidence({
                   </dd>
                 </div>
                 <div>
-                  <dt>Total debit</dt>
+                  <dt>Total you pay</dt>
                   <dd>
                     {formatCurrency(
                       current.totalMinor / 100,
@@ -287,7 +287,7 @@ export default function PaymentEvidence({
                       </dd>
                     </div>
                     <div>
-                      <dt>Protected reserve</dt>
+                      <dt>Money kept for living costs</dt>
                       <dd>
                         {formatCurrency(
                           (current.protectedReserveMinor ?? 0) / 100,
@@ -299,7 +299,9 @@ export default function PaymentEvidence({
                   </>
                 )}
                 <div>
-                  <dt>{current.reference ? "Reference" : "Quote expires"}</dt>
+                  <dt>
+                    {current.reference ? "Reference" : "Price valid until"}
+                  </dt>
                   <dd>
                     {current.reference ??
                       new Date(current.expiresAt).toLocaleTimeString()}
@@ -308,11 +310,11 @@ export default function PaymentEvidence({
                 {current.deadline && (
                   <>
                     <div>
-                      <dt>Deadline (UTC)</dt>
+                      <dt>Payment deadline</dt>
                       <dd>{current.deadline}</dd>
                     </div>
                     <div>
-                      <dt>Safety buffer</dt>
+                      <dt>Extra time for processing</dt>
                       <dd>{current.bufferBusinessDays ?? 1} business day(s)</dd>
                     </div>
                   </>
@@ -326,7 +328,7 @@ export default function PaymentEvidence({
                     {(entry.afterMinor / 100).toFixed(2)}
                   </span>
                   <small>
-                    Debit ·{" "}
+                    Paid ·{" "}
                     {formatCurrency(entry.debitMinor / 100, entry.currency, 2)}
                   </small>
                 </div>
@@ -335,41 +337,11 @@ export default function PaymentEvidence({
           </details>
         ) : (
           <p className="security-empty receipt-empty">
-            No payment receipts yet.
+            No payments yet. Your payment details will appear here.
           </p>
         )}
       </div>
-      {tools.length > 0 && (
-        <details className="evidence-tools">
-          <summary>
-            <Calculator size={16} aria-hidden="true" />
-            Agent calculations
-            <span className="evidence-badge">{tools.length}</span>
-            <ChevronRight size={15} aria-hidden="true" />
-          </summary>
-          <div className="payment-evidence-content">
-            {tools.map((tool, index) => (
-              <details
-                className="evidence-tool"
-                key={`${tool.timestamp}-${index}`}
-              >
-                <summary>
-                  {tool.name.replaceAll("_", " ")}
-                  <small>{new Date(tool.timestamp).toLocaleString()}</small>
-                </summary>
-                <pre>
-                  {JSON.stringify(
-                    { arguments: tool.arguments, result: tool.result },
-                    null,
-                    2,
-                  )}
-                </pre>
-              </details>
-            ))}
-          </div>
-        </details>
-      )}
-      <p className="payment-sandbox-note">Sandbox · No real funds move.</p>
+      <p className="payment-sandbox-note">Demo only · No real money moves.</p>
     </section>
   );
 }

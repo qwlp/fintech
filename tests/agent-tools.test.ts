@@ -71,6 +71,100 @@ async function fixture() {
 }
 
 describe("agent workspace editing", () => {
+  it("saves combined university, tuition, payment and planner edits without touching money", async () => {
+    const { tool, state } = await fixture();
+    const before = await state();
+    const result = await tool("update_study_plan", {
+      profile: { university: "University of Edinburgh", course: "Finance" },
+      annualTuitionFee: 28000,
+      payment: { amount: 7000 },
+      movePlan: { budgetAmounts: { rent: 950 }, months: 10 },
+    });
+    expect(result.status).toBe("saved");
+    const after = await state();
+    expect(after.account).toMatchObject({
+      university: "University of Edinburgh",
+      course: "Finance",
+    });
+    expect(after.config.banking).toMatchObject({
+      recipient: "University of Edinburgh",
+      paymentAmount: 7000,
+      recipientVerified: false,
+    });
+    expect(after.config.move.budgetAmounts).toMatchObject({
+      tuition: 28000,
+      rent: 950,
+    });
+    expect(after.config.move.months).toBe(10);
+    expect(after.config.move.plannerSettings.university).toBe(5);
+    expect(after.costs.find((row) => row.key === "tuition")?.amount).toBe(
+      28000,
+    );
+    expect(after.wallets).toEqual(before.wallets);
+    expect(after.ledgerEntries).toEqual(before.ledgerEntries);
+  });
+  it("rolls back every combined edit when a later field fails validation", async () => {
+    const { tool, state } = await fixture();
+    const before = await state();
+    await expect(
+      tool("update_study_plan", {
+        profile: { course: "Must roll back" },
+        payment: { amount: 500, last4: "oops" },
+      }),
+    ).rejects.toThrow("Invalid payment details");
+    const after = await state();
+    expect(after.account).toEqual(before.account);
+    expect(after.config).toEqual(before.config);
+    expect(after.toolExecutions).toEqual(before.toolExecutions);
+  });
+  it("changes the study country and university directly using the resulting currency", async () => {
+    const { tool, state } = await fixture();
+    await tool("update_study_plan", {
+      profile: { studyCountry: "United States", university: "UCLA" },
+      annualTuitionFee: 45000,
+      payment: { amount: 10000, last4: "4321" },
+    });
+    const saved = await state();
+    expect(saved.account.countryTo).toBe("United States");
+    expect(saved.config.banking).toMatchObject({
+      currency: "USD",
+      paymentAmount: 10000,
+      recipient: "UCLA",
+    });
+    expect(saved.config.move.budgetAmounts.tuition).toBe(45000);
+    expect(saved.config.move.plannerSettings.university).toBe(8);
+  });
+  it("edits a planner with an unknown arrival date and tuition planning before Payments is opened", async () => {
+    const { t, accountId, tool, state } = await fixture();
+    await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query("appConfig")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .collect();
+      for (const row of rows)
+        if (["banking", "security"].includes(row.key))
+          await ctx.db.delete(row._id);
+    });
+    const before = await state();
+    await tool("update_study_plan", {
+      annualTuitionFee: 20000,
+      tuitionPlan: {
+        deadline: new Date(Date.now() + 30 * 86400000)
+          .toISOString()
+          .slice(0, 10),
+        livingReserve: 2500,
+      },
+      movePlan: { budgetAmounts: { rent: 800 } },
+    });
+    const after = await state();
+    expect(after.config.move.arrivalDateISO).toBe("");
+    expect(after.config.move.budgetAmounts).toMatchObject({
+      tuition: 20000,
+      rent: 800,
+    });
+    expect(after.config.security.protectedReserveGBP).toBe(2500);
+    expect(after.wallets).toEqual(before.wallets);
+  });
   it("reads fresh values and approved directory, and saves partial tuition edits with audit evidence", async () => {
     const { tool, state } = await fixture();
     const initial = await state();

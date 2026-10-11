@@ -151,7 +151,7 @@ export async function runWorkspaceTool(
   if (account.role !== "Student") throw new Error("Student account required");
   if (!account.aiConsentAt)
     throw new Error("AI processing consent has been revoked");
-  const state: any = await ctx.runQuery(api.accounts.bootstrap, {});
+  let state: any = await ctx.runQuery(api.accounts.bootstrap, {});
   const currency = studyCurrency(account.countryTo);
   if (name === "read_workspace")
     return {
@@ -186,15 +186,152 @@ export async function runWorkspaceTool(
         })),
       },
     };
+  if (name === "update_study_plan") {
+    const changes: Record<string, any> = {};
+    if (args.profile) {
+      changes.profile = await runWorkspaceTool(
+        ctx,
+        accountId,
+        "update_profile",
+        args.profile,
+      );
+      if (changes.profile.status !== "saved")
+        throw new Error(
+          "Save the study-country funding conversion using update_profile and confirm it before making combined edits",
+        );
+    }
+    state = await ctx.runQuery(api.accounts.bootstrap, {});
+    const university = args.profile?.university;
+    if (args.payment) {
+      changes.payment = await runWorkspaceTool(
+        ctx,
+        accountId,
+        "update_tuition_details",
+        {
+          ...(university ? { recipient: university } : {}),
+          ...args.payment,
+        },
+      );
+    } else if (university && state.config.banking) {
+      if (state.account.paymentStatus !== "not_started")
+        throw new Error(
+          "Reset the active payment before changing its university",
+        );
+      const row = (
+        await ctx.db
+          .query("appConfig")
+          .withIndex("by_account", (q) => q.eq("accountId", accountId))
+          .take(100)
+      ).find((row) => row.key === "banking");
+      if (row)
+        await ctx.db.patch(row._id, {
+          value: {
+            ...row.value,
+            recipient: university,
+            recipientVerified: false,
+          },
+        });
+      changes.payment = {
+        status: "saved",
+        recipient: university,
+        recipientConfirmed: false,
+      };
+    }
+    if (args.tuitionPlan)
+      changes.tuitionPlan = await runWorkspaceTool(
+        ctx,
+        accountId,
+        "update_tuition_plan",
+        args.tuitionPlan,
+      );
+    if (args.movePlan || args.annualTuitionFee !== undefined || university) {
+      const universityIndex =
+        universities[state.account.countryTo]?.indexOf(university);
+      // Estimate profiles follow the same country and university ordering as the approved directory.
+      const countryProfiles = profiles.filter(
+        (p) => p.country === state.account.countryTo,
+      );
+      const estimate =
+        universityIndex >= 0 ? countryProfiles[universityIndex] : undefined;
+      changes.movePlan = await runWorkspaceTool(
+        ctx,
+        accountId,
+        "update_move_plan",
+        {
+          ...args.movePlan,
+          ...(university
+            ? {
+                plannerSettings: {
+                  ...(args.movePlan?.plannerSettings ?? {}),
+                  university: estimate?.id ?? -1,
+                },
+              }
+            : {}),
+          ...(args.movePlan?.budgetAmounts ||
+          args.annualTuitionFee !== undefined
+            ? {
+                budgetAmounts: {
+                  ...args.movePlan?.budgetAmounts,
+                  ...(args.annualTuitionFee !== undefined
+                    ? { tuition: args.annualTuitionFee }
+                    : {}),
+                },
+              }
+            : {}),
+        },
+      );
+    }
+    if (args.routeKey)
+      changes.route = await runWorkspaceTool(
+        ctx,
+        accountId,
+        "select_payment_route",
+        { routeKey: args.routeKey },
+      );
+    return record(ctx, accountId, name, args, {
+      status: "saved",
+      currency: studyCurrency(state.account.countryTo),
+      changes,
+    });
+  }
+  // Editing payment configuration must work before the Payments page is opened.
+  // Create only planning configuration, without initializing or crediting wallets.
+  if (
+    ["update_tuition_details", "update_tuition_plan"].includes(name) &&
+    !state.config.banking
+  ) {
+    const banking = {
+      currency,
+      recipient: account.university,
+      recipientAccountLast4: "",
+      paymentAmount: 0,
+      recipientVerified: false,
+      sandbox: true,
+      bufferBusinessDays: 1,
+    };
+    await ctx.db.insert("appConfig", {
+      accountId,
+      key: "banking",
+      value: banking,
+    });
+    state.config.banking = banking;
+  }
+  if (name === "update_tuition_plan" && !state.config.security) {
+    const security = { currency, protectedReserveGBP: 0 };
+    await ctx.db.insert("appConfig", {
+      accountId,
+      key: "security",
+      value: security,
+    });
+    state.config.security = security;
+  }
   const profile = name === "update_profile" ? profilePatch(state, args) : null;
   const funding =
     name === "update_funding_source" ? fundingPatch(state, args) : null;
   if (funding && !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(args.key))
     throw new Error("Use a simple stable funding key");
   const fundingChange =
-    (!!profile &&
-      (args.confirmedFunding !== undefined ||
-        profile.countryTo !== account.countryTo)) ||
+    (!!profile && args.confirmedFunding !== undefined) ||
     (!!funding && funding.delta !== 0);
   if (fundingChange && !confirmed) {
     const result: any = {
@@ -249,6 +386,14 @@ export async function runWorkspaceTool(
       recipient: args.recipient ?? banking.recipient,
       last4: args.last4 ?? banking.recipientAccountLast4,
     };
+    if (!patch.last4)
+      throw new Error(
+        "Provide the recipient account last four digits to save payment details",
+      );
+    if (!patch.recipient)
+      throw new Error("Choose your university to save payment details");
+    if (!(patch.amount > 0))
+      throw new Error("Provide a positive tuition payment amount");
     await ctx.runMutation(api.accounts.updatePaymentDetails, patch);
     changes = {
       amount: patch.amount,

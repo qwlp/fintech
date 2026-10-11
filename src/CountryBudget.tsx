@@ -159,7 +159,9 @@ export default function CountryBudget() {
                 <label htmlFor={`country-budget-${field}`}>{label}</label>
                 <span className="budget-number-control">
                   <Input
-                    type="number"
+                    type={field === "months" ? "number" : "text"}
+                    money={field !== "months"}
+                    moneyControls={false}
                     id={`country-budget-${field}`}
                     min="0"
                     max={field === "months" ? 120 : undefined}

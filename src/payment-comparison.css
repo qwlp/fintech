@@ -1,0 +1,453 @@
+/* Payment comparisons use the app's existing palette and provider data. */
+:root[data-theme]
+  .app-clean
+  .payment-workspace.payment-workspace.payment-workspace {
+  max-width: none;
+}
+.payment-comparison-search {
+  margin: 22px 0 32px;
+}
+.payment-comparison-bar {
+  display: grid;
+  grid-template-columns:
+    minmax(140px, 1fr) minmax(140px, 1fr) minmax(240px, 1.4fr)
+    auto;
+  align-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
+  padding: 20px;
+  gap: 24px;
+}
+.payment-comparison-country {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding-right: 20px;
+  border-right: 1px solid var(--color-line);
+}
+.payment-comparison-country > span,
+.payment-comparison-amount > span {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.payment-comparison-country > strong {
+  font-size: 17px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.payment-comparison-country > small {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.payment-comparison-amount {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.payment-comparison-amount > div {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  padding-right: 14px;
+}
+.payment-comparison-amount > div:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+.payment-comparison-amount .money-input-control > input {
+  height: 48px;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 20px;
+  font-weight: 600;
+  outline: none;
+}
+.payment-comparison-amount > div > strong {
+  font-size: 13px;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-line);
+}
+.payment-workspace .payment-comparison-submit.ui-button {
+  min-height: 48px;
+  padding-inline: 20px;
+  margin-top: 20px;
+  gap: 8px;
+}
+.payment-comparison-recipient {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 4px 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.payment-comparison-recipient > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.payment-comparison-recipient svg {
+  flex-shrink: 0;
+}
+.payment-comparison-count {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.payment-workspace .tuition-route-title {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 10px;
+}
+.payment-workspace .tuition-route-title > strong {
+  font-size: 17px;
+}
+.payment-workspace .payment-best-option {
+  color: var(--color-accent);
+  background: var(--color-primary-soft);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.payment-comparison-delivery,
+.payment-comparison-fees,
+.payment-comparison-total {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 9px;
+  min-width: 0;
+}
+.payment-comparison-delivery > small,
+.payment-comparison-fees > small,
+.payment-comparison-total > small {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.payment-comparison-delivery > strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+.payment-comparison-fees > strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.payment-comparison-delivery > span,
+.payment-comparison-fees > span,
+.payment-comparison-total > span {
+  font-size: 12px;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+.payment-comparison-total > strong {
+  font-size: 23px;
+  letter-spacing: -0.5px;
+}
+:root[data-theme]
+  .app-clean
+  .payment-workspace.payment-workspace.payment-workspace
+  .tuition-route {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1fr) minmax(140px, 0.85fr) minmax(180px, 1fr)
+    minmax(250px, 1.5fr);
+  grid-template-rows: auto auto;
+  gap: 12px 24px;
+  padding: 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+:root[data-theme]
+  .app-clean
+  .payment-workspace.payment-workspace.payment-workspace
+  .tuition-route.selected {
+  background: var(--color-surface);
+  border-color: var(--color-accent);
+  box-shadow: none;
+}
+.payment-workspace .tuition-route-title {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+}
+.payment-workspace .payment-comparison-delivery {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+.payment-workspace .payment-comparison-fees {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+}
+:root[data-theme]
+  .app-clean
+  .payment-workspace.payment-workspace.payment-workspace
+  .tuition-route-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  grid-column: 4;
+  grid-row: 1;
+}
+.payment-workspace .tuition-route-summary > button {
+  flex-shrink: 0;
+  min-height: 42px;
+}
+.payment-workspace .route-detail-button {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: start;
+  padding-left: 0;
+}
+.payment-workspace .tuition-route-blocker {
+  grid-column: 2 / -1;
+  grid-row: 2;
+  align-self: center;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+@media (max-width: 1100px) {
+  .payment-comparison-bar {
+    gap: 16px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .payment-comparison-country:nth-child(2) {
+    border-right: 0;
+  }
+  .payment-workspace .payment-comparison-submit.ui-button {
+    margin-top: 20px;
+  }
+  :root[data-theme]
+    .app-clean
+    .payment-workspace.payment-workspace.payment-workspace
+    .tuition-route {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .payment-workspace .tuition-route-title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .payment-workspace .payment-comparison-delivery {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .payment-workspace .payment-comparison-fees {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  :root[data-theme]
+    .app-clean
+    .payment-workspace.payment-workspace.payment-workspace
+    .tuition-route-summary {
+    grid-column: 2;
+    grid-row: 2;
+    flex-wrap: wrap;
+  }
+  .payment-workspace .route-detail-button {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .payment-workspace .tuition-route-blocker {
+    grid-column: 2;
+    grid-row: 3;
+  }
+}
+@media (max-width: 600px) {
+  .payment-comparison-bar {
+    padding: 16px;
+    gap: 20px 12px;
+  }
+  .payment-comparison-country {
+    padding-right: 10px;
+  }
+  .payment-comparison-country > strong {
+    font-size: 14px;
+  }
+  .payment-comparison-amount {
+    grid-column: 1 / -1;
+  }
+  .payment-workspace .payment-comparison-submit.ui-button {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .payment-comparison-recipient {
+    align-items: start;
+    font-size: 12px;
+  }
+  .payment-comparison-recipient > button {
+    flex-shrink: 0;
+  }
+  :root[data-theme]
+    .app-clean
+    .payment-workspace.payment-workspace.payment-workspace
+    .tuition-route {
+    padding: 20px 16px;
+    gap: 18px 12px;
+  }
+  .payment-workspace .tuition-route-title {
+    grid-column: 1 / -1;
+  }
+  .payment-workspace .payment-comparison-delivery {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .payment-workspace .payment-comparison-fees {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  :root[data-theme]
+    .app-clean
+    .payment-workspace.payment-workspace.payment-workspace
+    .tuition-route-summary {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    flex-wrap: nowrap;
+  }
+  .payment-workspace .payment-comparison-total > strong {
+    font-size: 20px;
+  }
+  .payment-workspace .tuition-route-summary > button {
+    font-size: 12px;
+    padding-inline: 12px;
+  }
+  .payment-workspace .route-detail-button {
+    grid-row: 4;
+  }
+  .payment-workspace .tuition-route-blocker {
+    grid-column: 1 / -1;
+    grid-row: 5;
+  }
+}
+
+:root[data-theme]
+  .app-clean
+  .payment-workspace.payment-workspace.payment-workspace
+  .tuition-route-list {
+  display: grid;
+  gap: 16px;
+  border: 0;
+}
+
+:root[data-theme]
+  .app-clean
+  .payment-workspace.payment-workspace.payment-workspace
+  .tuition-route-summary
+  > button {
+  width: auto;
+  max-width: none;
+}
+.payment-comparison-total {
+  flex: 1;
+}
+@media (max-width: 600px) {
+  :root[data-theme]
+    .app-clean
+    .payment-workspace.payment-workspace.payment-workspace
+    .tuition-route-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  :root[data-theme]
+    .app-clean
+    .payment-workspace.payment-workspace.payment-workspace
+    .tuition-route-summary
+    > button {
+    width: 100%;
+  }
+}
+
+.payment-comparison-pending {
+  color: var(--color-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.payment-comparison-country [role="combobox"] {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  height: auto;
+  min-height: 32px;
+  box-shadow: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink);
+  gap: 12px;
+}
+.payment-comparison-country [role="combobox"] > span {
+  white-space: normal;
+  text-align: left;
+}
+.payment-option-rating {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.payment-option-score {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  padding: 4px;
+  background: conic-gradient(
+    var(--color-accent) calc(var(--score) * 10%),
+    var(--color-line) 0
+  );
+}
+.payment-option-score > strong {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  font-size: 18px;
+  color: var(--color-ink);
+}
+.payment-option-rating > span:last-child {
+  display: inline-flex;
+  align-items: center;
+}
+.payment-workspace .tuition-route-title .payment-option-rating svg {
+  width: 15px;
+  height: 15px;
+}
+
+.payment-comparison-market-bottom {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+.payment-comparison-market-bottom .mid-market-rate {
+  width: min(100%, 360px);
+}
+@media (max-width: 600px) {
+  .payment-comparison-market-bottom .mid-market-rate {
+    width: 100%;
+  }
+}
+
+.payment-comparison-recipient {
+  padding: 0 4px 14px;
+}

@@ -11,7 +11,7 @@ describe("tuition route planning", () => {
     const bank = tuitionEstimates("China", "US", 50000, true)[0];
     expect(bank.fee).toEqual([30, 85]);
     expect(bank.fx).toEqual([100, 250]);
-    expect(bank.subtitle).toContain("SWIFT");
+    expect(bank.subtitle).toContain("US ACH eCheck");
   });
   it("separates local conversion from domestic bank payment fees", () => {
     const bank = tuitionEstimates("US", "UK", 50000, true)[0];

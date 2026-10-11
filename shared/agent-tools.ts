@@ -45,7 +45,7 @@ const settings = object({
   fundingOption: number(0, 10),
   proofOption: number(0, 10),
 });
-export const workspaceTools = {
+const baseWorkspaceTools = {
   read_workspace: {
     description:
       "Read current profile, tuition details and plan, Move Planner, budget items, funding sources, route keys, checklist and alerts before editing. Returns approved countries/universities. No records changed.",
@@ -71,7 +71,7 @@ export const workspaceTools = {
   },
   update_move_plan: {
     description:
-      "Save requested Move Planner costs and settings. Partial budgetAmounts/settings merge into saved values. Costs use study currency; rent is monthly, food/transport/phone/laundry/personal/social are daily, tuition is annual. months 1–24. Read workspace for university IDs; use only IDs in the study country. Ask for arrivalDate (YYYY-MM-DD) if none saved. excludedCosts replaces exclusions when supplied.",
+      "Save requested Move Planner costs and settings. Partial budgetAmounts/settings merge into saved values. Costs use study currency; rent is monthly, food/transport/phone/laundry/personal/social are daily, tuition is annual. months 1–24. Read workspace for university IDs; use only IDs in the study country. arrivalDate (YYYY-MM-DD) may be omitted or cleared when unknown. excludedCosts replaces exclusions when supplied.",
     parameters: object({
       months: number(1, 24),
       arrivalDate: string(10),
@@ -89,7 +89,7 @@ export const workspaceTools = {
   },
   update_profile: {
     description:
-      "Save requested profile fields, preserving omitted values. Only listed countries/universities. confirmedFunding sets the TOTAL declared study-plan funding, not a wallet balance. Funding/currency changes return a pending confirmation card; they are NOT saved until the owner confirms in chat. Changing study country clears university unless provided and rebases plan amounts.",
+      "Save requested profile fields, preserving omitted values. Only listed countries/universities. confirmedFunding sets the TOTAL declared study-plan funding, not a wallet balance. Explicit confirmedFunding changes return a pending confirmation card; they are NOT saved until the owner confirms in chat. Requested study-country changes save directly with currency rebasing. Changing study country clears university unless provided and rebases plan amounts.",
     parameters: object({
       name: { ...string(100), minLength: 1 },
       homeCountry: choice(countries.map((c) => c.name)),
@@ -164,6 +164,24 @@ export const workspaceTools = {
       },
       ["country", "label"],
     ),
+  },
+} satisfies Record<string, { description: string; parameters: Schema }>;
+// One atomic tool can apply edits across pages without exhausting the model's tool loop.
+const { confirmedFunding: _funding, ...editableProfile } =
+  baseWorkspaceTools.update_profile.parameters.properties!;
+export const workspaceTools = {
+  ...baseWorkspaceTools,
+  update_study_plan: {
+    description:
+      "Save all explicitly requested profile, university, annual tuition fee, payment details/plan, route and Move Planner edits together atomically. Preserves omitted fields. university in profile also updates the payment recipient and saved planner university. annualTuitionFee updates annual tuition in Move Planner and budget; payment.amount is the separate amount to pay. Monetary values use the resulting study country's currency. Does not approve/send payments or change funding/wallets. On failure no edits are saved.",
+    parameters: object({
+      profile: object(editableProfile),
+      annualTuitionFee: number(),
+      payment: baseWorkspaceTools.update_tuition_details.parameters,
+      tuitionPlan: baseWorkspaceTools.update_tuition_plan.parameters,
+      movePlan: baseWorkspaceTools.update_move_plan.parameters,
+      routeKey: string(80),
+    }),
   },
 } satisfies Record<string, { description: string; parameters: Schema }>;
 export type WorkspaceTool = keyof typeof workspaceTools;

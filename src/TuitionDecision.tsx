@@ -1,9 +1,11 @@
+import { routeProviderDetails } from "../shared/payment-routes";
 import { useWorkspaceCurrency } from "./WorkspaceCurrency";
 import { formatCurrency } from "../shared/currency";
+import { paymentOptionScore } from "../shared/payment-comparison";
 import { Dialog } from "radix-ui";
 import InfoHelp from "./InfoHelp";
 import MidMarketRate from "./MidMarketRate";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowRight,
   RefreshCw,
@@ -52,6 +54,7 @@ const sourceMoney = (value: number | null, currency = "USD") =>
       }).format(value);
 export default function TuitionDecision(props: Props) {
   const currency = useWorkspaceCurrency();
+  const fieldId = useId();
   const { banking, reserveGBP, paymentStatus } = props;
   const [deadline, setDeadline] = useState(banking.tuitionDeadline ?? "");
   const [buffer, setBuffer] = useState(String(banking.bufferBusinessDays ?? 1));
@@ -103,6 +106,11 @@ export default function TuitionDecision(props: Props) {
     now,
   ]);
   const decision = assessment.decision;
+  const cheapest = Math.min(
+    ...(decision?.routes.map((route) => route.totalUSD ?? Infinity) ?? [
+      Infinity,
+    ]),
+  );
   const dirty =
     deadline !== (banking.tuitionDeadline ?? "") ||
     Number(buffer) !== (banking.bufferBusinessDays ?? 1) ||
@@ -119,7 +127,11 @@ export default function TuitionDecision(props: Props) {
     } catch (e) {
       setError(
         e instanceof Error
-          ? e.message.replace(/\[.*?\]/g, "").replace(/^.*?Uncaught Error:\s*/, "").replace(/\s+at handler[\s\S]*$/, "").replace(/\s+Called by client[\s\S]*$/, "")
+          ? e.message
+              .replace(/\[.*?\]/g, "")
+              .replace(/^.*?Uncaught Error:\s*/, "")
+              .replace(/\s+at handler[\s\S]*$/, "")
+              .replace(/\s+Called by client[\s\S]*$/, "")
           : "Could not update tuition plan",
       );
     } finally {
@@ -138,18 +150,20 @@ export default function TuitionDecision(props: Props) {
     } as any);
   };
   return (
-    <section
-      className="tuition-decision"
-      aria-labelledby="tuition-decision-heading"
-    >
-      <div className="tuition-decision-heading">
-        <div>
-          <h2 id="tuition-decision-heading">Choose a route</h2>
-        </div>
-        <MidMarketRate source={props.routes[0]?.sourceCurrency ?? "USD"} target={currency} />
-      </div>
-      <details className="payment-plan-settings" open={!banking.tuitionDeadline || dirty}>
-        <summary className="payment-plan-summary"><span><CalendarDays size={17} /> Payment plan</span><span>{banking.tuitionDeadline || "Set deadline"}<ChevronDown size={16} /></span></summary>
+    <section className="tuition-decision" aria-label="Payment options">
+      <details
+        className="payment-plan-settings"
+        open={!banking.tuitionDeadline || dirty}
+      >
+        <summary className="payment-plan-summary">
+          <span>
+            <CalendarDays size={17} /> Payment plan
+          </span>
+          <span>
+            {banking.tuitionDeadline || "Set deadline"}
+            <ChevronDown size={16} />
+          </span>
+        </summary>
         <form
           className="tuition-plan-form"
           onSubmit={(e) => {
@@ -179,9 +193,15 @@ export default function TuitionDecision(props: Props) {
             />
           </label>
           <div className="tuition-plan-option-fields">
-            <label>
-              Buffer · business days
+            <div className="tuition-plan-field">
+              <span className="tuition-plan-field-heading">
+                <label htmlFor={`${fieldId}-buffer`}>
+                  Extra processing days · business days
+                </label>
+                <InfoHelp term="Extra processing days" />
+              </span>
               <Input
+                id={`${fieldId}-buffer`}
                 aria-label="Safety buffer in business days"
                 type="number"
                 min={0}
@@ -192,21 +212,26 @@ export default function TuitionDecision(props: Props) {
                 disabled={locked || busy}
                 onChange={(e) => setBuffer(e.target.value)}
               />
-            </label>
-            <label>
-              Living reserve · {currency}
+            </div>
+            <div className="tuition-plan-field">
+              <span className="tuition-plan-field-heading">
+                <label htmlFor={`${fieldId}-reserve`}>
+                  Living costs to keep · {currency}
+                </label>
+                <InfoHelp term="Living costs to keep" />
+              </span>
               <Input
+                id={`${fieldId}-reserve`}
                 aria-label={`Protected living funds in ${currency}`}
-                type="number"
+                money
                 min={0}
                 max={1000000}
-                step="0.01"
                 required
                 value={reserve}
                 disabled={locked || busy}
                 onChange={(e) => setReserve(e.target.value)}
               />
-            </label>
+            </div>
           </div>
           <Button
             type="submit"
@@ -237,7 +262,11 @@ export default function TuitionDecision(props: Props) {
               aria-label="Route recommendation"
             >
               <CircleAlert size={18} />
-              <strong>{!banking.tuitionDeadline ? "Choose a deadline and save your plan" : "Refresh quotes or check route details"}</strong>
+              <strong>
+                {!banking.tuitionDeadline
+                  ? "Choose a deadline and save your plan"
+                  : "Refresh quotes or check route details"}
+              </strong>
             </div>
           )}
           <div className="tuition-route-list">
@@ -247,10 +276,52 @@ export default function TuitionDecision(props: Props) {
                 key={route.routeKey}
               >
                 <div className="tuition-route-title">
+                  <div className="payment-option-rating">
+                    <span
+                      className="payment-option-score"
+                      style={
+                        {
+                          "--score": paymentOptionScore(
+                            route,
+                            cheapest,
+                            props.routes.find(
+                              (item) => item.key === route.routeKey,
+                            )?.maxBusinessDays,
+                          ),
+                        } as React.CSSProperties
+                      }
+                    >
+                      <strong>
+                        {paymentOptionScore(
+                          route,
+                          cheapest,
+                          props.routes.find(
+                            (item) => item.key === route.routeKey,
+                          )?.maxBusinessDays,
+                        ).toFixed(1)}
+                      </strong>
+                    </span>
+                    <span>
+                      Our score <InfoHelp term="Payment score" />
+                    </span>
+                  </div>
                   <strong>
-                    {route.routeKey.includes("card") || route.routeKey === "sandbox-fast" ? <CreditCard size={18} /> : <Landmark size={18} />}
+                    {route.routeKey.includes("card") ||
+                    route.routeKey === "sandbox-fast" ? (
+                      <CreditCard size={18} />
+                    ) : (
+                      <Landmark size={18} />
+                    )}
                     {route.provider}
                   </strong>
+                  <small>
+                    {routeProviderDetails(route.provider, route.targetCurrency)}
+                  </small>
+                  {decision.recommendedRouteKey === route.routeKey && (
+                    <small className="payment-best-option">
+                      Lowest available cost
+                    </small>
+                  )}
                   <span>
                     {route.eligible ? (
                       <CheckCircle2 size={14} />
@@ -264,16 +335,44 @@ export default function TuitionDecision(props: Props) {
                         : "Unavailable"}
                   </span>
                 </div>
-                <div className="tuition-route-summary">
+                <div className="payment-comparison-delivery">
+                  <small>Transfer time</small>
                   <strong>
-                    {sourceMoney(route.totalUSD, route.sourceCurrency)}
+                    <Clock3 size={15} />
+                    {route.delivery}
                   </strong>
                   <span>
-                    <Clock3 size={14} />
-                    {route.estimatedArrival
-                      ? route.delivery
-                      : route.delivery}
+                    {route.routeKey.includes("card") ||
+                    route.routeKey === "sandbox-fast"
+                      ? "Bank & Card"
+                      : route.provider}
                   </span>
+                </div>
+                <div className="payment-comparison-fees">
+                  <small>Fee & exchange rate</small>
+                  <strong>
+                    Fee {sourceMoney(route.feeUSD, route.sourceCurrency)}
+                  </strong>
+                  <span>
+                    1 {route.sourceCurrency} = {route.rateGBPPerUSD.toFixed(4)}{" "}
+                    {route.targetCurrency}
+                  </span>
+                </div>
+                <div className="tuition-route-summary">
+                  <div className="payment-comparison-total">
+                    <small>Total you pay</small>
+                    <strong>
+                      {sourceMoney(route.totalUSD, route.sourceCurrency)}
+                    </strong>
+                    <span>
+                      University gets{" "}
+                      {formatCurrency(
+                        banking.paymentAmount ?? 0,
+                        route.targetCurrency,
+                        2,
+                      )}
+                    </span>
+                  </div>
                   <Button
                     variant="outline"
                     aria-label={
@@ -299,11 +398,13 @@ export default function TuitionDecision(props: Props) {
                   >
                     {props.selectedRoute === route.routeKey
                       ? "Selected"
-                      : "Select"}
+                      : "Choose option"}
                     <ArrowRight size={15} />
                   </Button>
                 </div>
-                {!route.eligible && <p className="tuition-route-blocker">{route.blockers[0]}</p>}
+                {!route.eligible && (
+                  <p className="tuition-route-blocker">{route.blockers[0]}</p>
+                )}
                 <Dialog.Root
                   open={detailRoute === route.routeKey}
                   onOpenChange={(open) =>
@@ -324,6 +425,12 @@ export default function TuitionDecision(props: Props) {
                     <Dialog.Overlay className="brief-overlay" />
                     <Dialog.Content className="brief-dialog tuition-route-details">
                       <Dialog.Title>{route.provider}</Dialog.Title>
+                      <p>
+                        {routeProviderDetails(
+                          route.provider,
+                          route.targetCurrency,
+                        )}
+                      </p>
                       <Dialog.Description>
                         Rate, fees and availability for this quote.
                       </Dialog.Description>
@@ -426,6 +533,12 @@ export default function TuitionDecision(props: Props) {
           </div>
         </>
       )}
+      <div className="payment-comparison-market-bottom">
+        <MidMarketRate
+          source={props.routes[0]?.sourceCurrency ?? "USD"}
+          target={currency}
+        />
+      </div>
       {(error || assessment.error) && (
         <p className="tuition-error" role="alert">
           {error || assessment.error}

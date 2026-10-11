@@ -1,6 +1,6 @@
-import { convertMoney } from "../shared/currency";
+import { convertMoney, formatCurrency } from "../shared/currency";
 import { useWorkspaceCurrency } from "./WorkspaceCurrency";
-import { countries, getUniversity } from "../shared/study";
+import { countries, getCountry, getUniversity } from "../shared/study";
 import UniversitySelect from "./UniversitySelect";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -12,16 +12,36 @@ import {
   ShieldCheck,
   ArrowRight,
   ArrowLeft,
+  Search,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "./components/ui/select";
+import { WorkspaceCurrencyProvider } from "./WorkspaceCurrency";
+import { api } from "../convex/_generated/api";
+export type Comparison = {
+  sourceCurrency: string;
+  targetCurrency: string;
+  amount: number;
+};
 import { convexApi, convexClient } from "./lib/convex";
 import "./tuition-decision.css";
 import "./brief.css";
 import "./payment-compact.css";
+import "./payment-comparison.css";
 export default function PaymentWorkspace({
   help,
+  sourceCurrency = "USD",
+  homeCountry,
+  travelCountry,
+  onCompare,
   plan,
   review,
   balances,
@@ -35,7 +55,11 @@ export default function PaymentWorkspace({
   onEdit,
 }: {
   help?: ReactNode;
-  plan: ReactNode;
+  sourceCurrency?: string;
+  homeCountry?: string;
+  travelCountry?: string;
+  onCompare?: (comparison: Comparison) => Promise<void>;
+  plan: ReactNode | ((comparison: Comparison) => ReactNode);
   review: ReactNode;
   balances?: ReactNode;
   exchange?: ReactNode;
@@ -43,7 +67,11 @@ export default function PaymentWorkspace({
   recipient?: string;
   paymentStatus: string;
   accountId?: string;
-  banking?: { recipientAccountLast4?: string };
+  banking?: {
+    recipientAccountLast4?: string;
+    currency?: string;
+    sourceCurrency?: string;
+  };
   initialView?: string;
   onEdit?: (details: {
     amount: number;
@@ -51,9 +79,27 @@ export default function PaymentWorkspace({
     last4: string;
   }) => Promise<void>;
 }) {
-  const currency = useWorkspaceCurrency();
+  const workspaceCurrency = useWorkspaceCurrency();
+  const defaultSource =
+    banking?.sourceCurrency ??
+    getCountry(homeCountry ?? "")?.currency ??
+    sourceCurrency;
+  const defaultTarget =
+    banking?.currency ??
+    getCountry(travelCountry ?? "")?.currency ??
+    workspaceCurrency;
+  const [payFrom, setPayFrom] = useState(defaultSource);
+  const [payTo, setPayTo] = useState(defaultTarget);
+  useEffect(() => {
+    setPayFrom(defaultSource);
+    setPayTo(defaultTarget);
+  }, [defaultSource, defaultTarget]);
+  const currency = payTo;
+  const savedCurrency = banking?.currency ?? workspaceCurrency;
   const country =
-    countries.find((item) => item.currency === currency)?.name ?? "";
+    getCountry(travelCountry ?? "")?.name ??
+    countries.find((item) => item.currency === workspaceCurrency)?.name ??
+    "";
   const [view, setView] = useState(initialView);
   const [reviewing, setReviewing] = useState(paymentStatus !== "not_started");
   const [editing, setEditing] = useState(false);
@@ -62,6 +108,20 @@ export default function PaymentWorkspace({
     recipient: recipient ?? "",
     last4: banking?.recipientAccountLast4 ?? "",
   });
+  const [comparisonAmount, setComparisonAmount] = useState(
+    String(
+      amount == null ? "" : convertMoney(amount, savedCurrency, defaultTarget),
+    ),
+  );
+  useEffect(
+    () =>
+      setComparisonAmount(
+        String(
+          amount == null ? "" : convertMoney(amount, savedCurrency, payTo),
+        ),
+      ),
+    [amount, savedCurrency, payTo],
+  );
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     setEditing(false);
@@ -111,41 +171,147 @@ export default function PaymentWorkspace({
         </TabsList>
         <TabsContent value="tuition">
           {amount !== undefined && !reviewing && (
-            <div className="payment-workspace-summary">
-              <div>
+            <div className="payment-comparison-search">
+              <div className="payment-comparison-recipient">
                 <span>
-                  <GraduationCap size={15} /> Tuition · {currency}
+                  <Landmark size={16} aria-hidden="true" />
+                  {recipient || "Choose your university"}
                 </span>
-                <strong>
-                  {new Intl.NumberFormat("en-GB", {
-                    style: "currency",
-                    currency,
-                  }).format(amount)}
-                </strong>
+                <Button
+                  variant="ghost"
+                  aria-label="Edit tuition details"
+                  disabled={locked || busy}
+                  onClick={() => {
+                    setDraft({
+                      amount: String(amount),
+                      recipient: recipient ?? "",
+                      last4: banking?.recipientAccountLast4 ?? "",
+                    });
+                    setEditing(true);
+                    setMessage("");
+                  }}
+                >
+                  <Pencil size={14} />
+                  Edit details
+                </Button>
               </div>
-              <div>
-                <span>
-                  <Landmark size={15} /> Recipient
-                </span>
-                <strong>{recipient || "Not set"}</strong>
-              </div>
-
-              <Button
-                variant="outline"
-                aria-label="Edit tuition details"
-                disabled={locked || busy}
-                onClick={() => {
-                  setDraft({
-                    amount: String(amount),
-                    recipient: recipient ?? "",
-                    last4: banking?.recipientAccountLast4 ?? "",
-                  });
-                  setEditing(true);
+              <form
+                className="payment-comparison-bar"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  const nextAmount = Number(comparisonAmount);
+                  if (
+                    busy ||
+                    locked ||
+                    !Number.isFinite(nextAmount) ||
+                    nextAmount <= 0
+                  )
+                    return;
+                  setBusy(true);
                   setMessage("");
+                  try {
+                    if (onCompare)
+                      await onCompare({
+                        sourceCurrency: payFrom,
+                        targetCurrency: payTo,
+                        amount: nextAmount,
+                      });
+                    else if (convexClient && accountId)
+                      await convexClient.mutation(api.paymentPreferences.save, {
+                        sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
+                        targetCurrency: payTo as "USD" | "GBP" | "CNY",
+                        amount: nextAmount,
+                      });
+                    else if (
+                      onEdit &&
+                      payFrom === sourceCurrency &&
+                      payTo === workspaceCurrency
+                    )
+                      await onEdit({
+                        amount: nextAmount,
+                        recipient: recipient ?? "",
+                        last4: banking?.recipientAccountLast4 ?? "",
+                      });
+                    else
+                      throw new Error(
+                        "Sign in to save your payment currencies.",
+                      );
+                    setMessage("Payment options updated.");
+                  } catch (error) {
+                    setMessage(
+                      error instanceof Error
+                        ? error.message
+                        : "Could not update your amount. Try again.",
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
                 }}
               >
-                <Pencil size={15} /> Edit
-              </Button>
+                <div className="payment-comparison-country">
+                  <span id="pay-from-label">Pay from</span>
+                  <Select
+                    value={payFrom}
+                    disabled={locked || busy}
+                    onValueChange={setPayFrom}
+                  >
+                    <SelectTrigger aria-labelledby="pay-from-label">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="ui-select-content">
+                      {countries.map((item) => (
+                        <SelectItem key={item.currency} value={item.currency}>
+                          {item.flag} {item.name} · {item.currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="payment-comparison-country">
+                  <span id="pay-to-label">Pay to</span>
+                  <Select
+                    value={payTo}
+                    disabled={locked || busy}
+                    onValueChange={setPayTo}
+                  >
+                    <SelectTrigger aria-labelledby="pay-to-label">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="ui-select-content">
+                      {countries.map((item) => (
+                        <SelectItem key={item.currency} value={item.currency}>
+                          {item.flag} {item.name} · {item.currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <label className="payment-comparison-amount">
+                  <span>University receives</span>
+                  <div>
+                    <Input
+                      money
+                      required
+                      min="0.01"
+                      max={convertMoney(1000000, "GBP", currency)}
+                      aria-label={`Tuition amount in ${currency}`}
+                      value={comparisonAmount}
+                      disabled={locked || busy}
+                      onChange={(event) =>
+                        setComparisonAmount(event.target.value)
+                      }
+                    />
+                    <strong>{currency}</strong>
+                  </div>
+                </label>
+                <Button
+                  className="payment-comparison-submit"
+                  disabled={locked || busy}
+                >
+                  <Search size={18} />
+                  {busy ? "Updating…" : "Compare"}
+                </Button>
+              </form>
             </div>
           )}
           {editing && (
@@ -174,10 +340,11 @@ export default function PaymentWorkspace({
                   else {
                     if (!convexClient || !accountId)
                       throw new Error("Sign in to save payment details.");
-                    await convexClient.mutation(
-                      convexApi.updatePaymentDetails,
-                      { accountId: accountId as any, ...details },
-                    );
+                    await convexClient.mutation(api.paymentPreferences.save, {
+                      sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
+                      targetCurrency: payTo as "USD" | "GBP" | "CNY",
+                      ...details,
+                    });
                   }
                   setEditing(false);
                   setMessage("Saved. Confirm the updated recipient below.");
@@ -196,10 +363,10 @@ export default function PaymentWorkspace({
                 Tuition amount · {currency}
                 <Input
                   required
-                  type="number"
+                  money
                   min="0.01"
                   max={convertMoney(1000000, "GBP", currency)}
-                  step="0.01"
+
                   value={draft.amount}
                   disabled={busy}
                   onChange={(e) =>
@@ -247,10 +414,36 @@ export default function PaymentWorkspace({
           {message && <p role="status">{message}</p>}
           {!reviewing && !locked ? (
             <>
-              <div className="payment-choose-view">{plan}</div>
+              <div
+                className="payment-choose-view"
+                inert={
+                  amount !== undefined &&
+                  (Number(comparisonAmount) !==
+                    convertMoney(amount, savedCurrency, payTo) ||
+                    payFrom !== (banking?.sourceCurrency ?? sourceCurrency) ||
+                    payTo !== savedCurrency)
+                }
+              >
+                {typeof plan === "function"
+                  ? plan({
+                      sourceCurrency: payFrom,
+                      targetCurrency: payTo,
+                      amount: Number(comparisonAmount) || 0,
+                    })
+                  : plan}
+              </div>
               <div className="payment-review-actions">
                 <Button
                   className="payment-review-next"
+                  disabled={
+                    busy ||
+                    (amount !== undefined &&
+                      (Number(comparisonAmount) !==
+                        convertMoney(amount, savedCurrency, payTo) ||
+                        payFrom !==
+                          (banking?.sourceCurrency ?? sourceCurrency) ||
+                        payTo !== savedCurrency))
+                  }
                   onClick={() => setReviewing(true)}
                 >
                   Review payment <ArrowRight size={16} />
@@ -267,7 +460,9 @@ export default function PaymentWorkspace({
               >
                 <ArrowLeft size={16} /> Routes
               </Button>
-              {review}
+              <WorkspaceCurrencyProvider currency={savedCurrency}>
+                {review}
+              </WorkspaceCurrencyProvider>
             </>
           )}
         </TabsContent>

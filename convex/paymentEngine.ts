@@ -18,7 +18,19 @@ export async function paymentTransition(
   expectedQuote?: string,
 ) {
   const account = await requireAccount(ctx, accountId);
-  const currency = studyCurrency(account.countryTo);
+  const study = studyCurrency(account.countryTo);
+  const configs = await ctx.db
+    .query("appConfig")
+    .withIndex("by_account", (q) => q.eq("accountId", accountId))
+    .take(100);
+  const paymentConfig = configs.find((row) => row.key === "banking")?.value;
+  const currency = paymentConfig?.currency ?? study;
+  if (
+    (paymentConfig?.studyCurrencyAtSelection &&
+      paymentConfig.studyCurrencyAtSelection !== study) ||
+    (!paymentConfig?.sourceCurrency && currency !== study)
+  )
+    throw new Error("Study currency changed. Prepare a new payment");
   if (account.role !== "Student") throw new Error("Student account required");
   if (next === "completed" && expectedProposalId) {
     const previous = await ctx.db.get(expectedProposalId);
@@ -58,8 +70,6 @@ export async function paymentTransition(
     const amount = banking?.paymentAmount;
     if (route && (route.targetCurrency ?? "GBP") !== currency)
       throw new Error("Refresh quotes for your study currency");
-    if (banking?.currency && banking.currency !== currency)
-      throw new Error("Payment currency does not match study currency");
     const sourceCurrency = route?.sourceCurrency ?? "USD";
     if (
       expectedQuote &&
@@ -91,7 +101,10 @@ export async function paymentTransition(
       banking.recipientVerified !== true
     )
       throw new Error("Verify the sandbox university recipient first");
-    const limit = security?.paymentLimit ?? convertMoney(2500, "GBP", currency);
+    const limit =
+      security?.paymentLimit == null
+        ? convertMoney(2500, "GBP", currency)
+        : convertMoney(security.paymentLimit, study, currency);
     if (!Number.isFinite(limit) || amount > limit)
       throw new Error("Payment exceeds the sandbox transaction limit");
     const { amountMinor, sourceMinor, feeMinor, totalMinor } = tuitionQuote(
@@ -103,7 +116,9 @@ export async function paymentTransition(
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
       .collect();
     const reserveMinor = cents(
-      security?.protectedReserveGBP ?? convertMoney(1000, "GBP", currency),
+      security?.protectedReserveGBP == null
+        ? convertMoney(1000, "GBP", currency)
+        : convertMoney(security.protectedReserveGBP, study, currency),
     );
     if (!Number.isSafeInteger(reserveMinor) || reserveMinor < 0)
       throw new Error("Invalid protected reserve");

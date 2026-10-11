@@ -1,3 +1,4 @@
+import { comparisonRoute } from "../shared/payment-comparison";
 import { WorkspaceCurrencyProvider } from "../src/WorkspaceCurrency";
 import { convertMoney, currencyRate } from "../shared/currency";
 import { countries, universities } from "../shared/study";
@@ -21,6 +22,8 @@ const converted = (value: number) => convertMoney(value, "GBP", currency);
 function Preview() {
   const [banking, setBanking] = useState({
     paymentAmount: converted(2000),
+    currency,
+    sourceCurrency: undefined as string | undefined,
     recipient: universities[country][0],
     recipientAccountLast4: "1842",
     tuitionDeadline: new Date(observedAt + 14 * 86400000)
@@ -42,6 +45,10 @@ function Preview() {
       <div className="app-clean">
         <main style={{ padding: 16, maxWidth: 1600, margin: "auto" }}>
           <PaymentWorkspace
+            homeCountry={
+              new URLSearchParams(location.search).get("home") ?? undefined
+            }
+            travelCountry={country}
             amount={banking.paymentAmount}
             recipient={banking.recipient}
             banking={banking}
@@ -54,6 +61,14 @@ function Preview() {
               />
             }
             exchange={<p>Exchange estimates available.</p>}
+            onCompare={async (comparison) =>
+              setBanking({
+                ...banking,
+                paymentAmount: comparison.amount,
+                currency: comparison.targetCurrency,
+                sourceCurrency: comparison.sourceCurrency,
+              })
+            }
             onEdit={async (details) =>
               setBanking({
                 ...banking,
@@ -64,68 +79,80 @@ function Preview() {
             }
             paymentStatus={status}
             review={<p>Review your saved proposal before approving.</p>}
-            plan={
-              <TuitionDecision
-                banking={banking}
-                reserveGBP={reserve}
-                selectedRoute={selected}
-                paymentStatus={status}
-                wallets={[wallet]}
-                routes={[
-                  {
-                    key: "sandbox-standard",
-                    provider: "Sandbox Standard",
-                    fee: 8.4,
-                    sourceCurrency: "USD",
-                    targetCurrency: currency,
-                    fxRate: 0.774 * currencyRate("GBP", currency),
-                    delivery: "1–2 business days",
-                    maxBusinessDays: 2,
-                    quotedAt: observedAt,
-                    quoteExpiresAt: expiresAt,
-                  },
-                  {
-                    key: "swift",
-                    provider: "Bank SWIFT",
-                    fee: 34,
-                    sourceCurrency: "USD",
-                    targetCurrency: currency,
-                    fxRate: 0.768 * currencyRate("GBP", currency),
-                    delivery: "3–5 business days",
-                    maxBusinessDays: 5,
-                    quotedAt: observedAt,
-                    quoteExpiresAt: expiresAt,
-                  },
-                  {
-                    key: "sandbox-fast",
-                    provider: "Sandbox Express",
-                    fee: 26,
-                    sourceCurrency: "USD",
-                    targetCurrency: currency,
-                    fxRate: 0.77 * currencyRate("GBP", currency),
-                    delivery: "Within 1 business day",
-                    maxBusinessDays: 1,
-                    quotedAt: observedAt,
-                    quoteExpiresAt: expiresAt,
-                  },
-                ]}
-                onSave={async (plan) => {
-                  setBanking({
-                    ...banking,
-                    tuitionDeadline: plan.deadline,
-                    bufferBusinessDays: plan.bufferBusinessDays,
-                  });
-                  setReserve(plan.protectedReserveGBP);
-                }}
-                onSelect={async (key) => {
-                  setSelected(key);
-                  return true;
-                }}
-                onRefresh={async () => {
-                  setExpiresAt(Date.now() + 600000);
-                }}
-              />
-            }
+            plan={(comparison) => (
+              <WorkspaceCurrencyProvider currency={comparison.targetCurrency}>
+                <TuitionDecision
+                  banking={{ ...banking, paymentAmount: comparison.amount }}
+                  reserveGBP={convertMoney(
+                    reserve,
+                    currency,
+                    comparison.targetCurrency,
+                  )}
+                  selectedRoute={selected}
+                  paymentStatus={status}
+                  wallets={[wallet]}
+                  routes={[
+                    {
+                      key: "sandbox-standard",
+                      provider: "Sandbox Standard",
+                      fee: 8.4,
+                      sourceCurrency: "USD",
+                      targetCurrency: currency,
+                      fxRate: 0.774 * currencyRate("GBP", currency),
+                      delivery: "1–2 business days",
+                      maxBusinessDays: 2,
+                      quotedAt: observedAt,
+                      quoteExpiresAt: expiresAt,
+                    },
+                    {
+                      key: "swift",
+                      provider: "Bank SWIFT",
+                      fee: 34,
+                      sourceCurrency: "USD",
+                      targetCurrency: currency,
+                      fxRate: 0.768 * currencyRate("GBP", currency),
+                      delivery: "3–5 business days",
+                      maxBusinessDays: 5,
+                      quotedAt: observedAt,
+                      quoteExpiresAt: expiresAt,
+                    },
+                    {
+                      key: "sandbox-fast",
+                      provider: "Sandbox Express",
+                      fee: 26,
+                      sourceCurrency: "USD",
+                      targetCurrency: currency,
+                      fxRate: 0.77 * currencyRate("GBP", currency),
+                      delivery: "Within 1 business day",
+                      maxBusinessDays: 1,
+                      quotedAt: observedAt,
+                      quoteExpiresAt: expiresAt,
+                    },
+                  ].map((route) =>
+                    comparisonRoute(
+                      route,
+                      comparison.sourceCurrency,
+                      comparison.targetCurrency,
+                    ),
+                  )}
+                  onSave={async (plan) => {
+                    setBanking({
+                      ...banking,
+                      tuitionDeadline: plan.deadline,
+                      bufferBusinessDays: plan.bufferBusinessDays,
+                    });
+                    setReserve(plan.protectedReserveGBP);
+                  }}
+                  onSelect={async (key) => {
+                    setSelected(key);
+                    return true;
+                  }}
+                  onRefresh={async () => {
+                    setExpiresAt(Date.now() + 600000);
+                  }}
+                />
+              </WorkspaceCurrencyProvider>
+            )}
           />
           <button
             onClick={() =>

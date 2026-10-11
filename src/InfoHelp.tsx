@@ -1,6 +1,12 @@
 import { CircleHelp, X } from "lucide-react";
 import { Popover } from "radix-ui";
 const explanations: Record<string, string> = {
+  "Extra processing days":
+    "Extra business days added to the provider’s estimated transfer time to allow for bank or university processing. A route must arrive with this extra time before your tuition deadline. Choose 0–5 days; weekends are excluded.",
+  "Living costs to keep":
+    "Money you want to keep available for rent, food, transport and other living costs after paying tuition and fees. Enter an amount in the displayed currency. This amount is protected when checking whether you can afford a payment; it is not an extra payment fee.",
+  "Payment score":
+    "A score out of 10 for this comparison: up to 5 points for cost versus the cheapest option, 2 for speed, 2 for meeting your funding and deadline needs, and 1 for a current quote. This is a calculated demo score, not a customer rating.",
   "Exchange rate":
     "How much study currency one unit of the source currency buys. Sandbox quotes are estimates, not live provider rates.",
   "Provider quote":

@@ -60,11 +60,17 @@ export function Assistant({
   onNew,
   onHistory,
   aiEnabled = true,
+  backgroundPending,
+  backgroundBusy = false,
+  backgroundError,
   onConsent,
   tour,
 }: {
   tour?: ReactNode;
   aiEnabled?: boolean;
+  backgroundPending?: string;
+  backgroundBusy?: boolean;
+  backgroundError?: string;
   onConsent?: (enabled: boolean) => Promise<boolean>;
   messages: ChatMessage[];
   onSend: (text: string) => Promise<boolean>;
@@ -72,7 +78,9 @@ export function Assistant({
   onHistory: () => void;
 }) {
   const [input, setInput] = useState("");
-  const [pending, setPending] = useState("");
+  const [localPending, setPending] = useState("");
+  const pending = backgroundPending ?? localPending;
+  const sending = backgroundBusy || !!pending;
   const [error, setError] = useState("");
   const [privacyOpen, setPrivacyOpen] = useState(!aiEnabled);
   const [consentPending, setConsentPending] = useState(false);
@@ -88,7 +96,7 @@ export function Assistant({
   }, [messages.length, pending]);
   const send = async (text: string) => {
     text = text.trim();
-    if (!text || busy.current || !aiEnabled) return;
+    if (!text || busy.current || sending || !aiEnabled) return;
     busy.current = true;
     setPending(text);
     setInput("");
@@ -142,7 +150,7 @@ export function Assistant({
             aria-label="History"
             title="Chat history"
             onClick={onHistory}
-            disabled={!!pending}
+            disabled={sending}
           >
             <Clock />
             <span className="assistant-action-label">History</span>
@@ -154,7 +162,7 @@ export function Assistant({
             aria-label="New chat"
             title="New chat"
             onClick={onNew}
-            disabled={!!pending}
+            disabled={sending}
           >
             <Plus />
             <span className="assistant-action-label">New chat</span>
@@ -191,7 +199,7 @@ export function Assistant({
                   <Button variant="outline">Done</Button>
                 </Dialog.Close>
                 <Button
-                  disabled={!!pending || consentPending}
+                  disabled={sending || consentPending}
                   onClick={async () => {
                     setConsentPending(true);
                     setConsentError("");
@@ -337,7 +345,7 @@ export function Assistant({
             placeholder="Ask anything about your plan…"
             value={input}
             maxLength={4000}
-            disabled={!!pending || !aiEnabled}
+            disabled={sending || !aiEnabled}
             onChange={(event) => {
               setInput(event.target.value);
               event.target.style.height = "auto";
@@ -360,15 +368,15 @@ export function Assistant({
               type="submit"
               size="icon"
               aria-label="Send message"
-              disabled={!!pending || !input.trim() || !aiEnabled}
+              disabled={sending || !input.trim() || !aiEnabled}
             >
               <ArrowUp size={19} />
             </Button>
           </div>
         </form>
-        {error && (
+        {(backgroundError || error) && (
           <p className="assistant-error" role="alert">
-            {error}
+            {backgroundError || error}
           </p>
         )}
         <small className="assistant-note">

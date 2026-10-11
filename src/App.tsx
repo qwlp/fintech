@@ -1,4 +1,11 @@
+import { useBackgroundChat } from "./lib/use-background-chat";
+import {
+  routeProviderName,
+  routeProviderDetails,
+} from "../shared/payment-routes";
 import MovePlanner from "./MovePlanner";
+import LinkAccount from "./LinkAccount";
+import { comparisonRoute } from "../shared/payment-comparison";
 import { calculateMove } from "../shared/move-planner";
 export { default as MovePlanner } from "./MovePlanner";
 import {
@@ -29,9 +36,7 @@ import { createPortal } from "react-dom";
 import SponsorConnect from "./SponsorConnect";
 import { Assistant, ChatHistory } from "./Chat";
 import type { Id } from "../convex/_generated/dataModel";
-import BudgetDonut, {
-  planChartColors,
-} from "./BudgetDonut";
+import BudgetDonut, { planChartColors } from "./BudgetDonut";
 import Brand from "./Brand";
 import PaymentWorkspace from "./PaymentWorkspace";
 import PaymentEvidence from "./PaymentEvidence";
@@ -628,22 +633,15 @@ function App({ onSignOut }: { onSignOut: () => void }) {
     setShowChatHistory(false);
     go("AI Agent");
   };
-  const sendMessage = async (text: string) => {
-    if (!account || !convexClient) return false;
-    try {
-      await convexClient.action(convexApi.sendMessage, {
-        accountId: account._id as Id<"accounts">,
-        text,
-        chatId: activeChat,
-      });
-      return true;
-    } catch {
-      announce(
-        "AI reply unavailable. Check Payments for any prepared proposal before retrying.",
-      );
-      return false;
-    }
-  };
+  const backgroundChat = useBackgroundChat(async ({ text, chatId }) => {
+    if (!account || !convexClient) throw new Error("Sign in to send a message");
+    await convexClient.action(convexApi.sendMessage, {
+      accountId: account._id as Id<"accounts">,
+      text,
+      chatId,
+    });
+  }, announce);
+  const sendMessage = (text: string) => backgroundChat.send(text, activeChat);
   const saveProfile = (profile: Record<string, string>) =>
     account
       ? mutate(convexApi.updateProfile, {
@@ -780,6 +778,14 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                     )}
                     <Icon size={19} />
                     <span>{item}</span>
+                    {item === "AI Agent" && backgroundChat.pending && (
+                      <small
+                        role="status"
+                        aria-label="AI agent working in background"
+                      >
+                        Working…
+                      </small>
+                    )}
                   </button>
                 </div>
               ))}
@@ -892,7 +898,13 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             >
               {(page !== "AI Agent" || showChatHistory) &&
-                !["Payments", "Wallet", "Exchange"].includes(page) && (
+                ![
+                  "Payments",
+                  "Wallet",
+                  "Exchange",
+                  "Profile",
+                  "Security",
+                ].includes(page) && (
                   <div className="page-help-tools">
                     <SectionHelp key={page} section={page} />
                   </div>
@@ -973,6 +985,17 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                           })
                         : false
                     }
+                    backgroundPending={
+                      backgroundChat.pending?.chatId === activeChat
+                        ? backgroundChat.pending?.text
+                        : ""
+                    }
+                    backgroundBusy={!!backgroundChat.pending}
+                    backgroundError={
+                      backgroundChat.failure?.chatId === activeChat
+                        ? backgroundChat.failure?.message
+                        : ""
+                    }
                     onSend={sendMessage}
                     onNew={newChat}
                     onHistory={() => setShowChatHistory(true)}
@@ -980,6 +1003,11 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                 ))}
               {["Payments", "Wallet", "Exchange"].includes(page) && (
                 <PaymentWorkspace
+                  sourceCurrency={
+                    database?.paymentRoutes?.[0]?.sourceCurrency ?? "USD"
+                  }
+                  homeCountry={account?.countryFrom}
+                  travelCountry={account?.countryTo}
                   help={
                     <div className="page-help-tools">
                       <SectionHelp key={page} section={page} />
@@ -1007,21 +1035,51 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   amount={database?.config?.banking?.paymentAmount}
                   recipient={database?.config?.banking?.recipient}
                   paymentStatus={paymentStatus}
-                  plan={
+                  plan={(comparison) =>
                     database?.config?.banking ? (
-                      <TuitionDecision
-                        accountId={account?._id}
-                        banking={database.config.banking}
-                        reserveGBP={
-                          database.config.security?.protectedReserveGBP ??
-                          convertMoney(1000, "GBP", currency)
-                        }
-                        wallets={database.wallets}
-                        routes={database.paymentRoutes}
-                        selectedRoute={account?.selectedRoute}
-                        paymentStatus={paymentStatus}
-                        onSelect={selectRoute}
-                      />
+                      <WorkspaceCurrencyProvider
+                        currency={comparison.targetCurrency}
+                      >
+                        <TuitionDecision
+                          accountId={account?._id}
+                          banking={{
+                            ...database.config.banking,
+                            paymentAmount: comparison.amount,
+                          }}
+                          reserveGBP={convertMoney(
+                            database.config.security?.protectedReserveGBP ??
+                              convertMoney(1000, "GBP", currency),
+                            currency,
+                            comparison.targetCurrency,
+                          )}
+                          wallets={database.wallets}
+                          routes={database.paymentRoutes.map((route) =>
+                            comparisonRoute(
+                              route,
+                              comparison.sourceCurrency,
+                              comparison.targetCurrency,
+                            ),
+                          )}
+                          selectedRoute={account?.selectedRoute}
+                          paymentStatus={paymentStatus}
+                          onSave={async (plan) => {
+                            if (
+                              !account ||
+                              !(await mutate(convexApi.updateTuitionPlan, {
+                                accountId: account._id,
+                                ...plan,
+                                protectedReserveGBP: convertMoney(
+                                  plan.protectedReserveGBP,
+                                  comparison.targetCurrency,
+                                  currency,
+                                ),
+                              }))
+                            )
+                              throw new Error("Could not save payment plan");
+                          }}
+                          onSelect={selectRoute}
+                        />
+                      </WorkspaceCurrencyProvider>
                     ) : (
                       <PaymentEvidence
                         accountId={account?._id}
@@ -1877,8 +1935,8 @@ function VariationPanel({
         <div className="conversion">
           <label>
             You send <span>$</span>
-            <input
-              type="number"
+            <Input
+              money
               min="10"
               value={usdAmount}
               onChange={(e) =>
@@ -2222,8 +2280,8 @@ function SponsorWorkspace({
           </div>
           <label>
             Amount
-            <input
-              type="number"
+            <Input
+              money
               min="1"
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
@@ -2382,45 +2440,164 @@ export function ExchangeWorkspace({
   return (
     <section className="workspace fx-desk fx-conversion">
       <header className="fx-heading">
-        <h2><ArrowLeftRight size={24} aria-hidden="true" /> Exchange</h2>
+        <h2>
+          <ArrowLeftRight size={24} aria-hidden="true" /> Exchange
+        </h2>
       </header>
       <div className="fx-conversion-layout">
-        <section className="fx-converter-panel" aria-label="Conversion estimate">
-          <div className="fx-conversion-heading"><h3>USD → {currency}</h3><span className="fx-badge"><ShieldCheck size={14} aria-hidden="true" /> Sandbox</span></div>
+        <section
+          className="fx-converter-panel"
+          aria-label="Conversion estimate"
+        >
+          <div className="fx-conversion-heading">
+            <h3>USD → {currency}</h3>
+            <span className="fx-badge">
+              <ShieldCheck size={14} aria-hidden="true" /> Sandbox
+            </span>
+          </div>
           <div className="fx-amounts">
-          <label className="fx-label" htmlFor="fx-amount"><WalletCards size={15} aria-hidden="true" /> You send</label>
-          <div className="fx-money-field">
-            <Input id="fx-amount" aria-label="Amount to convert" className="fx-amount-input" type="number" inputMode="decimal" min="0.01" step="0.01" value={amount} aria-invalid={!validAmount} aria-describedby={!validAmount ? "fx-amount-help" : undefined} onChange={e => setAmount(e.target.value)} />
-            <span className="fx-currency">USD</span>
-          </div>
-          <div className="fx-conversion-direction"><ArrowLeft className="fx-down-arrow" size={18} aria-hidden="true" /></div>
-          <div className="fx-result">
-            <span className="fx-label"><Landmark size={15} aria-hidden="true" /> You receive · {currency}</span>
-            <output aria-live="polite">{bestRoute && validAmount ? targetMoney(received) : "—"}</output>
-          </div>
-          {!validAmount && <p id="fx-amount-help" className="fx-error">Enter an amount above zero.</p>}
+            <label className="fx-label" htmlFor="fx-amount">
+              <WalletCards size={15} aria-hidden="true" /> You send
+            </label>
+            <div className="fx-money-field">
+              <Input
+                id="fx-amount"
+                aria-label="Amount to convert"
+                className="fx-amount-input"
+                money
+                inputMode="decimal"
+                min="0.01"
+                value={amount}
+                aria-invalid={!validAmount}
+                aria-describedby={!validAmount ? "fx-amount-help" : undefined}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+              <span className="fx-currency">USD</span>
+            </div>
+            <div className="fx-conversion-direction">
+              <ArrowLeft
+                className="fx-down-arrow"
+                size={18}
+                aria-hidden="true"
+              />
+            </div>
+            <div className="fx-result">
+              <span className="fx-label">
+                <Landmark size={15} aria-hidden="true" /> You receive ·{" "}
+                {currency}
+              </span>
+              <output aria-live="polite">
+                {bestRoute && validAmount ? targetMoney(received) : "—"}
+              </output>
+            </div>
+            {!validAmount && (
+              <p id="fx-amount-help" className="fx-error">
+                Enter an amount above zero.
+              </p>
+            )}
           </div>
           <div className="fx-quote-summary">
-          <dl className="fx-breakdown">
-            <div><dt><ArrowLeftRight size={15} aria-hidden="true" /> Rate <InfoHelp term="Exchange rate" /></dt><dd>{bestRoute ? `1 USD = ${rate.toFixed(4)} ${currency}` : "Unavailable"}</dd></div>
-            <div><dt><ReceiptText size={15} aria-hidden="true" /> Fee <InfoHelp term="Fees" /></dt><dd>{bestRoute ? formatUSD(fee) : "—"}</dd></div>
-            <div><dt><Clock3 size={15} aria-hidden="true" /> Arrival <InfoHelp term="Arrival estimate" /></dt><dd>{bestRoute?.delivery ?? "Unavailable"}</dd></div>
-            <div className="fx-total"><dt><WalletCards size={15} aria-hidden="true" /> Total · USD</dt><dd>{bestRoute && validAmount ? formatUSD(numericAmount + fee) : "—"}</dd></div>
-          </dl>
-          <Button className="fx-primary" disabled={!validAmount || !bestRoute} onClick={() => go("Payments")}><GraduationCap size={18} aria-hidden="true" /> Tuition payment <ArrowRight size={18} /></Button>
+            <dl className="fx-breakdown">
+              <div>
+                <dt>
+                  <ArrowLeftRight size={15} aria-hidden="true" /> Rate{" "}
+                  <InfoHelp term="Exchange rate" />
+                </dt>
+                <dd>
+                  {bestRoute
+                    ? `1 USD = ${rate.toFixed(4)} ${currency}`
+                    : "Unavailable"}
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <ReceiptText size={15} aria-hidden="true" /> Fee{" "}
+                  <InfoHelp term="Fees" />
+                </dt>
+                <dd>{bestRoute ? formatUSD(fee) : "—"}</dd>
+              </div>
+              <div>
+                <dt>
+                  <Clock3 size={15} aria-hidden="true" /> Arrival{" "}
+                  <InfoHelp term="Arrival estimate" />
+                </dt>
+                <dd>{bestRoute?.delivery ?? "Unavailable"}</dd>
+              </div>
+              <div className="fx-total">
+                <dt>
+                  <WalletCards size={15} aria-hidden="true" /> Total · USD
+                </dt>
+                <dd>
+                  {bestRoute && validAmount
+                    ? formatUSD(numericAmount + fee)
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+            <Button
+              className="fx-primary"
+              disabled={!validAmount || !bestRoute}
+              onClick={() => go("Payments")}
+            >
+              <GraduationCap size={18} aria-hidden="true" /> Tuition payment{" "}
+              <ArrowRight size={18} />
+            </Button>
           </div>
         </section>
         <aside className="fx-conversion-support">
-
           <details className="fx-alert-disclosure">
-            <summary><span><Bell size={16} aria-hidden="true" /> Rate alert</span><ChevronRight size={16} aria-hidden="true" /></summary>
-            {alert && <p className="fx-active-alert">Active target: {alert.targetRate} {currency} per USD</p>}
-            <form onSubmit={e => { e.preventDefault(); void saveAlert(); }}>
-              <label className="fx-label" htmlFor="fx-target">Target rate · {currency} per USD</label>
-              <Input id="fx-target" className="fx-target-input" type="number" inputMode="decimal" min="0.001" step="0.001" value={targetRate} onChange={e => { setTargetRate(e.target.value); setAlertMessage(""); }} aria-invalid={!validTarget} aria-describedby="fx-target-help" />
-              <p id="fx-target-help" className={validTarget ? "fx-hint" : "fx-error"}>{validTarget ? `Current: ${bestRoute ? rate.toFixed(4) : "unavailable"} ${currency} per USD` : "Enter a rate above zero."}</p>
-              <Button type="submit" disabled={!validTarget || saving || !database}>{saving ? "Saving…" : alert ? "Update alert" : "Create alert"}</Button>
-              <p role="status" className="fx-hint">{alertMessage}</p>
+            <summary>
+              <span>
+                <Bell size={16} aria-hidden="true" /> Rate alert
+              </span>
+              <ChevronRight size={16} aria-hidden="true" />
+            </summary>
+            {alert && (
+              <p className="fx-active-alert">
+                Active target: {alert.targetRate} {currency} per USD
+              </p>
+            )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void saveAlert();
+              }}
+            >
+              <label className="fx-label" htmlFor="fx-target">
+                Target rate · {currency} per USD
+              </label>
+              <Input
+                id="fx-target"
+                className="fx-target-input"
+                type="number"
+                inputMode="decimal"
+                min="0.001"
+                step="0.001"
+                value={targetRate}
+                onChange={(e) => {
+                  setTargetRate(e.target.value);
+                  setAlertMessage("");
+                }}
+                aria-invalid={!validTarget}
+                aria-describedby="fx-target-help"
+              />
+              <p
+                id="fx-target-help"
+                className={validTarget ? "fx-hint" : "fx-error"}
+              >
+                {validTarget
+                  ? `Current: ${bestRoute ? rate.toFixed(4) : "unavailable"} ${currency} per USD`
+                  : "Enter a rate above zero."}
+              </p>
+              <Button
+                type="submit"
+                disabled={!validTarget || saving || !database}
+              >
+                {saving ? "Saving…" : alert ? "Update alert" : "Create alert"}
+              </Button>
+              <p role="status" className="fx-hint">
+                {alertMessage}
+              </p>
             </form>
           </details>
         </aside>
@@ -2883,16 +3060,12 @@ export function Profile({
   const [saving, setSaving] = useState(false);
   const [confirmingFunding, setConfirmingFunding] = useState(false);
   const [addingCountry, setAddingCountry] = useState(false);
-  const [country, setCountry] = useState("");
-  const [accountLabel, setAccountLabel] = useState("");
-  const [adding, setAdding] = useState(false);
   const [profile, setProfile] = useState({
     name: account?.name ?? "",
-    home:
-      getCountry(account?.countryFrom ?? "")?.name ?? "",
-    study:
-      getCountry(account?.countryTo ?? "")?.name ?? "",
-    university: getUniversity(account?.countryTo ?? "", account?.university ?? "") ?? "",
+    home: getCountry(account?.countryFrom ?? "")?.name ?? "",
+    study: getCountry(account?.countryTo ?? "")?.name ?? "",
+    university:
+      getUniversity(account?.countryTo ?? "", account?.university ?? "") ?? "",
     course: account?.course ?? "",
     start: config?.courseStart ?? "",
     status: config?.financialStatus ?? "",
@@ -3015,7 +3188,13 @@ export function Profile({
           >
             {editing ? (
               <>
-                <Check aria-hidden="true" /><span className="profile-label-desktop">{saving ? "Saving…" : "Save profile"}</span><span className="profile-label-mobile">{saving ? "Saving…" : "Save"}</span>
+                <Check aria-hidden="true" />
+                <span className="profile-label-desktop">
+                  {saving ? "Saving…" : "Save profile"}
+                </span>
+                <span className="profile-label-mobile">
+                  {saving ? "Saving…" : "Save"}
+                </span>
               </>
             ) : (
               <>
@@ -3025,6 +3204,7 @@ export function Profile({
               </>
             )}
           </button>
+          <SectionHelp section="Profile" />
         </div>
       </section>
       <div className="profile-secondary-nav">
@@ -3188,7 +3368,7 @@ export function Profile({
                         : label}
                     </span>
                     {editing ? (
-                      <input
+                      <Input
                         id={`profile-${key}`}
                         aria-label={
                           key === "funding"
@@ -3197,7 +3377,7 @@ export function Profile({
                         }
                         type={key === "funding" ? "number" : "text"}
                         min={key === "funding" ? 0 : undefined}
-                        step={key === "funding" ? "0.01" : undefined}
+                        money={key === "funding"}
                         value={profile[key]}
                         onChange={(e) => update(key, e.target.value)}
                       />
@@ -3242,11 +3422,12 @@ export function Profile({
             </h3>
           </div>
           <button className="secondary" onClick={() => setAddingCountry(true)}>
-            <Plus size={16} /> Add account
+            <Plus size={16} /> Link bank or card
           </button>
         </div>
-        {(config?.countryAccounts ?? []).filter((item: { country: string }) => getCountry(item.country)).map(
-          (item: { country: string; label: string }, index: number) => (
+        {(config?.countryAccounts ?? [])
+          .filter((item: { country: string }) => getCountry(item.country))
+          .map((item: { country: string; label: string }, index: number) => (
             <div className="line-item" key={`${item.country}-${index}`}>
               <MapPin size={18} />
               <div>
@@ -3257,63 +3438,27 @@ export function Profile({
                 </small>
               </div>
             </div>
-          ),
-        )}
-        {!(config?.countryAccounts ?? []).some((item: { country: string }) => getCountry(item.country)) && !addingCountry && (
-          <p className="country-account-hint">None yet.</p>
-        )}
+          ))}
+        {!(config?.countryAccounts ?? []).some((item: { country: string }) =>
+          getCountry(item.country),
+        ) &&
+          !addingCountry && (
+            <p className="country-account-hint">
+              Add a bank account or credit card to keep your account details in
+              one place.
+            </p>
+          )}
         {addingCountry && (
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (!country.trim() || !accountLabel.trim() || adding) return;
-              setAdding(true);
-              const saved = await onAddCountry(
-                country.trim(),
-                accountLabel.trim(),
-              );
-              setAdding(false);
-              if (saved) {
-                setAddingCountry(false);
-                setCountry("");
-                setAccountLabel("");
-                announce("Country account added");
-              }
+          <LinkAccount
+            open={addingCountry}
+            onOpenChange={setAddingCountry}
+            defaultCountry={profile.home}
+            onSave={async (country, label) => {
+              const saved = await onAddCountry(country, label);
+              if (saved) announce("Account added to your profile");
+              return saved;
             }}
-          >
-            <div className="field-grid">
-              <div className="setup-field">
-                <SetupCountrySelect
-                  label="Account country"
-                  value={country}
-                  onChange={setCountry}
-                  disabled={adding}
-                />
-              </div>
-              <label>
-                <span>Account name</span>
-                <input
-                  required
-                  value={accountLabel}
-                  onChange={(event) => setAccountLabel(event.target.value)}
-                  placeholder="e.g. US study account"
-                />
-              </label>
-            </div>
-            <div className="country-account-actions">
-              <button
-                type="button"
-                className="secondary"
-                disabled={adding}
-                onClick={() => setAddingCountry(false)}
-              >
-                Cancel
-              </button>
-              <button className="primary" disabled={adding}>
-                {adding ? "Adding…" : "Add account"}
-              </button>
-            </div>
-          </form>
+          />
         )}
       </section>
     </div>
@@ -3705,7 +3850,9 @@ export function Payments({
         }).format(amount)
       : "—";
   const recipient =
-    activeProposal?.recipient ?? config?.recipient ?? "University of Manchester";
+    activeProposal?.recipient ??
+    config?.recipient ??
+    "University of Manchester";
   const locked = status !== "not_started";
   const currentStep =
     status === "not_started" ? 1 : status === "prepared" ? 2 : 3;
@@ -3777,7 +3924,13 @@ export function Payments({
                             <RouteIcon size={20} />
                           </span>
                           <span className="pay-provider">
-                            <strong>{r.provider}</strong>
+                            <strong>{routeProviderName(r.provider)}</strong>
+                            <small>
+                              {routeProviderDetails(
+                                r.provider,
+                                r.targetCurrency ?? "GBP",
+                              )}
+                            </small>
                             <span>
                               <Clock3 size={13} />
                               {r.delivery}
@@ -4101,10 +4254,9 @@ function Sponsors({
               <label>
                 Amount ({currency})
                 <Input
-                  type="number"
+                  money
                   min="0.01"
                   max="1000000"
-                  step="0.01"
                   required
                   value={amount}
                   onChange={(event) => setAmount(event.target.value)}
@@ -4505,68 +4657,86 @@ export function Security({
     link.click();
     URL.revokeObjectURL(link.href);
   };
-  const visibleAudit = activityOpen ? audit : audit.slice(0, 5);
+  const visibleAudit = activityOpen ? audit : audit.slice(0, 3);
+  const activityNames: Record<string, string> = {
+    PROFILE_UPDATED: "Profile updated",
+    PLAN_CREATED: "Study plan created",
+    AI_CONSENT: "AI access changed",
+    AGENT_TOOL: "AI assistant used",
+    PAYMENT_DETAILS_UPDATED: "Payment details updated",
+    PAYMENT_RESET: "Payment restarted",
+    RECIPIENT_VERIFIED: "University account checked",
+    SANDBOX_INITIALIZED: "Demo payment set up",
+    SANDBOX_QUOTES_REFRESHED: "Payment options refreshed",
+    SPONSOR_ACCEPTED: "Sponsor connected",
+    SPONSOR_PERMISSION: "Sponsor sharing updated",
+    SPONSOR_REQUESTED: "Support requested",
+    TUITION_PLAN_UPDATED: "Tuition plan updated",
+    PAYMENT_COMPLETED: "Demo payment completed",
+    PAYMENT_APPROVED: "Payment approved",
+    PAYMENT_PREPARED: "Payment prepared",
+    PROPOSAL_CREATED: "Payment prepared",
+    PROPOSAL_APPROVED: "Payment approved",
+  };
   return (
     <div id="security-center" className="page-stack security-workspace">
       <section className="page-intro">
         <h2>
           <ShieldCheck size={24} aria-hidden="true" />
-          Security center
+          Security
         </h2>
-        <span className="security-mode">Sandbox</span>
+        <div className="security-heading-actions">
+          <SectionHelp section="Security" />
+        </div>
       </section>
-      <section className="security-grid" aria-label="Payment protections">
-        <div className="security-control">
-          <LockKeyhole aria-hidden="true" />
+      <section
+        className="security-safeguards"
+        aria-labelledby="security-safeguards-title"
+      >
+        <h3 id="security-safeguards-title">Payment safeguards</h3>
+        <div className="security-safeguard-row">
+          <LockKeyhole size={19} aria-hidden="true" />
           <div>
-            <strong>Owner approval</strong>
-            <span>
+            <strong>You approve payments</strong>
+            <p>
               {config?.approvalRequired == null
-                ? "—"
+                ? "Payment approval settings are not available yet."
                 : config.approvalRequired
-                  ? "Required"
-                  : "Off"}
-            </span>
+                  ? "Each payment needs your approval before it can be sent."
+                  : "Approval is currently turned off for demo payments."}
+            </p>
           </div>
         </div>
-        <div className="security-control">
-          <CircleDollarSign aria-hidden="true" />
+        <div className="security-safeguard-row">
+          <CircleDollarSign size={19} aria-hidden="true" />
           <div>
-            <strong>Payment limit</strong>
-            <span>
+            <strong>Maximum per payment</strong>
+            <p>
               {config?.paymentLimit == null
-                ? "—"
-                : formatMoney(config.paymentLimit)}
-            </span>
+                ? "Payment limit settings are not available yet."
+                : `You can send up to ${formatMoney(config.paymentLimit)} in a single demo payment.`}
+            </p>
           </div>
         </div>
-        <div className="security-control">
-          <Clock3 aria-hidden="true" />
+        <div className="security-safeguard-row">
+          <Clock3 size={19} aria-hidden="true" />
           <div>
-            <strong>Approval expires</strong>
-            <span>
+            <strong>Time to send after approval</strong>
+            <p>
               {config?.approvalExpiryMinutes == null
-                ? "—"
-                : `${config.approvalExpiryMinutes} min`}
-            </span>
+                ? "Approval time settings are not available yet."
+                : `Send within ${config.approvalExpiryMinutes} minutes of approving. After that, you’ll need to approve again.`}
+            </p>
           </div>
         </div>
       </section>
-      {receipts && (
-        <section className="security-receipts" aria-label="Payment receipts">
-          {receipts}
-        </section>
-      )}
       <section className="security-activity">
         <div className="security-section-heading">
-          <h3>
-            <History size={18} aria-hidden="true" />
-            Activity log <span className="security-count">{audit.length}</span>
-          </h3>
+          <h3>Recent activity</h3>
           {audit.length > 0 && (
             <Button variant="outline" size="sm" onClick={exportAudit}>
               <Download size={15} aria-hidden="true" />
-              Export
+              Download history
             </Button>
           )}
         </div>
@@ -4574,53 +4744,65 @@ export function Security({
           <div
             className="security-event-list"
             role="region"
-            aria-label="Activity log"
+            aria-label="Recent activity"
           >
             {visibleAudit.map((a) => (
               <div className="security-event" key={a.id}>
-                <span
-                  className="security-event-icon"
-                  data-kind={
-                    /PAYMENT|PROPOSAL|RECIPIENT/.test(a.type)
-                      ? "payment"
-                      : /AI|TOOL/.test(a.type)
-                        ? "agent"
-                        : "account"
-                  }
-                >
+                <span className="security-event-icon">
                   <History size={16} aria-hidden="true" />
                 </span>
                 <div className="security-event-copy">
                   <strong>
-                    {a.type
-                      .replaceAll("_", " ")
-                      .toLowerCase()
-                      .replace(/^./, (c) => c.toUpperCase())}
+                    {activityNames[a.type] ??
+                      (/PAYMENT|PROPOSAL/.test(a.type)
+                        ? "Payment updated"
+                        : /SPONSOR/.test(a.type)
+                          ? "Sponsor details updated"
+                          : /AI|TOOL/.test(a.type)
+                            ? "AI assistant activity"
+                            : "Account updated")}
                   </strong>
-                  <p>{a.detail}</p>
+                  <details className="security-activity-details">
+                    <summary>View details</summary>
+                    <p>{a.detail}</p>
+                    <p>By {a.actor}</p>
+                  </details>
                 </div>
                 <div className="security-event-meta">
                   <span>{a.timestamp}</span>
-                  <small>{a.actor}</small>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="security-empty">No activity yet.</p>
+          <p className="security-empty">
+            No activity yet. Updates to your account will appear here.
+          </p>
         )}
-        {audit.length > 5 && (
+        {audit.length > 3 && (
           <Button
             variant="ghost"
             className="security-show-all"
             aria-expanded={activityOpen}
             onClick={() => setActivityOpen((open) => !open)}
           >
-            {activityOpen ? "Show recent" : `View all ${audit.length}`}
+            {activityOpen ? "Show less" : "Show all activity"}
             <ChevronRight size={15} aria-hidden="true" />
           </Button>
         )}
       </section>
+      {receipts && (
+        <details className="security-receipts security-payment-history">
+          <summary>
+            <span>Payment history</span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </summary>
+          <p className="security-history-note">
+            Check university account details and review your demo payments.
+          </p>
+          {receipts}
+        </details>
+      )}
     </div>
   );
 }

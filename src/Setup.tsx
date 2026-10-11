@@ -1,3 +1,4 @@
+import LinkAccount from "./LinkAccount";
 import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
@@ -40,6 +41,7 @@ export default function Setup({
     fundingAmount?: number;
     sponsorSupport?: string;
     fundingCurrency?: string;
+    countryAccounts?: { country: string; label: string }[];
   };
   onDone: () => void;
   onSignOut: () => void;
@@ -50,6 +52,10 @@ export default function Setup({
     ? ["About you", "Ready"]
     : ["Your move", "Your studies", "Your funding"];
   const [step, setStep] = useState(0);
+  const [linkingAccount, setLinkingAccount] = useState(false);
+  const [addedAccounts, setAddedAccounts] = useState<
+    { country: string; label: string }[]
+  >([]);
   const [direction, setDirection] = useState(1);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -75,6 +81,7 @@ export default function Setup({
     config?.fundingCurrency ?? studyCurrency(account.countryTo),
   );
   const save = useMutation(convexApi.completeSetup);
+  const addAccount = useMutation(convexApi.addCountryAccount);
   const reduced = useReducedMotion();
   const heading = useRef<HTMLHeadingElement>(null);
   const update = (key: keyof typeof values, value: string) => {
@@ -113,7 +120,7 @@ export default function Setup({
         required={required}
         maxLength={type === "text" ? 100 : undefined}
         min={type === "number" ? 0 : undefined}
-        step={type === "number" ? "0.01" : undefined}
+        money={type === "number"}
         disabled={busy}
       />
     </label>
@@ -344,6 +351,45 @@ export default function Setup({
                       </label>
                     </>
                   )}
+                  {!sponsor && step === 2 && (
+                    <div className="setup-link-accounts">
+                      <strong>Bank accounts & cards · optional</strong>
+                      <p>
+                        Add a bank account or card to your profile. You can also
+                        do this later.
+                      </p>
+                      {[
+                        ...(config?.countryAccounts ?? []),
+                        ...addedAccounts.filter(
+                          (added) =>
+                            !config?.countryAccounts?.some(
+                              (saved) =>
+                                saved.country === added.country &&
+                                saved.label === added.label,
+                            ),
+                        ),
+                      ].map((item, index) => (
+                        <div
+                          className="setup-linked-account"
+                          key={`${item.country}-${index}`}
+                        >
+                          <Check size={16} aria-hidden="true" />
+                          <span>
+                            {item.label}
+                            <small>{item.country}</small>
+                          </span>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => setLinkingAccount(true)}
+                      >
+                        <Wallet size={16} /> Link bank or card
+                      </Button>
+                    </div>
+                  )}
                   {sponsor && step === 1 && (
                     <div className="setup-summary">
                       <Check size={19} />
@@ -392,6 +438,18 @@ export default function Setup({
           </motion.div>
         </AnimatePresence>
       </motion.section>
+      {linkingAccount && (
+        <LinkAccount
+          open
+          onOpenChange={setLinkingAccount}
+          defaultCountry={values.countryFrom || values.countryTo}
+          onSave={async (country, label) => {
+            await addAccount({ accountId: account._id, country, label });
+            setAddedAccounts((previous) => [...previous, { country, label }]);
+            return true;
+          }}
+        />
+      )}
     </main>
   );
 }

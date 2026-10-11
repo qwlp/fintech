@@ -164,7 +164,7 @@ test("failed commitment save preserves the edit", async ({ page }) => {
     .getByRole("button", { name: "Save commitment", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Could not save");
-  await expect(page.getByLabel("Annual amount in USD")).toHaveValue("12000");
+  await expect(page.getByLabel("Annual amount in USD")).toHaveValue("12,000");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.locator(".sd-commitment")).toContainText("US$11,627.91");
 });

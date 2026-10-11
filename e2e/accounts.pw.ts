@@ -248,7 +248,7 @@ test("country budget currencies and editable controls", async ({ page }) => {
     .click();
   await expect(
     budget.getByLabel("Annual tuition", { exact: true }),
-  ).toHaveValue("6500");
+  ).toHaveValue("6,500");
   await expect(budget.locator(".home-budget-results")).toContainText("£18,500");
   await budget.getByRole("tab", { name: "United States", exact: true }).click();
   await expect(budget.locator(".home-budget-results")).toContainText(
@@ -261,7 +261,7 @@ test("country budget currencies and editable controls", async ({ page }) => {
     .click();
   await expect(
     budget.getByLabel("Annual tuition", { exact: true }),
-  ).toHaveValue("6500");
+  ).toHaveValue("6,500");
   await budget.getByLabel("Confirmed funding", { exact: true }).fill("50000");
   await expect(budget.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",

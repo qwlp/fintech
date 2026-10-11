@@ -1,3 +1,4 @@
+import { routeProviderName } from "../shared/payment-routes";
 import { useWorkspaceCurrency } from "./WorkspaceCurrency";
 import { studyCurrency } from "../shared/currency";
 import { useEffect, useState } from "react";
@@ -120,7 +121,7 @@ export default function PaymentEstimate({
         </span>
         <strong>{money(quote.totalMinor / 100, source)}</strong>
         <small>
-          {quote.provider} · {quote.delivery}
+          {routeProviderName(quote.provider)} · {quote.delivery}
         </small>
       </div>
       <dl className="estimate-breakdown">

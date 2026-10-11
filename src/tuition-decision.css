@@ -443,3 +443,19 @@
 @media (max-width: 767px) {
   :root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .payment-workspace-summary { grid-template-columns: minmax(0, 1fr) auto; }
 }
+
+.tuition-plan-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.tuition-plan-field-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.tuition-plan-field-heading .info-help {
+  width: 24px;
+  height: 24px;
+}

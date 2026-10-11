@@ -879,3 +879,10 @@
     font-size: 20px;
   }
 }
+
+/* Keep the sticky budget and save action clear of the mobile navigation. */
+@media (max-width: 800px) {
+  .app-clean #move-planner .planner-save-bar {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}

@@ -159,10 +159,10 @@ export default function TuitionPlanner() {
                 </label>
                 <Input
                   id="tuition-amount"
-                  type="number"
+                  money
                   min="1"
                   max="10000000"
-                  step="any"
+
                   value={amountText}
                   onChange={(event) => setAmountText(event.target.value)}
                   aria-invalid={!valid}
@@ -202,9 +202,7 @@ export default function TuitionPlanner() {
                   >
                     <Icon />
                     <span>
-                      <strong>
-                        {["Bank transfer", "Platform", "Card / wallet"][index]}
-                      </strong>
+                      <strong>{item.title}</strong>
                       <small>
                         <Clock3 size={11} />
                         {item.id === "bank"

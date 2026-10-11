@@ -388,9 +388,8 @@ export default function MovePlanner({
               </span>
               <Input
                 aria-label={`${label} in ${currency}`}
-                type="number"
+                money
                 min="0"
-                step="0.01"
                 value={amounts[key] ?? 0}
                 onChange={(e) => update(key, Number(e.target.value))}
               />

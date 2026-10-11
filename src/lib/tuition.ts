@@ -1,3 +1,7 @@
+import {
+  destinationPaymentRoutes,
+  paymentRouteNames,
+} from "../../shared/payment-routes";
 import { universities as studyUniversities } from "../../shared/study";
 export type TuitionCountry = "US" | "UK" | "China";
 export type TuitionRoute = "bank" | "platform" | "card";
@@ -18,10 +22,8 @@ export function tuitionEstimates(
   return [
     {
       id: "bank" as const,
-      title: "Bank transfer",
-      subtitle: local
-        ? "Local account · domestic payment"
-        : "Direct SWIFT · university bank account",
+      title: paymentRouteNames.fintech,
+      subtitle: destinationPaymentRoutes[destination].fintech,
       fee: local ? [0, 0] : [30, 85],
       fx: domestic
         ? [0, 0]
@@ -35,17 +37,17 @@ export function tuitionEstimates(
     },
     {
       id: "platform" as const,
-      title: "Education payment platform",
-      subtitle: "University-authorized partner",
+      title: paymentRouteNames.platform,
+      subtitle: destinationPaymentRoutes[destination].platform,
       fee: [0, 0],
       fx: domestic ? [0, 0] : [amount * 0.012, amount * 0.025],
       speed: "2–3 business days",
-      note: "Find Flywire, Convera, EasyTransfer or TransferMate through your university’s payment instructions. FX cost is embedded in the rate; payment-method fees may also apply.",
+      note: "Use the education payment partners listed for your destination through your university’s payment instructions. FX cost is embedded in the rate; payment-method fees may also apply.",
     },
     {
       id: "card" as const,
-      title: "University card / e-wallet",
-      subtitle: "Direct checkout · student portal",
+      title: paymentRouteNames.bankCard,
+      subtitle: destinationPaymentRoutes[destination].bankCard,
       fee:
         destination === "US"
           ? [amount * 0.0275, amount * 0.0425]

@@ -1,5 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import MobileNavigation from "../src/MobileNavigation";
+import "../src/brief.css";
 import { MovePlanner } from "../src/App";
 import { WorkspaceCurrencyProvider } from "../src/WorkspaceCurrency";
 import "../src/styles.css";
@@ -14,6 +16,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       style={{ padding: 16, maxWidth: 1440, margin: "auto" }}
     >
       <MovePlanner go={() => {}} />
+      <MobileNavigation page="Move Planner" go={() => {}} />
     </main>
   </WorkspaceCurrencyProvider>,
 );

@@ -14,7 +14,7 @@ const descriptions: Record<string, string> = {
   Sponsors:
     "Connect with the people supporting your studies and manage which parts of your plan they can see.",
   Security:
-    "Manage account protection, privacy settings and access to your account.",
+    "Review payment safeguards, recent account activity, and your demo payment history.",
   Profile:
     "Update your personal and study details, connect with sponsors and open your security settings.",
   Wallet:

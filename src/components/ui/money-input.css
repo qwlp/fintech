@@ -1,0 +1,51 @@
+.money-input-control {
+  display: inline-flex;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+}
+.money-input-control > input {
+  width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.money-input-control[data-controls="true"] > input {
+  padding-right: 36px !important;
+}
+.money-input-actions {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  gap: 0;
+}
+.money-input-control .money-input-actions > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-muted);
+  box-shadow: none;
+}
+.money-input-control .money-input-actions > button:hover {
+  color: var(--color-ink);
+  background: var(--color-surface-soft);
+}
+.money-input-actions > button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.money-input-actions svg {
+  display: block;
+  flex-shrink: 0;
+}

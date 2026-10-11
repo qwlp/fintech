@@ -523,97 +523,102 @@
   }
 }
 
+/* Use the same neutral surfaces and blue accent as the rest of the app. */
 #security-center {
-  --security-blue: #35659c;
-  --security-blue-soft: #e8f0fb;
-  --security-teal: #197a72;
-  --security-teal-soft: #e6f4f0;
-  --security-amber: #95651d;
-  --security-amber-soft: #fff3dd;
-  --security-purple: #7560ad;
-  --security-purple-soft: #f0ecfa;
+  --security-blue-soft: var(--color-surface-soft);
 }
-#security-center .page-intro h2 > svg {
-  color: var(--security-blue);
+#security-center .security-intro-copy {
+  margin: -8px 0 0;
+  color: var(--color-muted);
+  font-size: 14px;
 }
-#security-center .security-mode {
-  background: var(--security-blue-soft);
-  color: var(--security-blue);
-  border: 0;
+#security-center .security-demo-note {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--color-surface-soft);
+  color: var(--color-muted);
+  font-size: 13px;
 }
-#security-center .security-grid,
-#security-center .security-receipts,
-#security-center .security-activity {
+#security-center .security-safeguards {
+  padding: 24px;
   border: 1px solid var(--color-line);
-  box-shadow: 0 2px 12px #14283c05;
+  border-radius: 12px;
+  background: var(--color-surface);
 }
-#security-center .security-grid .security-control:nth-child(1) > svg {
-  color: var(--security-teal);
-  background: var(--security-teal-soft);
+#security-center .security-safeguard-row {
+  display: flex;
+  align-items: start;
+  gap: 14px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--color-line);
 }
-#security-center .security-grid .security-control:nth-child(1) span {
-  color: var(--security-teal);
+#security-center .security-safeguard-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
-#security-center .security-grid .security-control:nth-child(2) span {
-  color: var(--security-blue);
+#security-center .security-safeguard-row > svg {
+  color: var(--color-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
 }
-#security-center .security-grid .security-control:nth-child(3) > svg {
-  color: var(--security-amber);
-  background: var(--security-amber-soft);
+#security-center .security-safeguard-row strong {
+  font-size: 14px;
+  font-weight: 600;
 }
-#security-center .security-grid .security-control:nth-child(3) span {
-  color: var(--security-amber);
+#security-center .security-safeguard-row p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.6;
 }
-#security-center .evidence-badge {
-  border: 0;
-  background: var(--security-amber-soft);
-  color: var(--security-amber);
+#security-center .security-payment-history > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 600;
 }
-#security-center .evidence-badge.confirmed {
-  background: var(--security-teal-soft);
-  color: var(--security-teal);
+#security-center .security-payment-history > summary::-webkit-details-marker {
+  display: none;
 }
-#security-center .evidence-receipt-details .evidence-badge {
-  background: var(--security-blue-soft);
-  color: var(--security-blue);
+#security-center .security-payment-history[open] > summary > svg {
+  transform: rotate(90deg);
 }
-#security-center .evidence-tools .evidence-badge {
-  background: var(--security-purple-soft);
-  color: var(--security-purple);
+#security-center .security-history-note {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 12px 0 24px;
 }
-#security-center .evidence-section-heading h3 > svg {
-  color: var(--security-blue);
+#security-center .security-activity-details summary {
+  margin-top: 6px;
+  color: var(--color-muted);
+  font-size: 12px;
+  cursor: pointer;
 }
-#security-center .evidence-tools > summary > svg:first-child {
-  color: var(--security-purple);
+#security-center summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+  border-radius: 4px;
 }
-#security-center .security-section-heading h3 > svg {
-  color: var(--security-purple);
+@media (max-width: 767px) {
+  #security-center .security-safeguards {
+    padding: 18px 16px;
+  }
+  #security-center .security-section-heading {
+    flex-wrap: wrap;
+  }
 }
-#security-center .security-count {
-  border: 0;
-  background: var(--security-purple-soft);
-  color: var(--security-purple);
+
+.evidence-destination-copy strong {
+  font-size: 14px;
+  color: var(--color-ink);
 }
-#security-center .security-event-icon[data-kind="payment"] {
-  background: var(--security-teal-soft);
-  color: var(--security-teal);
-}
-#security-center .security-event-icon[data-kind="agent"] {
-  background: var(--security-purple-soft);
-  color: var(--security-purple);
-}
-#security-center .security-event-icon[data-kind="account"] {
-  background: var(--security-blue-soft);
-  color: var(--security-blue);
-}
-:root[data-theme="dark"] #security-center {
-  --security-blue: #94b9eb;
-  --security-blue-soft: #25354d;
-  --security-teal: #83cfc0;
-  --security-teal-soft: #203b38;
-  --security-amber: #e6bf7b;
-  --security-amber-soft: #3c3423;
-  --security-purple: #baa5e7;
-  --security-purple-soft: #322d46;
+.evidence-destination-copy p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--color-muted);
 }

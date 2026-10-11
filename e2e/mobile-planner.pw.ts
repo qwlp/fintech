@@ -24,6 +24,20 @@ for (const width of [320, 390]) {
         .evaluate((el) => el.getBoundingClientRect().height),
     ).toBeLessThan(300);
     await expect(page.locator(".arrival-summary")).not.toContainText("London");
+    const budget = page.locator(".planner-save-bar");
+    await budget.scrollIntoViewIfNeeded();
+    const budgetBox = await budget.boundingBox();
+    const navigationBox = await page
+      .getByRole("navigation", { name: "Mobile navigation" })
+      .boundingBox();
+    expect(budgetBox).not.toBeNull();
+    expect(navigationBox).not.toBeNull();
+    expect(budgetBox!.y + budgetBox!.height).toBeLessThanOrEqual(
+      navigationBox!.y - 8,
+    );
+    await expect(
+      budget.getByRole("button"),
+    ).toBeVisible();
     await page.screenshot({
       path: `/tmp/movewise-mobile-planner-${width}.png`,
       fullPage: true,

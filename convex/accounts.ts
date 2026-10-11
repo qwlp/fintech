@@ -1146,6 +1146,7 @@ export const runAgentTool = internalMutation({
       v.literal("prepare_tuition_payment"),
       v.literal("stress_test_fx"),
       v.literal("read_workspace"),
+      v.literal("update_study_plan"),
       v.literal("update_tuition_details"),
       v.literal("update_tuition_plan"),
       v.literal("update_move_plan"),
@@ -1597,17 +1598,20 @@ export const refreshSandboxQuotes = mutation({
       "sandbox-bank": 5,
       "sandbox-fast": 1,
     };
+    const rows = await ctx.db.query("appConfig").withIndex("by_account", q => q.eq("accountId", accountId)).take(100);
+    const banking = rows.find(row => row.key === "banking")?.value;
+    const target = banking?.currency ?? studyCurrency(account.countryTo);
     let updated = 0;
     for (const route of routes) {
       // Only known fixtures can be refreshed; never invent current observations for other records.
       if (windows[route.key] === undefined) continue;
       await ctx.db.patch(route._id, {
-        fxRate: studyCurrency(account.countryTo) === "USD" ? 1 : sandboxRouteGBPPerUSD[route.key] * currencyRate("GBP", studyCurrency(account.countryTo)),
+        fxRate: (route.sourceCurrency ?? "USD") === target ? 1 : (sandboxRouteGBPPerUSD[route.key] / currencyRate("USD", "GBP")) * currencyRate(route.sourceCurrency ?? "USD", target),
         quotedAt: Date.now(),
         quoteExpiresAt: Date.now() + 600000,
         maxBusinessDays: windows[route.key],
-        sourceCurrency: "USD",
-        targetCurrency: studyCurrency(account.countryTo),
+        sourceCurrency: route.sourceCurrency ?? "USD",
+        targetCurrency: target,
       });
       updated++;
     }

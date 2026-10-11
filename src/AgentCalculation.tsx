@@ -1,3 +1,4 @@
+import { routeProviderName } from "../shared/payment-routes";
 import AgentFundingChange from "./AgentFundingChange";
 
 export type ToolResult = { name: string; result: unknown };
@@ -87,7 +88,7 @@ export default function AgentCalculation({ tool }: { tool: ToolResult }) {
                     {Array.isArray(result.routes) &&
                       result.routes.map((route: any) => (
                         <tr key={route.routeKey}>
-                          <td>{route.provider}</td>
+                          <td>{routeProviderName(route.provider)}</td>
                           <td>
                             {money(
                               route.totalUSD,
@@ -141,8 +142,8 @@ export default function AgentCalculation({ tool }: { tool: ToolResult }) {
           )}
           {tool.name === "prepare_tuition_payment" && result.proposal && (
             <p>
-              Proposal {result.proposal.status}: {result.proposal.provider}.
-              Recipient receives{" "}
+              Proposal {result.proposal.status}:{" "}
+              {routeProviderName(result.proposal.provider)}. Recipient receives{" "}
               {money(
                 result.proposal.amountGBP,
                 result.proposal.targetCurrency ?? result.currency ?? "GBP",

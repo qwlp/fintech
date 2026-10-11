@@ -9,11 +9,13 @@ export default function SetupCountrySelect({
   value,
   onChange,
   disabled,
+  menuClassName = "",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   disabled: boolean;
+  menuClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -51,7 +53,7 @@ export default function SetupCountrySelect({
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
-            className="setup-country-menu"
+            className={`setup-country-menu ${menuClassName}`}
             sideOffset={8}
             align="start"
             collisionPadding={16}

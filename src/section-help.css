@@ -25,7 +25,9 @@
   right: 0;
   z-index: 5;
 }
-:root[data-theme] .app-clean .page-view:has(> .page-help-tools)
+:root[data-theme]
+  .app-clean
+  .page-view:has(> .page-help-tools)
   :is(
     .consumer-welcome,
     .move-board-header,
@@ -39,9 +41,14 @@
   align-items: center;
   gap: 16px;
 }
-.page-help-tools .section-help-trigger {
-  display: grid;
-  place-items: center;
+.section-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+  vertical-align: middle;
   width: 40px;
   height: 40px;
   border: 1px solid var(--color-line);
@@ -50,12 +57,23 @@
   color: var(--color-muted);
   cursor: pointer;
 }
-.page-help-tools .section-help-trigger:hover,
-.page-help-tools .section-help-trigger[data-state="open"] {
+.section-help-trigger > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.section-help-trigger:has(> span) {
+  width: auto;
+  gap: 8px;
+  padding: 0 12px;
+}
+.section-help-trigger:hover,
+.section-help-trigger[data-state="open"] {
   color: var(--color-ink);
   background: var(--color-surface-soft);
 }
-.page-help-tools .section-help-trigger:focus-visible {
+.section-help-trigger:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
 }
@@ -105,11 +123,81 @@
   outline-offset: 2px;
 }
 @media (pointer: coarse) {
-  .page-help-tools .section-help-trigger {
+  .section-help-trigger {
     width: 44px;
     height: 44px;
   }
 }
 .page-view:has(> .page-help-tools) #profile-workspace > .page-intro {
   margin-right: 56px;
+}
+
+/* Header help participates in the same row as the adjacent actions. */
+#profile-workspace .profile-edit-actions,
+#security-center .security-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  :root[data-theme] .app-clean .payment-workspace .payment-workspace-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px;
+    gap: 10px 12px;
+    align-items: center;
+  }
+  .payment-workspace .payment-heading-actions {
+    display: contents;
+  }
+  .payment-heading-actions > .page-help-tools {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .payment-heading-actions > .payment-workspace-sandbox {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
+  }
+  :root[data-theme] .app-clean .page-view:has(> .page-help-tools)
+    .move-board.move-board.move-board .move-board-header {
+    margin-right: 0;
+  }
+  :root[data-theme] .app-clean .page-view:has(> .page-help-tools)
+    .move-board.move-board.move-board .move-board-header > div:first-child {
+    padding-right: 52px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+  :root[data-theme] .app-clean .move-board.move-board.move-board .move-board-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 22px;
+    line-height: 1.25;
+  }
+  .move-board-header h2 > svg {
+    flex-shrink: 0;
+  }
+  .payment-workspace .tuition-decision-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .payment-workspace .payment-comparison-recipient {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+  }
+  .payment-workspace .payment-comparison-recipient > span {
+    line-height: 1.4;
+  }
+  .payment-workspace .payment-comparison-recipient > button {
+    padding: 8px;
+    font-size: 12px;
+  }
 }
