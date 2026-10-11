@@ -9,6 +9,9 @@
   margin: auto;
   text-align: left;
 }
+.demo-header .demo-mobile-brand {
+  display: none;
+}
 .showcase-controls {
   display: flex;
   justify-content: space-between;
@@ -1224,8 +1227,8 @@
 }
 .demo-donut-center strong {
   font:
-    400 16px "IBM Plex Mono",
-    monospace;
+    600 16px "Manrope",
+    sans-serif;
   letter-spacing: -0.04em;
 }
 .demo-chart-legend {
@@ -1255,8 +1258,8 @@
 .demo-chart-legend strong {
   margin-left: auto;
   font:
-    400 12px "IBM Plex Mono",
-    monospace;
+    600 12px "Manrope",
+    sans-serif;
 }
 .demo-funding-coverage {
   display: flex;
@@ -1497,5 +1500,104 @@
   }
   .auth-shell .auth-story > .passport-brand {
     left: 28px;
+  }
+}
+
+/* Match the workspace's mobile navigation without shrinking the desktop rail. */
+@media (max-width: 800px) {
+  .home-showcase-section .demo-window {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home-showcase-section .demo-main {
+    grid-row: 1;
+  }
+  .home-showcase-section .demo-sidebar {
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    padding: 8px;
+    border-right: 0;
+    border-top: 1px solid var(--demo-line);
+  }
+  .home-showcase-section .demo-sidebar > .passport-brand,
+  .home-showcase-section .demo-tabs,
+  .home-showcase-section .demo-header > span {
+    display: none;
+  }
+  .home-showcase-section .demo-sidebar button {
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    height: auto;
+    min-height: 56px;
+    padding: 8px 4px;
+    font-size: 11px;
+  }
+  .home-showcase-section .demo-sidebar button > span {
+    display: block;
+  }
+  .home-showcase-section .demo-header {
+    flex-wrap: wrap;
+    padding: 16px !important;
+  }
+  .home-showcase-section .demo-mobile-brand {
+    display: flex;
+  }
+  .home-showcase-section .demo-mobile-brand .movewise-wordmark {
+    font-size: 18px;
+  }
+  .home-showcase-section .demo-header > strong {
+    font-size: 12px;
+  }
+  .home-showcase-section .demo-content {
+    padding: 20px 16px;
+    min-height: 450px;
+  }
+  .home-showcase-section .demo-title {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .home-showcase-section .demo-title h3 {
+    font-size: 20px;
+  }
+  .home-showcase-section .demo-title > svg {
+    flex-shrink: 0;
+  }
+  .home-showcase-section .demo-chart-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .home-showcase-section .demo-donut {
+    height: 160px;
+  }
+  .home-showcase-section .demo-donut-center span,
+  .home-showcase-section .demo-chart-legend small {
+    font-size: 10px;
+  }
+  .home-showcase-section .demo-donut-center strong {
+    font-size: 16px;
+  }
+  .home-showcase-section .demo-chart-legend > div,
+  .home-showcase-section .demo-chart-legend strong {
+    font-size: 12px;
+  }
+  .home-showcase-section .demo-support {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .home-showcase-section .demo-avatar {
+    flex-shrink: 0;
+  }
+  .home-showcase-section .demo-action {
+    min-height: 44px;
+    padding: 12px;
+  }
+  .home-showcase-section .demo-payment-steps {
+    flex-direction: column;
+  }
+  .home-showcase-section .demo-payment-steps span {
+    flex-shrink: 0;
   }
 }

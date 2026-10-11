@@ -160,6 +160,7 @@ export default function AppShowcase({
         </aside>
         <div className="demo-main">
           <header className="demo-header">
+            <Brand className="demo-mobile-brand" />
             <strong>My study plan</strong>
             <span>Sample data</span>
           </header>
