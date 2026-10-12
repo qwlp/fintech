@@ -11,6 +11,7 @@ export default defineSchema({
     email: v.string(),
     name: v.string(),
     initials: v.string(),
+    avatarStorageId: v.optional(v.id("_storage")),
     role: v.string(),
     planName: v.string(),
     countryFrom: v.string(),

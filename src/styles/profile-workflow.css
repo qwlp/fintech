@@ -1,0 +1,156 @@
+/* Profile sections have local edit actions and one shared save bar. */
+#profile-workspace {
+  max-width: 1120px;
+  margin-inline: auto;
+  gap: 20px;
+}
+#profile-workspace .page-intro {
+  margin: 0;
+  min-height: 0;
+}
+#profile-workspace .profile-secondary-nav {
+  margin: 0;
+  gap: 8px;
+}
+#profile-workspace .profile-hero {
+  margin: 0;
+  padding: 8px 0 20px;
+}
+#profile-workspace .profile-grid {
+  gap: 20px;
+  align-items: start;
+}
+#profile-workspace .profile-section {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+#profile-workspace .profile-section.is-editing {
+  border-color: var(--color-primary);
+}
+#profile-workspace .section-heading {
+  margin-bottom: 20px;
+  gap: 12px;
+}
+#profile-workspace .section-heading button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 12px;
+  box-shadow: none;
+}
+#profile-workspace .section-heading button:hover {
+  background: var(--color-primary-soft);
+}
+#profile-workspace .field-grid {
+  gap: 20px;
+}
+#profile-workspace .profile-summary {
+  margin-top: 16px;
+  padding-top: 16px;
+}
+#profile-workspace .is-editing .field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#profile-workspace .is-editing .profile-data-row[data-field="study"] {
+  grid-column: 1 / -1;
+}
+#profile-workspace .is-editing .profile-data-row {
+  min-width: 0;
+}
+#profile-workspace .is-editing .profile-data-row label {
+  display: block;
+  margin: 0 0 6px;
+}
+#profile-workspace .is-editing .profile-data-row .setup-field > span {
+  margin-bottom: 0;
+}
+
+#profile-workspace .country-account-hint {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--color-line);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+#profile-workspace .profile-save-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 8%);
+}
+#profile-workspace .profile-save-bar > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+#profile-workspace .profile-save-bar strong {
+  font-size: 13px;
+}
+#profile-workspace .profile-save-bar [role="status"] {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+#profile-workspace .profile-save-bar [role="alert"] {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-danger, #b42318);
+}
+#profile-workspace .profile-save-buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+@media (max-width: 767px) {
+  #profile-workspace {
+    gap: 16px;
+  }
+  #profile-workspace .profile-section {
+    padding: 16px;
+  }
+  #profile-workspace .section-heading {
+    margin-bottom: 16px;
+  }
+  #profile-workspace .is-editing .field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #profile-workspace .profile-save-bar {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    padding: 12px;
+  }
+}
+#profile-workspace .profile-secondary-nav {
+  display: flex;
+  flex-wrap: wrap;
+}
+#profile-workspace .profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+#profile-workspace .is-editing :is(input, button) {
+  scroll-margin-block: 24px 160px;
+}
+@media (max-width: 767px) {
+  #profile-workspace .profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

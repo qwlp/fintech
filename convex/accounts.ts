@@ -27,7 +27,7 @@ import {
 
 import { requireAccount } from "./ownership";
 import { internal } from "./_generated/api";
-import { internalQuery, mutation } from "./_generated/server";
+import { internalQuery, internalMutation as profileInternalMutation, action as profileAction, mutation } from "./_generated/server";
 import { requestReply } from "./openrouter";
 import { paymentTransition } from "./paymentEngine";
 import {
@@ -112,7 +112,7 @@ export const bootstrap = query({
         .collect(),
     ]);
     return {
-      account,
+      account: { ...account, avatarUrl: account.avatarStorageId ? await ctx.storage.getUrl(account.avatarStorageId) : null },
       costs,
       funding,
       sponsors,
@@ -1097,6 +1097,7 @@ export const sendMessage = action({
 
 export const addCountryAccount = mutation({
   args: { accountId: v.id("accounts"), country: v.string(), label: v.string() },
+  returns: v.null(),
   handler: async (ctx, { accountId, country, label }) => {
     await requireAccount(ctx, accountId);
     const selectedCountry = getCountry(country.trim());
@@ -1107,13 +1108,14 @@ export const addCountryAccount = mutation({
     const rows = await ctx.db
       .query("appConfig")
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
-      .collect();
+      .take(100);
     const row = rows.find((item) => item.key === "profile");
     const value = {
       ...(row?.value ?? {}),
       countryAccounts: [
         ...(row?.value?.countryAccounts ?? []),
         {
+          id: `${accountId}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
           country: selectedCountry.name,
           currency: selectedCountry.currency,
           label: label.trim(),
@@ -1122,6 +1124,7 @@ export const addCountryAccount = mutation({
     };
     if (row) await ctx.db.patch(row._id, { value });
     else await ctx.db.insert("appConfig", { accountId, key: "profile", value });
+    return null;
   },
 });
 
@@ -2000,5 +2003,70 @@ export const repairPaymentRouteCategories = internalMutation({
       repaired++;
     }
     return repaired;
+  },
+});
+
+
+export const removeCountryAccount = mutation({
+  args: { accountId: v.id("accounts"), index: v.number(), country: v.string(), label: v.string(), id: v.optional(v.string()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const account = await requireAccount(ctx, args.accountId);
+    const rows = await ctx.db.query("appConfig").withIndex("by_account", q => q.eq("accountId", account._id)).take(100);
+    const row = rows.find(item => item.key === "profile");
+    if (!row) throw new Error("Account no longer exists. Refresh your profile.");
+    const accounts: { id?: string; country: string; label: string }[] = row.value.countryAccounts ?? [];
+    const index = args.id ? accounts.findIndex(item => item.id === args.id) : args.index;
+    if (!Number.isInteger(index) || index < 0 || index >= accounts.length || accounts[index].country !== args.country || accounts[index].label !== args.label) {
+      throw new Error("Account details changed. Refresh your profile before removing it.");
+    }
+    await ctx.db.patch(row._id, { value: { ...row.value, countryAccounts: accounts.filter((_, position) => position !== index) } });
+    await ctx.db.insert("auditEvents", { accountId: account._id, type: "LINKED_ACCOUNT_REMOVED", detail: `Removed a saved account in ${args.country}`, actor: account.name, timestamp: Date.now() });
+    return null;
+  },
+});
+
+export const avatarOwner = internalQuery({
+  args: {}, returns: v.id("accounts"),
+  handler: async ctx => (await requireAccount(ctx))._id,
+});
+
+export const attachProfilePicture = profileInternalMutation({
+  args: { accountId: v.id("accounts"), storageId: v.id("_storage") }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const account = await requireAccount(ctx, args.accountId);
+    const file = await ctx.db.system.get("_storage", args.storageId);
+    if (!file || file.size > 1024 * 1024 || (file.contentType && !["image/jpeg", "image/png", "image/webp"].includes(file.contentType))) throw new Error("Invalid profile picture");
+    await ctx.db.patch(account._id, { avatarStorageId: args.storageId });
+    if (account.avatarStorageId && account.avatarStorageId !== args.storageId) await ctx.storage.delete(account.avatarStorageId);
+    return null;
+  },
+});
+
+export const uploadProfilePicture = profileAction({
+  args: { image: v.bytes(), contentType: v.union(v.literal("image/jpeg"), v.literal("image/png"), v.literal("image/webp")) }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const accountId = await ctx.runQuery(internal.accounts.avatarOwner, {});
+    const bytes = new Uint8Array(args.image);
+    const valid = args.contentType === "image/jpeg" ? bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 && bytes.at(-2) === 255 && bytes.at(-1) === 217
+      : args.contentType === "image/png" ? [137,80,78,71,13,10,26,10].every((value, index) => bytes[index] === value)
+      : String.fromCharCode(...bytes.slice(0,4)) === "RIFF" && String.fromCharCode(...bytes.slice(8,12)) === "WEBP";
+    if (bytes.length < 12 || bytes.length > 1024 * 1024 || !valid) throw new Error("Choose a valid JPG, PNG or WebP photo under 1 MB");
+    const storageId = await ctx.storage.store(new Blob([args.image], { type: args.contentType }));
+    try { await ctx.runMutation(internal.accounts.attachProfilePicture, { accountId, storageId }); }
+    catch (error) { await ctx.storage.delete(storageId); throw error; }
+    return null;
+  },
+});
+
+export const removeProfilePicture = mutation({
+  args: {}, returns: v.null(),
+  handler: async ctx => {
+    const account = await requireAccount(ctx);
+    if (account.avatarStorageId) {
+      await ctx.storage.delete(account.avatarStorageId);
+      await ctx.db.patch(account._id, { avatarStorageId: undefined });
+    }
+    return null;
   },
 });

@@ -9,6 +9,7 @@ export type DatabaseState = {
     countriesTo?: string[];
     name: string;
     initials: string;
+    avatarUrl?: string | null;
     role: string;
     planName: string;
     paymentStatus: PaymentStatus;

@@ -330,11 +330,13 @@ describe("agent workspace editing", () => {
       pair: "USD/GBP",
       targetRate: 0.8,
     });
-    expect(saved.config.profile.countryAccounts).toContainEqual({
-      country: "United States",
-      currency: "USD",
-      label: "Study account",
-    });
+    expect(saved.config.profile.countryAccounts).toContainEqual(
+      expect.objectContaining({
+        country: "United States",
+        currency: "USD",
+        label: "Study account",
+      }),
+    );
   });
   it("stages a funding total and requires the owner to confirm once before saving", async () => {
     const { owner, other, tool, state } = await fixture();

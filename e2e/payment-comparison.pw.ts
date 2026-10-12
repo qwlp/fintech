@@ -162,3 +162,73 @@ test("currency controls default to home and travel countries and recalculate opt
     ),
   ).toBe(true);
 });
+
+for (const width of [390, 1440]) {
+  test(`receiving currency converts the draft and stays synchronized at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.route("**/receive-currency-preview", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: `<html data-theme="light"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module">import RefreshRuntime from '/@react-refresh';RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type="module" src="/e2e/tuition-preview.tsx"></script></body></html>`,
+      }),
+    );
+    await page.route("https://api.frankfurter.dev/**", (route) =>
+      route.fulfill({ json: [] }),
+    );
+    await page.goto("/receive-currency-preview");
+    const currency = page.getByRole("combobox", {
+      name: "University receives currency",
+      exact: true,
+    });
+    await page
+      .getByRole("spinbutton", { name: "Tuition amount in GBP", exact: true })
+      .fill("2500");
+    await currency.click();
+    await page.getByRole("option", { name: "CNY", exact: true }).click();
+    await expect(currency).toContainText("CNY");
+    await expect(
+      page.getByRole("combobox", { name: "Pay to", exact: true }),
+    ).toContainText("China");
+    await expect(
+      page.getByRole("spinbutton", {
+        name: "Tuition amount in CNY",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-valuenow", "23000");
+    await expect(
+      page.getByRole("button", { name: "Review payment", exact: true }),
+    ).toBeDisabled();
+    await page.getByRole("combobox", { name: "Pay to", exact: true }).click();
+    await page.getByRole("option", { name: /United Kingdom/ }).click();
+    await expect(currency).toContainText("GBP");
+    await expect(
+      page.getByRole("spinbutton", {
+        name: "Tuition amount in GBP",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-valuenow", "2500");
+    await currency.click();
+    await page.getByRole("option", { name: "CNY", exact: true }).click();
+    await page.getByRole("button", { name: "Compare", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText(
+      "Payment options updated",
+    );
+    await expect(currency).toContainText("CNY");
+    await expect(
+      page.locator(".payment-comparison-fees").first(),
+    ).toContainText("CNY");
+    await expect(
+      page.getByRole("button", { name: "Review payment", exact: true }),
+    ).toBeEnabled();
+    await page
+      .locator(".payment-comparison-bar")
+      .screenshot({ path: `/tmp/receiving-currency-${width}.png` });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+}

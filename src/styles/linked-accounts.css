@@ -1,0 +1,106 @@
+.linked-accounts-list {
+  display: grid;
+  gap: 10px;
+}
+.linked-account-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--color-line, #d6dee8);
+  border-radius: 10px;
+  background: var(--color-surface-soft, #edf3fa);
+}
+.linked-account-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  color: var(--color-primary, #244b75);
+  background: var(--color-primary-soft, #e5edf6);
+}
+.linked-account-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  text-align: left;
+}
+.linked-account-copy strong {
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.linked-account-copy p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-muted, #64748b);
+  overflow-wrap: anywhere;
+}
+.linked-account-copy > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-muted, #64748b);
+}
+.linked-account-currency {
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: var(--color-surface, #fff);
+  font-size: 11px;
+  font-weight: 600;
+}
+.linked-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.linked-account-remove {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-muted, #64748b);
+  box-shadow: none;
+  cursor: pointer;
+}
+.linked-account-remove:hover:not(:disabled) {
+  background: var(--color-surface, #fff);
+  color: var(--color-danger, #b42318);
+}
+.linked-account-remove:focus-visible {
+  outline: 2px solid var(--color-primary, #244b75);
+  outline-offset: 2px;
+}
+.linked-account-remove:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+@media (max-width: 767px) {
+  .linked-account-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+  }
+  .linked-account-icon {
+    width: 36px;
+    height: 36px;
+  }
+}
+@media (max-width: 480px) {
+  .linked-account-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

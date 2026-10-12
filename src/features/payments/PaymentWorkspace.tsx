@@ -100,8 +100,7 @@ export default function PaymentWorkspace({
   const [payTo, setPayTo] = useState(defaultTarget);
   useEffect(() => {
     setPayFrom(defaultSource);
-    setPayTo(defaultTarget);
-  }, [defaultSource, defaultTarget]);
+  }, [defaultSource]);
   const currency = payTo;
   const savedCurrency = banking?.currency ?? workspaceCurrency;
   const country =
@@ -121,15 +120,24 @@ export default function PaymentWorkspace({
       amount == null ? "" : convertMoney(amount, savedCurrency, defaultTarget),
     ),
   );
-  useEffect(
-    () =>
-      setComparisonAmount(
-        String(
-          amount == null ? "" : convertMoney(amount, savedCurrency, payTo),
-        ),
+  useEffect(() => {
+    setPayTo(defaultTarget);
+    setComparisonAmount(
+      String(
+        amount == null
+          ? ""
+          : convertMoney(amount, savedCurrency, defaultTarget),
       ),
-    [amount, savedCurrency, payTo],
-  );
+    );
+  }, [amount, savedCurrency, defaultTarget]);
+  const changeTargetCurrency = (next: string) => {
+    if (next === payTo) return;
+    const current = Number(comparisonAmount);
+    if (comparisonAmount.trim() && Number.isFinite(current)) {
+      setComparisonAmount(String(convertMoney(current, payTo, next)));
+    }
+    setPayTo(next);
+  };
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     setEditing(false);
@@ -292,7 +300,7 @@ export default function PaymentWorkspace({
                   <Select
                     value={payTo}
                     disabled={locked || busy}
-                    onValueChange={setPayTo}
+                    onValueChange={changeTargetCurrency}
                   >
                     <SelectTrigger aria-labelledby="pay-to-label">
                       <SelectValue />
@@ -306,7 +314,7 @@ export default function PaymentWorkspace({
                     </SelectContent>
                   </Select>
                 </div>
-                <label className="payment-comparison-amount">
+                <div className="payment-comparison-amount">
                   <span>
                     <GraduationCap size={13} aria-hidden="true" />
                     University receives
@@ -324,9 +332,28 @@ export default function PaymentWorkspace({
                         setComparisonAmount(event.target.value)
                       }
                     />
-                    <strong>{currency}</strong>
+                    <Select
+                      value={payTo}
+                      disabled={locked || busy}
+                      onValueChange={changeTargetCurrency}
+                    >
+                      <SelectTrigger
+                        className="payment-receive-currency"
+                        aria-label="University receives currency"
+                        title="Change receiving currency"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="ui-select-content">
+                        {countries.map((item) => (
+                          <SelectItem key={item.currency} value={item.currency}>
+                            {item.currency}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </label>
+                </div>
                 <Button
                   className="payment-comparison-submit"
                   disabled={locked || busy}

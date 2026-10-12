@@ -1,3 +1,4 @@
+import AccountAvatar from "./components/AccountAvatar";
 import AccountMenu from "./components/AccountMenu";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -571,7 +572,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               aria-label="Open account menu"
               aria-current={page === "Profile" ? "page" : undefined}
             >
-              <span>{account?.initials ?? "DC"}</span>
+              <AccountAvatar url={account?.avatarUrl} initials={account?.initials ?? "DC"} />
               <div>
                 <strong>{account?.name ?? "Dara Chan"}</strong>
                 <small>{account?.role ?? "Student"}</small>
@@ -626,6 +627,16 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                         })
                       : Promise.resolve(false)
                   }
+                  onRemoveCountry={item => account ? mutate(convexApi.removeCountryAccount, { accountId: account._id, ...item }) : Promise.resolve(false)}
+                  onUploadPhoto={async photo => {
+                    if (!convexClient) return false;
+                    await convexClient.action(convexApi.uploadProfilePicture, { image: await photo.arrayBuffer(), contentType: "image/jpeg" });
+                    announce("Profile picture saved"); return true;
+                  }}
+                  onRemovePhoto={async () => {
+                    const saved = await mutate(convexApi.removeProfilePicture, {});
+                    if (saved) announce("Profile picture removed"); return saved;
+                  }}
                   onSignOut={onSignOut}
                   onSetup={() => { location.hash = "setup"; }}
                 />
