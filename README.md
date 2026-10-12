@@ -90,7 +90,6 @@ Existing sandbox accounts must save a deadline and refresh known fixture quotes 
 - [Local control evaluation](docs/evidence/local-evaluation.json)
 - [Live-model evaluation](docs/evidence/live-agent-evaluation.json)
 - [Student validation protocol](docs/student-validation.md)
-- [TODO]
 
 ## Scope
 
