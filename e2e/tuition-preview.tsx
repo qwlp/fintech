@@ -94,6 +94,18 @@ function Preview() {
                   wallets={[wallet]}
                   routes={[
                     {
+                      key: "sandbox-platform",
+                      provider: "Education Platforms",
+                      fee: 15,
+                      sourceCurrency: "USD",
+                      targetCurrency: currency,
+                      fxRate: 0.772 * currencyRate("GBP", currency),
+                      delivery: "2–3 business days",
+                      maxBusinessDays: 3,
+                      quotedAt: observedAt,
+                      quoteExpiresAt: expiresAt,
+                    },
+                    {
                       key: "sandbox-standard",
                       provider: "Sandbox Standard",
                       fee: 8.4,
@@ -114,18 +126,6 @@ function Preview() {
                       fxRate: 0.768 * currencyRate("GBP", currency),
                       delivery: "3–5 business days",
                       maxBusinessDays: 5,
-                      quotedAt: observedAt,
-                      quoteExpiresAt: expiresAt,
-                    },
-                    {
-                      key: "sandbox-fast",
-                      provider: "Sandbox Express",
-                      fee: 26,
-                      sourceCurrency: "USD",
-                      targetCurrency: currency,
-                      fxRate: 0.77 * currencyRate("GBP", currency),
-                      delivery: "Within 1 business day",
-                      maxBusinessDays: 1,
                       quotedAt: observedAt,
                       quoteExpiresAt: expiresAt,
                     },

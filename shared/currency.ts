@@ -12,6 +12,8 @@ export const sandboxUnitsPerGBP: Record<string, number> = {
   KHR: 5200,
 };
 export const sandboxRouteGBPPerUSD: Record<string, number> = {
+  platform: 0.772,
+  "sandbox-platform": 0.772,
   wise: 0.774,
   swift: 0.768,
   card: 0.77,

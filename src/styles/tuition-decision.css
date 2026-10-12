@@ -459,3 +459,180 @@
   width: 24px;
   height: 24px;
 }
+
+/* Compact comparison summary using the existing page palette. */
+.payment-option-highlights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 10px;
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+.payment-highlight {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+.payment-highlight > svg {
+  color: var(--color-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.payment-highlight > div { display: grid; gap: 4px; min-width: 0; }
+.payment-highlight span {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.payment-highlight strong {
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.payment-highlight small, .payment-option-highlights > p {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.payment-option-highlights > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+@media (max-width: 600px) {
+  .payment-option-highlights { grid-template-columns: minmax(0, 1fr); row-gap: 14px; }
+}
+
+/* Quiet sage and bronze accents complement the existing blue palette. */
+.payment-workspace {
+  --payment-sage: #526e60;
+  --payment-sage-soft: #e8eeea;
+  --payment-bronze: #8a6841;
+  --payment-bronze-soft: #f2ece3;
+}
+:root[data-theme="dark"] .payment-workspace {
+  --payment-sage: #a7bfb0;
+  --payment-sage-soft: #26382f;
+  --payment-bronze: #d2b58e;
+  --payment-bronze-soft: #3b3025;
+}
+.payment-workspace .payment-option-score[data-score-band="high"] {
+  --score-color: var(--payment-sage);
+}
+.payment-workspace .payment-option-score[data-score-band="medium"] {
+  --score-color: var(--color-prussian-blue-500);
+}
+.payment-workspace .payment-option-score[data-score-band="low"] {
+  --score-color: var(--payment-bronze);
+}
+.payment-workspace .payment-option-score[data-score-band] {
+  background: conic-gradient(var(--score-color) calc(var(--score) * 10%), var(--color-line) 0);
+}
+.payment-workspace .payment-option-score[data-score-band] > strong {
+  color: var(--score-color);
+  background: color-mix(in srgb, var(--score-color) 7%, var(--color-surface));
+}
+.payment-route-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.payment-workspace .tuition-route-title .payment-route-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.payment-workspace .payment-route-badge-cost {
+  color: var(--payment-sage);
+  background: var(--payment-sage-soft);
+}
+.payment-workspace .payment-route-badge-speed {
+  color: var(--payment-bronze);
+  background: var(--payment-bronze-soft);
+}
+.payment-highlight-cheapest > svg, .payment-highlight-cheapest span { color: var(--payment-sage); }
+.payment-highlight-fastest > svg, .payment-highlight-fastest span { color: var(--payment-bronze); }
+:root[data-theme="dark"] .payment-workspace .payment-option-score[data-score-band="high"] { --score-color: var(--payment-sage); }
+:root[data-theme="dark"] .payment-workspace .payment-option-score[data-score-band="medium"] { --score-color: var(--color-prussian-blue-300); }
+:root[data-theme="dark"] .payment-workspace .payment-option-score[data-score-band="low"] { --score-color: var(--payment-bronze); }
+:root[data-theme="dark"] .payment-workspace .payment-route-badge-cost {
+  color: var(--payment-sage);
+  background: var(--payment-sage-soft);
+}
+:root[data-theme="dark"] .payment-workspace .payment-route-badge-speed {
+  color: var(--payment-bronze);
+  background: var(--payment-bronze-soft);
+}
+:root[data-theme="dark"] .payment-highlight-cheapest > svg,
+:root[data-theme="dark"] .payment-highlight-cheapest span { color: var(--payment-sage); }
+:root[data-theme="dark"] .payment-highlight-fastest > svg,
+:root[data-theme="dark"] .payment-highlight-fastest span { color: var(--payment-bronze); }
+
+/* Softer text hierarchy with color reserved for useful comparison details. */
+.payment-workspace {
+  --payment-body-text: #526376;
+  --payment-heading-text: #3e5269;
+  --payment-blue-text: #405b7d;
+}
+:root[data-theme="dark"] .payment-workspace {
+  --payment-body-text: #b0bdcd;
+  --payment-heading-text: #cfdae7;
+  --payment-blue-text: #a8bedb;
+}
+.payment-workspace .tuition-route[data-category="fintech"] { --payment-provider-text: var(--payment-sage); }
+.payment-workspace .tuition-route[data-category="platform"] { --payment-provider-text: var(--payment-bronze); }
+.payment-workspace .tuition-route[data-category="bankCard"] { --payment-provider-text: var(--payment-blue-text); }
+:root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .tuition-route-title > strong {
+  color: var(--payment-provider-text, var(--payment-heading-text));
+}
+:root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .tuition-route-title > small {
+  color: var(--payment-body-text);
+}
+:root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .payment-comparison-total > strong {
+  color: var(--payment-sage);
+}
+:root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .payment-comparison-delivery > strong {
+  color: var(--payment-bronze);
+}
+:root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .payment-comparison-fees > strong {
+  color: var(--payment-blue-text);
+}
+:root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .payment-highlight strong,
+:root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .tuition-recommendation strong,
+:root[data-theme] .app-clean .payment-workspace.payment-workspace.payment-workspace .tuition-plan-field-heading {
+  color: var(--payment-heading-text);
+}
+
+.payment-provider-brands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 2px 0 4px;
+}
+.payment-provider-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--payment-body-text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.payment-provider-logo {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #e1e6ec;
+  overflow: hidden;
+}
+.payment-provider-logo img { width: 22px; height: 22px; object-fit: contain; }

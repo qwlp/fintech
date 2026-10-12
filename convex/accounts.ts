@@ -17,7 +17,12 @@ import {
   walletValue,
   sandboxRouteGBPPerUSD,
 } from "../shared/currency";
-import { getCountry, getUniversity, universities, validateStudySelection } from "../shared/study";
+import {
+  getCountry,
+  getUniversity,
+  universities,
+  validateStudySelection,
+} from "../shared/study";
 
 import { requireAccount } from "./ownership";
 import { internal } from "./_generated/api";
@@ -259,12 +264,13 @@ export const seedDemo = internalMutation({
         delivery: "3–5 business days",
       },
       {
-        key: "card",
-        provider: "Debit / credit card",
-        sourceAmount: 2598,
-        fee: 26,
-        fxRate: 0.77,
-        delivery: "Instant",
+        key: "platform",
+        provider: "Education Platforms",
+        sourceAmount: 2590.68,
+        fee: 15,
+        fxRate: 0.772,
+        delivery: "2–3 business days",
+        maxBusinessDays: 3,
       },
     ])
       await ctx.db.insert("paymentRoutes", { accountId, ...route });
@@ -589,7 +595,8 @@ export const updateProfile = mutation({
       throw new Error("Invalid confirmed funding amount");
     account.countryFrom = getCountry(account.countryFrom)!.name;
     account.countryTo = getCountry(account.countryTo)?.name ?? "";
-    account.university = getUniversity(account.countryTo, account.university) ?? "";
+    account.university =
+      getUniversity(account.countryTo, account.university) ?? "";
     const initials = account.name
       .split(/\s+/)
       .filter(Boolean)
@@ -1172,7 +1179,8 @@ export const runAgentTool = internalMutation({
       throw new Error("AI processing consent has been revoked");
     if (!args || typeof args !== "object" || Array.isArray(args))
       throw new Error("Invalid tool arguments");
-    if (isWorkspaceTool(name)) return runWorkspaceTool(ctx, accountId, name, args);
+    if (isWorkspaceTool(name))
+      return runWorkspaceTool(ctx, accountId, name, args);
     const keys = Object.keys(args);
     if (
       keys.some(
@@ -1351,7 +1359,8 @@ export const agentFundingChange = query({
     await requireAccount(ctx, row.accountId);
     if (!["update_profile", "update_funding_source"].includes(row.name))
       throw new Error("Not a funding change");
-    if (!row.result?.executionId) throw new Error("Not a pending funding change");
+    if (!row.result?.executionId)
+      throw new Error("Not a pending funding change");
     return {
       executionId,
       status: row.result.status,
@@ -1387,7 +1396,8 @@ export const initializePaymentSandbox = mutation({
       value: {
         recipient:
           getUniversity(account.countryTo, account.university) ||
-          universities[getCountry(account.countryTo)?.name ?? ""]?.[0] || "",
+          universities[getCountry(account.countryTo)?.name ?? ""]?.[0] ||
+          "",
         currency,
         recipientAccountLast4: "1842",
         paymentAmount: convertMoney(2000, "GBP", currency),
@@ -1424,6 +1434,15 @@ export const initializePaymentSandbox = mutation({
       });
     const routes = [
       {
+        key: "sandbox-platform",
+        provider: "Education Platforms",
+        fxRate: 0.772,
+        fee: 15,
+        delivery: "2–3 business days",
+        maxBusinessDays: 3,
+        recommended: false,
+      },
+      {
         key: "sandbox-standard",
         provider: "Wise",
         fxRate: 0.774,
@@ -1441,15 +1460,6 @@ export const initializePaymentSandbox = mutation({
         maxBusinessDays: 5,
         recommended: false,
       },
-      {
-        key: "sandbox-fast",
-        provider: "Debit / credit card",
-        fxRate: 0.77,
-        fee: 26,
-        delivery: "Within 1 business day",
-        maxBusinessDays: 1,
-        recommended: false,
-      },
     ];
     for (const route of routes)
       await ctx.db.insert("paymentRoutes", {
@@ -1463,7 +1473,9 @@ export const initializePaymentSandbox = mutation({
         quoteExpiresAt: Date.now() + 10 * 60 * 1000,
         sourceAmount: Math.ceil(200000 / route.fxRate) / 100,
       });
-    await ctx.db.patch(accountId, { selectedRoute: routes[0].key });
+    await ctx.db.patch(accountId, {
+      selectedRoute: routes.find((route) => route.recommended)!.key,
+    });
     await ctx.db.insert("auditEvents", {
       accountId,
       type: "SANDBOX_INITIALIZED",
@@ -1591,6 +1603,8 @@ export const refreshSandboxQuotes = mutation({
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
       .collect();
     const windows: Record<string, number> = {
+      platform: 3,
+      "sandbox-platform": 3,
       wise: 1,
       swift: 5,
       card: 1,
@@ -1598,18 +1612,68 @@ export const refreshSandboxQuotes = mutation({
       "sandbox-bank": 5,
       "sandbox-fast": 1,
     };
-    const rows = await ctx.db.query("appConfig").withIndex("by_account", q => q.eq("accountId", accountId)).take(100);
-    const banking = rows.find(row => row.key === "banking")?.value;
+    const rows = await ctx.db
+      .query("appConfig")
+      .withIndex("by_account", (q) => q.eq("accountId", accountId))
+      .take(100);
+    const banking = rows.find((row) => row.key === "banking")?.value;
     const target = banking?.currency ?? studyCurrency(account.countryTo);
+    // Existing sandboxes gain the missing category when quotes are refreshed.
+    if (
+      routes.length &&
+      !routes.some(
+        (route) => routeProviderName(route.provider) === "Education Platforms",
+      )
+    ) {
+      const sourceCurrency = routes[0].sourceCurrency ?? "USD";
+      const fxRate =
+        sourceCurrency === target
+          ? 1
+          : (sandboxRouteGBPPerUSD["sandbox-platform"] /
+              currencyRate("USD", "GBP")) *
+            currencyRate(sourceCurrency, target);
+      await ctx.db.insert("paymentRoutes", {
+        accountId,
+        key: "sandbox-platform",
+        provider: "Education Platforms",
+        sourceAmount:
+          Math.ceil(
+            ((banking?.paymentAmount ?? convertMoney(2000, "GBP", target)) /
+              fxRate) *
+              100,
+          ) / 100,
+        fee: 15,
+        fxRate,
+        delivery: "2–3 business days",
+        maxBusinessDays: 3,
+        recommended: false,
+        sourceCurrency,
+        targetCurrency: target,
+        quotedAt: Date.now(),
+        quoteExpiresAt: Date.now() + 600000,
+      });
+    }
     let updated = 0;
     for (const route of routes) {
       // Only known fixtures can be refreshed; never invent current observations for other records.
       if (windows[route.key] === undefined) continue;
       await ctx.db.patch(route._id, {
-        fxRate: (route.sourceCurrency ?? "USD") === target ? 1 : (sandboxRouteGBPPerUSD[route.key] / currencyRate("USD", "GBP")) * currencyRate(route.sourceCurrency ?? "USD", target),
+        fxRate:
+          (route.sourceCurrency ?? "USD") === target
+            ? 1
+            : (sandboxRouteGBPPerUSD[
+                routeProviderName(route.provider) === "Education Platforms"
+                  ? "sandbox-platform"
+                  : route.key
+              ] /
+                currencyRate("USD", "GBP")) *
+              currencyRate(route.sourceCurrency ?? "USD", target),
         quotedAt: Date.now(),
         quoteExpiresAt: Date.now() + 600000,
-        maxBusinessDays: windows[route.key],
+        maxBusinessDays:
+          routeProviderName(route.provider) === "Education Platforms"
+            ? 3
+            : windows[route.key],
         sourceCurrency: route.sourceCurrency ?? "USD",
         targetCurrency: target,
       });
@@ -1852,5 +1916,71 @@ export const syncPaymentReminder = mutation({
       read: false,
       timestamp: Date.now(),
     });
+  },
+});
+
+// Normalize legacy illustrative fixtures without altering active payment proposals.
+export const repairPaymentRouteCategories = internalMutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    const accounts = await ctx.db.query("accounts").take(1000);
+    let repaired = 0;
+    for (const account of accounts) {
+      if (account.paymentStatus !== "not_started") continue;
+      const routes = await ctx.db
+        .query("paymentRoutes")
+        .withIndex("by_account", (q) => q.eq("accountId", account._id))
+        .take(100);
+      const legacyCard = routes.find(
+        (route) =>
+          ["card", "sandbox-fast"].includes(route.key) &&
+          [
+            "Debit / credit card",
+            "International card",
+            "Bank & Card",
+            "Sandbox Express",
+          ].includes(route.provider),
+      );
+      if (!legacyCard) continue;
+      const platform = routes.find(
+        (route) => routeProviderName(route.provider) === "Education Platforms",
+      );
+      if (platform) {
+        if (account.selectedRoute === legacyCard.key)
+          await ctx.db.patch(account._id, { selectedRoute: platform.key });
+        await ctx.db.delete(legacyCard._id);
+      } else {
+        const source = legacyCard.sourceCurrency ?? "USD";
+        const target =
+          legacyCard.targetCurrency ?? studyCurrency(account.countryTo);
+        const fxRate =
+          source === target
+            ? 1
+            : (sandboxRouteGBPPerUSD["sandbox-platform"] /
+                currencyRate("USD", "GBP")) *
+              currencyRate(source, target);
+        const key = legacyCard.key === "card" ? "platform" : "sandbox-platform";
+        if (account.selectedRoute === legacyCard.key)
+          await ctx.db.patch(account._id, { selectedRoute: key });
+        await ctx.db.patch(legacyCard._id, {
+          key,
+          provider: "Education Platforms",
+          fee: 15,
+          fxRate,
+          sourceAmount:
+            Math.ceil(
+              ((legacyCard.sourceAmount * legacyCard.fxRate) / fxRate) * 100,
+            ) / 100,
+          delivery: "2–3 business days",
+          maxBusinessDays: 3,
+          // Require refreshing the replacement fixture before it can be selected.
+          quotedAt: undefined,
+          quoteExpiresAt: undefined,
+        });
+      }
+      repaired++;
+    }
+    return repaired;
   },
 });

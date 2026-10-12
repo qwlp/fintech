@@ -1,0 +1,54 @@
+{
+  "wise": {
+    "website": "https://wise.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=wise.com&sz=128"
+  },
+  "revolut": {
+    "website": "https://revolut.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=revolut.com&sz=128"
+  },
+  "alipay": {
+    "website": "https://alipay.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=alipay.com&sz=128"
+  },
+  "wechat": {
+    "website": "https://wechat.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=wechat.com&sz=128"
+  },
+  "flywire": {
+    "website": "https://flywire.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=flywire.com&sz=128"
+  },
+  "convera": {
+    "website": "https://convera.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=convera.com&sz=128"
+  },
+  "transact": {
+    "website": "https://transactcampus.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=transactcampus.com&sz=128"
+  },
+  "easytransfer": {
+    "website": "https://easytransferglobal.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=easytransferglobal.com&sz=128"
+  },
+  "skyremit": {
+    "website": "https://www.skyremit.cn",
+    "iconSource": "https://www.google.com/s2/favicons?domain=skyremit.cn&sz=128"
+  },
+  "visa": {
+    "website": "https://visa.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=visa.com&sz=128"
+  },
+  "mastercard": {
+    "website": "https://mastercard.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=mastercard.com&sz=128"
+  },
+  "unionpay": {
+    "website": "https://unionpayintl.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=unionpayintl.com&sz=128"
+  },
+  "swift": {
+    "website": "https://swift.com",
+    "iconSource": "https://www.google.com/s2/favicons?domain=swift.com&sz=128"
+  }
+}

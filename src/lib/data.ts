@@ -121,6 +121,14 @@ export const wallets: Wallet[] = [
 ];
 export const routes: PaymentRoute[] = [
   {
+    id: "platform",
+    provider: "Education Platforms",
+    sourceAmount: 2590.68,
+    fee: 15,
+    fxRate: 0.772,
+    delivery: "2–3 business days",
+  },
+  {
     id: "wise",
     provider: "Wise",
     sourceAmount: 2574.6,
@@ -136,14 +144,6 @@ export const routes: PaymentRoute[] = [
     fee: 34,
     fxRate: 0.768,
     delivery: "3–5 business days",
-  },
-  {
-    id: "card",
-    provider: "Debit / credit card",
-    sourceAmount: 2598,
-    fee: 26,
-    fxRate: 0.77,
-    delivery: "Instant",
   },
 ];
 export const initialAudit: AuditEvent[] = [

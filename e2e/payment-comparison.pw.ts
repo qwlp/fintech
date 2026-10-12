@@ -28,6 +28,43 @@ for (const width of [390, 1440])
         "none",
       );
       await expect(page.locator(".tuition-route")).toHaveCount(3);
+      await expect(
+        page
+          .locator(".tuition-route-title")
+          .filter({ hasText: "Education Platforms" }),
+      ).toHaveCount(1);
+      const highlights = page.getByRole("complementary", {
+        name: "Payment comparison highlights",
+      });
+      await expect(
+        highlights.locator(".payment-highlight-cheapest"),
+      ).toContainText("Fintech Provider");
+      await expect(
+        highlights.locator(".payment-highlight-cheapest"),
+      ).toContainText("$2,592.38 total");
+      await expect(
+        highlights.locator(".payment-highlight-fastest"),
+      ).toContainText("Fintech Provider");
+      await expect(
+        highlights.locator(".payment-highlight-fastest"),
+      ).toContainText("1–2 business days");
+      await expect(
+        page.locator('.tuition-route[data-category="platform"]'),
+      ).toHaveCSS("border-left-width", "1px");
+      await expect(page.locator(".payment-provider-logo img")).toHaveCount(8);
+      await expect
+        .poll(() =>
+          page
+            .locator(".payment-provider-logo img")
+            .evaluateAll((images) =>
+              images.every(
+                (image) =>
+                  (image as HTMLImageElement).complete &&
+                  (image as HTMLImageElement).naturalWidth > 0,
+              ),
+            ),
+        )
+        .toBe(true);
       const first = page.locator(".tuition-route").first();
       await expect(first.locator(".payment-comparison-fees")).toContainText(
         "Fee $8.40",

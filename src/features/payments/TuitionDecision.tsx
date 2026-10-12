@@ -1,4 +1,8 @@
-import { routeProviderDetails } from "../../../shared/payment-routes";
+import { providerBrands } from "./provider-brands";
+import {
+  paymentRouteCategory,
+  routeProviderDetails,
+} from "../../../shared/payment-routes";
 import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
 import { formatCurrency } from "../../../shared/currency";
 import { paymentOptionScore } from "../../../shared/payment-comparison";
@@ -17,7 +21,10 @@ import {
   ChevronDown,
   CreditCard,
 } from "lucide-react";
-import { assessTuition, type DecisionRoute } from "../../../convex/tuitionDecision";
+import {
+  assessTuition,
+  type DecisionRoute,
+} from "../../../convex/tuitionDecision";
 import { convexApi, convexClient } from "../../lib/convex";
 import { Button } from "../../components/ui/button";
 import { DatePicker } from "../../components/ui/date-picker";
@@ -111,6 +118,24 @@ export default function TuitionDecision(props: Props) {
       Infinity,
     ]),
   );
+  const cheapestOptions =
+    decision?.routes.filter(
+      (route) => Number.isFinite(cheapest) && route.totalUSD === cheapest,
+    ) ?? [];
+  const fastestDays = Math.min(
+    ...props.routes
+      .filter((route) =>
+        decision?.routes.some((item) => item.routeKey === route.key),
+      )
+      .map((route) => route.maxBusinessDays ?? Infinity),
+  );
+  const fastestOptions =
+    decision?.routes.filter(
+      (route) =>
+        Number.isFinite(fastestDays) &&
+        props.routes.find((item) => item.key === route.routeKey)
+          ?.maxBusinessDays === fastestDays,
+    ) ?? [];
   const dirty =
     deadline !== (banking.tuitionDeadline ?? "") ||
     Number(buffer) !== (banking.bufferBusinessDays ?? 1) ||
@@ -269,16 +294,83 @@ export default function TuitionDecision(props: Props) {
               </strong>
             </div>
           )}
+          <aside
+            className="payment-option-highlights"
+            aria-label="Payment comparison highlights"
+          >
+            <div className="payment-highlight payment-highlight-cheapest">
+              <Landmark size={18} aria-hidden="true" />
+              <div>
+                <span>Cheapest</span>
+                <strong>
+                  {cheapestOptions.map((route) => route.provider).join(" · ") ||
+                    "Quote unavailable"}
+                </strong>
+                <small>
+                  {cheapestOptions[0]
+                    ? sourceMoney(cheapest, cheapestOptions[0].sourceCurrency) +
+                      " total"
+                    : "Refresh quotes to compare costs"}
+                </small>
+              </div>
+            </div>
+            <div className="payment-highlight payment-highlight-fastest">
+              <Clock3 size={18} aria-hidden="true" />
+              <div>
+                <span>
+                  {fastestOptions.length > 1 ? "Fastest · tied" : "Fastest"}
+                </span>
+                <strong>
+                  {fastestOptions.map((route) => route.provider).join(" · ") ||
+                    "Timing unavailable"}
+                </strong>
+                <small>
+                  {fastestOptions
+                    .map((route) => route.delivery)
+                    .filter(
+                      (value, index, values) => values.indexOf(value) === index,
+                    )
+                    .join(" · ") || "Check route details for delivery times"}
+                </small>
+              </div>
+            </div>
+            <p>
+              Based on the displayed quotes and estimated delivery times.
+              {decision.routes.some((route) => !route.fresh)
+                ? " Refresh quotes before choosing an option."
+                : ""}
+            </p>
+          </aside>
           <div className="tuition-route-list">
             {decision.routes.map((route) => (
               <article
                 className={`tuition-route ${props.selectedRoute === route.routeKey ? "selected" : ""}`}
                 key={route.routeKey}
+                data-category={paymentRouteCategory(route.provider) ?? "other"}
               >
                 <div className="tuition-route-title">
                   <div className="payment-option-rating">
                     <span
                       className="payment-option-score"
+                      data-score-band={
+                        paymentOptionScore(
+                          route,
+                          cheapest,
+                          props.routes.find(
+                            (item) => item.key === route.routeKey,
+                          )?.maxBusinessDays,
+                        ) >= 8
+                          ? "high"
+                          : paymentOptionScore(
+                                route,
+                                cheapest,
+                                props.routes.find(
+                                  (item) => item.key === route.routeKey,
+                                )?.maxBusinessDays,
+                              ) >= 7
+                            ? "medium"
+                            : "low"
+                      }
                       style={
                         {
                           "--score": paymentOptionScore(
@@ -306,21 +398,58 @@ export default function TuitionDecision(props: Props) {
                     </span>
                   </div>
                   <strong>
-                    {route.routeKey.includes("card") ||
-                    route.routeKey === "sandbox-fast" ? (
+                    {paymentRouteCategory(route.provider) === "bankCard" ? (
                       <CreditCard size={18} />
                     ) : (
                       <Landmark size={18} />
                     )}
                     {route.provider}
                   </strong>
-                  <small>
-                    {routeProviderDetails(route.provider, route.targetCurrency)}
-                  </small>
-                  {decision.recommendedRouteKey === route.routeKey && (
-                    <small className="payment-best-option">
-                      Lowest available cost
-                    </small>
+                  <div
+                    className="payment-provider-brands"
+                    aria-label="Providers in this category"
+                  >
+                    {providerBrands(route.provider, route.targetCurrency).map(
+                      (brand) => (
+                        <span className="payment-provider-brand" key={brand.id}>
+                          <span className="payment-provider-logo">
+                            <img
+                              src={`/provider-logos/${brand.id}.${brand.id === "swift" ? "jpg" : "png"}`}
+                              alt=""
+                              width={22}
+                              height={22}
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          </span>
+                          <span>{brand.name}</span>
+                        </span>
+                      ),
+                    )}
+                  </div>
+                  {(cheapestOptions.some(
+                    (item) => item.routeKey === route.routeKey,
+                  ) ||
+                    fastestOptions.some(
+                      (item) => item.routeKey === route.routeKey,
+                    )) && (
+                    <div className="payment-route-badges">
+                      {cheapestOptions.some(
+                        (item) => item.routeKey === route.routeKey,
+                      ) && (
+                        <small className="payment-route-badge payment-route-badge-cost">
+                          Cheapest{!route.fresh ? " estimate" : ""}
+                        </small>
+                      )}
+                      {fastestOptions.some(
+                        (item) => item.routeKey === route.routeKey,
+                      ) && (
+                        <small className="payment-route-badge payment-route-badge-speed">
+                          Fastest estimate
+                        </small>
+                      )}
+                    </div>
                   )}
                   <span>
                     {route.eligible ? (
@@ -341,12 +470,7 @@ export default function TuitionDecision(props: Props) {
                     <Clock3 size={15} />
                     {route.delivery}
                   </strong>
-                  <span>
-                    {route.routeKey.includes("card") ||
-                    route.routeKey === "sandbox-fast"
-                      ? "Bank & Card"
-                      : route.provider}
-                  </span>
+                  <span>{route.provider}</span>
                 </div>
                 <div className="payment-comparison-fees">
                   <small>Fee & exchange rate</small>
