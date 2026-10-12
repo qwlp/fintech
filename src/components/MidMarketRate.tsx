@@ -1,4 +1,4 @@
-import { deployment } from "./lib/deployment";
+import { deployment } from "../lib/deployment";
 import { useEffect, useState } from "react";
 import {
   ArrowDownRight,
