@@ -1,6 +1,6 @@
 import SponsorDashboard from "./SponsorDashboard";
-import { needsStudySelectionUpdate } from "../shared/study";
-import Brand from "./Brand";
+import { needsStudySelectionUpdate } from "../../shared/study";
+import Brand from "../Brand";
 import {
   Component,
   type ReactNode,
@@ -9,7 +9,7 @@ import {
   lazy,
   Suspense,
 } from "react";
-import AppShowcase from "./AppShowcase";
+import AppShowcase from "../marketing/AppShowcase";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
 import {
@@ -21,13 +21,13 @@ import {
   EyeOff,
   LogOut,
 } from "lucide-react";
-const App = lazy(() => import("./App"));
-import Home from "./Home";
+const App = lazy(() => import("../App"));
+import Home from "../marketing/Home";
 import Setup from "./Setup";
-import { convexApi } from "./lib/convex";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import "./auth.css";
+import { convexApi } from "../lib/convex";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import "../styles/auth.css";
 
 function usePageHash() {
   const [hash, setHash] = useState(() => location.hash);

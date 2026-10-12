@@ -22,7 +22,7 @@ import { convexApi, convexClient } from "./lib/convex";
 import { Button } from "./components/ui/button";
 import { DatePicker } from "./components/ui/date-picker";
 import { Input } from "./components/ui/input";
-import "./tuition-decision.css";
+import "./styles/tuition-decision.css";
 
 type Plan = {
   deadline: string;

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Popover } from "radix-ui";
 import { Check, ChevronDown, Search } from "lucide-react";
 
-import { countries } from "../shared/study";
+import { countries } from "../../shared/study";
 
 export default function SetupCountrySelect({
   label,

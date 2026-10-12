@@ -17,10 +17,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { QRCodeSVG } from "qrcode.react";
 import type { IScannerControls } from "@zxing/browser";
-import { api } from "../convex/_generated/api";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import "./sponsor-connect.css";
+import { api } from "../../convex/_generated/api";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import "../styles/sponsor-connect.css";
 
 function readCode(value: string) {
   if (/^[\da-f]{12}$/i.test(value.replace(/[\s-]/g, "")))

@@ -9,15 +9,15 @@ import {
   X,
 } from "lucide-react";
 import SetupCountrySelect from "./SetupCountrySelect";
-import { getCountry } from "../shared/study";
+import { getCountry } from "../../shared/study";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./components/ui/select";
-import "./link-account.css";
+} from "../components/ui/select";
+import "../styles/link-account.css";
 
 const commonBanks: Record<string, string[]> = {
   China: [

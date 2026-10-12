@@ -1,5 +1,5 @@
 import CountryBudget from "./CountryBudget";
-import Brand from "./Brand";
+import Brand from "../Brand";
 import { lazy, Suspense } from "react";
 import AppShowcase from "./AppShowcase";
 import { motion, useReducedMotion } from "motion/react";
@@ -11,8 +11,8 @@ import {
   Landmark,
   Globe2,
 } from "lucide-react";
-import { Button } from "./components/ui/button";
-import "./home.css";
+import { Button } from "../components/ui/button";
+import "../styles/home.css";
 
 export default function Home() {
   const reduced = useReducedMotion();

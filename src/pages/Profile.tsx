@@ -19,10 +19,10 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import FundingConfirmation from "../FundingConfirmation";
-import LinkAccount from "../LinkAccount";
+import LinkAccount from "../auth/LinkAccount";
 import SectionHelp from "../SectionHelp";
-import SetupCountrySelect from "../SetupCountrySelect";
-import UniversitySelect from "../UniversitySelect";
+import SetupCountrySelect from "../auth/SetupCountrySelect";
+import UniversitySelect from "../auth/UniversitySelect";
 import { useWorkspaceCurrency, useWorkspaceMoney } from "../WorkspaceCurrency";
 import { formatCurrency, studyCurrency, convertMoney } from "../../shared/currency";
 import { countries, getCountry, getUniversity } from "../../shared/study";

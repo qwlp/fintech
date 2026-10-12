@@ -1,11 +1,11 @@
-import { getCountry } from "../shared/study";
+import { getCountry } from "../../shared/study";
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Globe2, Minus, Plus } from "lucide-react";
-import { Input } from "./components/ui/input";
-import { Button } from "./components/ui/button";
-import BudgetDonut, { planChartColors } from "./BudgetDonut";
-import MoneyAmount, { formatMoney } from "./MoneyAmount";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import BudgetDonut, { planChartColors } from "../BudgetDonut";
+import MoneyAmount, { formatMoney } from "../MoneyAmount";
 const destinations = [
   {
     name: "United Kingdom",

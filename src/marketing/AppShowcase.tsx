@@ -1,9 +1,9 @@
-import { Slider } from "./components/ui/slider";
+import { Slider } from "../components/ui/slider";
 import BudgetDonut, {
   planChartColors,
   FundingSourcesChart,
-} from "./BudgetDonut";
-import Brand from "./Brand";
+} from "../BudgetDonut";
+import Brand from "../Brand";
 import { useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
@@ -21,8 +21,8 @@ import {
   HeartHandshake,
   Landmark,
 } from "lucide-react";
-import { formatGBP } from "./lib/finance";
-import "./showcase.css";
+import { formatGBP } from "../lib/finance";
+import "../styles/showcase.css";
 function AnimatedAmount({ value }: { value: number }) {
   const reduced = useReducedMotion();
   const amount = useMotionValue(value);

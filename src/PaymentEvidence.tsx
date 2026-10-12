@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { convexApi, convexClient } from "./lib/convex";
 import { Button } from "./components/ui/button";
-import "./tuition-decision.css";
+import "./styles/tuition-decision.css";
 
 type Proposal = {
   _id: string;

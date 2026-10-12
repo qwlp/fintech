@@ -1,7 +1,7 @@
 import { convertMoney, formatCurrency } from "../shared/currency";
 import { useWorkspaceCurrency } from "./WorkspaceCurrency";
 import { countries, getCountry, getUniversity } from "../shared/study";
-import UniversitySelect from "./UniversitySelect";
+import UniversitySelect from "./auth/UniversitySelect";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Landmark,
@@ -32,10 +32,10 @@ export type Comparison = {
   amount: number;
 };
 import { convexApi, convexClient } from "./lib/convex";
-import "./tuition-decision.css";
-import "./brief.css";
-import "./payment-compact.css";
-import "./payment-comparison.css";
+import "./styles/tuition-decision.css";
+import "./styles/brief.css";
+import "./styles/payment-compact.css";
+import "./styles/payment-comparison.css";
 export default function PaymentWorkspace({
   help,
   sourceCurrency = "USD",

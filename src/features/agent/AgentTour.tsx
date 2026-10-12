@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Dialog } from "radix-ui";
-import { Button } from "./components/ui/button";
+import { Button } from "../../components/ui/button";
 import { Bot, CircleHelp, X } from "lucide-react";
-import "./agent-tour.css";
+import "../../styles/agent-tour.css";
 export default function AgentTour({ accountId }: { accountId?: string }) {
   const key = `movewise-agent-tour:${accountId ?? "session"}`;
   const [open, setOpen] = useState(() => {

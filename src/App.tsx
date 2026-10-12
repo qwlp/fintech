@@ -23,13 +23,13 @@ import { Button } from "./components/ui/button";
 import Brand from "./Brand";
 import MobileNavigation from "./MobileNavigation";
 import SectionHelp from "./SectionHelp";
-import AgentTour from "./AgentTour";
+import AgentTour from "./features/agent/AgentTour";
 import MovePlanner from "./MovePlanner";
 import PaymentWorkspace from "./PaymentWorkspace";
 import PaymentEvidence from "./PaymentEvidence";
 import TuitionDecision from "./TuitionDecision";
 import FundingConfirmation from "./FundingConfirmation";
-import { Assistant, ChatHistory } from "./Chat";
+import { Assistant, ChatHistory } from "./features/agent/Chat";
 import { Dashboard, ExchangeWorkspace } from "./pages/Dashboard";
 import { Profile } from "./pages/Profile";
 import { Payments } from "./pages/Payments";
@@ -52,9 +52,9 @@ import { initialAudit, costs, funding } from "./data";
 import type { AuditEvent, PaymentStatus } from "./types";
 import type { DatabaseState, Page } from "./types/database";
 import type { Id } from "../convex/_generated/dataModel";
-import "./brief.css";
-import "./security.css";
-import "./profile.css";
+import "./styles/brief.css";
+import "./styles/security.css";
+import "./styles/profile.css";
 
 type Variation = 1 | 2 | 3 | 4 | 5;
 
@@ -650,7 +650,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                     messages={database?.messages ?? []}
                     onNew={newChat}
                     onBack={() => setShowChatHistory(false)}
-                    onOpen={(id) => {
+                    onOpen={(id?: string) => {
                       setActiveChat(id);
                       setShowChatHistory(false);
                     }}
@@ -663,7 +663,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                       (message) => message.chatId === activeChat,
                     )}
                     aiEnabled={!!account?.aiConsentAt}
-                    onConsent={async (enabled) =>
+                    onConsent={async (enabled: boolean) =>
                       account
                         ? mutate(convexApi.setAIConsent, { accountId: account._id, enabled })
                         : false

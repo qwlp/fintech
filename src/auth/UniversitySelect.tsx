@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Popover } from "radix-ui";
 import { Check, ChevronDown, Search } from "lucide-react";
-import { universities, getCountry, getUniversity } from "../shared/study";
+import { universities, getCountry, getUniversity } from "../../shared/study";
 
 export default function UniversitySelect({
   country,

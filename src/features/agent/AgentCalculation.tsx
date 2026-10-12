@@ -1,4 +1,4 @@
-import { routeProviderName } from "../shared/payment-routes";
+import { routeProviderName } from "../../../shared/payment-routes";
 import AgentFundingChange from "./AgentFundingChange";
 
 export type ToolResult = { name: string; result: unknown };

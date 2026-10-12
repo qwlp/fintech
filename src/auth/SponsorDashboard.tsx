@@ -28,17 +28,17 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { api } from "../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import type { Id } from "../convex/_generated/dataModel";
-import { convertMoney, formatCurrency } from "../shared/currency";
-import DataBoundary from "./DataBoundary";
-import Brand from "./Brand";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
+import type { Id } from "../../convex/_generated/dataModel";
+import { convertMoney, formatCurrency } from "../../shared/currency";
+import DataBoundary from "../DataBoundary";
+import Brand from "../Brand";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import SponsorConnect from "./SponsorConnect";
-import "./sponsor-dashboard.css";
-import "./motion.css";
+import "../styles/sponsor-dashboard.css";
+import "../styles/motion.css";
 
 type Student = FunctionReturnType<typeof api.sponsorLinks.dashboard>[number];
 type View = "Overview" | "Students" | "Requests" | "Activity" | "Connections";

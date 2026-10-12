@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import type { Id } from "../convex/_generated/dataModel";
-import { convexApi, convexClient } from "./lib/convex";
-import FundingConfirmation from "./FundingConfirmation";
-import { Button } from "./components/ui/button";
-import { formatCurrency } from "../shared/currency";
+import type { Id } from "../../../convex/_generated/dataModel";
+import { convexApi, convexClient } from "../../lib/convex";
+import FundingConfirmation from "../../FundingConfirmation";
+import { Button } from "../../components/ui/button";
+import { formatCurrency } from "../../../shared/currency";
 
 type Change = {
   executionId: string;

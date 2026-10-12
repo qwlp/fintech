@@ -1,4 +1,4 @@
-import "./brand.css";
+import "./styles/brand.css";
 export default function Brand({
   href,
   className = "",

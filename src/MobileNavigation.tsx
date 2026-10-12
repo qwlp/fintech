@@ -5,7 +5,7 @@ import {
   Route,
   UserRound,
 } from "lucide-react";
-import "./mobile-navigation.css";
+import "./styles/mobile-navigation.css";
 export default function MobileNavigation({
   page,
   go,

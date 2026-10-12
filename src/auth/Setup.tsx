@@ -12,22 +12,22 @@ import {
   X,
 } from "lucide-react";
 import { useMutation } from "convex/react";
-import type { Doc } from "../convex/_generated/dataModel";
-import { convexApi } from "./lib/convex";
-import Brand from "./Brand";
-import FundingConfirmation from "./FundingConfirmation";
+import type { Doc } from "../../convex/_generated/dataModel";
+import { convexApi } from "../lib/convex";
+import Brand from "../Brand";
+import FundingConfirmation from "../FundingConfirmation";
 import UniversitySelect from "./UniversitySelect";
-import { convertMoney, studyCurrency } from "../shared/currency";
+import { convertMoney, studyCurrency } from "../../shared/currency";
 import {
   getCountry,
   getUniversity,
   needsStudySelectionUpdate,
-} from "../shared/study";
+} from "../../shared/study";
 import SetupCountrySelect from "./SetupCountrySelect";
-import { DatePicker } from "./components/ui/date-picker";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import "./setup.css";
+import { DatePicker } from "../components/ui/date-picker";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import "../styles/setup.css";
 
 export default function Setup({
   account,

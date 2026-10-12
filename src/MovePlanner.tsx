@@ -53,7 +53,7 @@ import {
 } from "./components/ui/select";
 import BudgetDonut from "./BudgetDonut";
 import { convexApi, convexClient } from "./lib/convex";
-import "./move-planner.css";
+import "./styles/move-planner.css";
 
 const groups: {
   name: string;
