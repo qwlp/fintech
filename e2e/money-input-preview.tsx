@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Input } from "../src/components/ui/input";
-import "../src/styles.css";
+import "../src/styles/styles.css";
 import "../src/components/ui/ui.css";
 function Preview() {
   const [amount, setAmount] = useState("1000.50");

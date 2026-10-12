@@ -18,11 +18,11 @@ for (const width of [390, 1440]) {
         import App from '/src/App.tsx';
         import { convexClient } from '/src/lib/convex.ts';
         import { calculateMove } from '/shared/move-planner.ts';
-        import '/src/styles.css';
-        import '/src/chat.css';
-        import '/src/app-clean.css';
-        import '/src/dashboard-visual.css';
-        import '/src/dark-mode.css';
+        import '/src/styles/styles.css';
+        import '/src/styles/chat.css';
+        import '/src/styles/app-clean.css';
+        import '/src/styles/dashboard-visual.css';
+        import '/src/styles/dark-mode.css';
         const state = {
           account: { _id: 'student', role: 'Student', aiConsentAt: 1, setupComplete: true, countryFrom: 'China', countryTo: 'China', university: 'Tsinghua University', name: 'Dara', initials: 'D', planName: 'Study', paymentStatus: 'not_started', selectedRoute: '', sponsorRequestSent: false },
           config: { profile: { fundingAmount: 19000, fundingCurrency: 'CNY', workspaceCurrency: 'CNY' } },
@@ -104,7 +104,12 @@ for (const width of [390, 1440]) {
     await page
       .getByRole("button", { name: "Edit profile", exact: true })
       .click();
-    await page.getByLabel("Confirmed funding in CNY").fill("21000");
+    await page
+      .getByRole("spinbutton", {
+        name: "Confirmed funding in CNY",
+        exact: true,
+      })
+      .fill("21000");
     await page
       .getByRole("button", { name: "Save profile", exact: true })
       .click();
@@ -115,9 +120,12 @@ for (const width of [390, 1440]) {
       await page.evaluate(() => (window as any).savedFundingAmount),
     ).toBeUndefined();
     await dialog.getByRole("button", { name: "Edit amount" }).click();
-    await expect(page.getByLabel("Confirmed funding in CNY")).toHaveValue(
-      "21000",
-    );
+    await expect(
+      page.getByRole("spinbutton", {
+        name: "Confirmed funding in CNY",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-valuenow", "21000");
     await page
       .getByRole("button", { name: "Save profile", exact: true })
       .click();

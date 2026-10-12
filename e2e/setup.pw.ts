@@ -17,8 +17,8 @@ async function openSetup(
       import React from '/node_modules/.vite/deps/react.js';
       import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';
       import { ConvexProvider, ConvexReactClient } from '/node_modules/.vite/deps/convex_react.js';
-      import Setup from '/src/Setup.tsx';
-      import '/src/styles.css'; import '/src/dark-mode.css'; import '/src/components/ui/ui.css';
+      import Setup from '/src/auth/Setup.tsx';
+      import '/src/styles/styles.css'; import '/src/styles/dark-mode.css'; import '/src/components/ui/ui.css';
       const client = new ConvexReactClient('https://setup-test.convex.cloud');
       client.mutation = async (_ref, args) => { ${fail ? "throw new Error('Unavailable');" : "window.savedSetup = args;"} };
       const account = { name: 'Dara Chan', role: '${role}', countryFrom: '', countryTo: '', university: '', course: '', setupComplete: false };

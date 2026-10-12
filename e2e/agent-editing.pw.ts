@@ -21,9 +21,9 @@ for (const theme of ["light", "dark"]) {
       </script><script type="module">
       import React from '/node_modules/.vite/deps/react.js';
       import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';
-      import AgentCalculation from '/src/AgentCalculation.tsx';
+      import AgentCalculation from '/src/features/agent/AgentCalculation.tsx';
       import { convexClient } from '/src/lib/convex.ts';
-      import '/src/styles.css'; import '/src/chat.css'; import '/src/dark-mode.css';
+      import '/src/styles/styles.css'; import '/src/styles/chat.css'; import '/src/styles/dark-mode.css';
       const pending = { executionId: 'change1', status: 'pending_confirmation', amount: 22000, currency: 'GBP' };
       let state = { ...pending, status: sessionStorage.getItem('fundingStatus') || pending.status };
       let update = () => {};

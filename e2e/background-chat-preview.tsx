@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
-import { Assistant, type ChatMessage } from "../src/Chat";
+import { Assistant, type ChatMessage } from "../src/features/agent/Chat";
 import { useBackgroundChat } from "../src/lib/use-background-chat";
-import "../src/styles.css";
+import "../src/styles/styles.css";
 import "../src/components/ui/ui.css";
 
 function Preview() {

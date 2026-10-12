@@ -1,0 +1,474 @@
+import { convertMoney, formatCurrency } from "../../../shared/currency";
+import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
+import { countries, getCountry, getUniversity } from "../../../shared/study";
+import UniversitySelect from "../../auth/UniversitySelect";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  Landmark,
+  GraduationCap,
+  WalletCards,
+  ArrowLeftRight,
+  Pencil,
+  ShieldCheck,
+  ArrowRight,
+  ArrowLeft,
+  Search,
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "../../components/ui/select";
+import { WorkspaceCurrencyProvider } from "../../components/WorkspaceCurrency";
+import { api } from "../../../convex/_generated/api";
+export type Comparison = {
+  sourceCurrency: string;
+  targetCurrency: string;
+  amount: number;
+};
+import { convexApi, convexClient } from "../../lib/convex";
+import "../../styles/tuition-decision.css";
+import "../../styles/brief.css";
+import "../../styles/payment-compact.css";
+import "../../styles/payment-comparison.css";
+export default function PaymentWorkspace({
+  help,
+  sourceCurrency = "USD",
+  homeCountry,
+  travelCountry,
+  onCompare,
+  plan,
+  review,
+  balances,
+  exchange,
+  amount,
+  recipient,
+  paymentStatus,
+  accountId,
+  banking,
+  initialView = "tuition",
+  onEdit,
+}: {
+  help?: ReactNode;
+  sourceCurrency?: string;
+  homeCountry?: string;
+  travelCountry?: string;
+  onCompare?: (comparison: Comparison) => Promise<void>;
+  plan: ReactNode | ((comparison: Comparison) => ReactNode);
+  review: ReactNode;
+  balances?: ReactNode;
+  exchange?: ReactNode;
+  amount?: number;
+  recipient?: string;
+  paymentStatus: string;
+  accountId?: string;
+  banking?: {
+    recipientAccountLast4?: string;
+    currency?: string;
+    sourceCurrency?: string;
+  };
+  initialView?: string;
+  onEdit?: (details: {
+    amount: number;
+    recipient: string;
+    last4: string;
+  }) => Promise<void>;
+}) {
+  const workspaceCurrency = useWorkspaceCurrency();
+  const defaultSource =
+    banking?.sourceCurrency ??
+    getCountry(homeCountry ?? "")?.currency ??
+    sourceCurrency;
+  const defaultTarget =
+    banking?.currency ??
+    getCountry(travelCountry ?? "")?.currency ??
+    workspaceCurrency;
+  const [payFrom, setPayFrom] = useState(defaultSource);
+  const [payTo, setPayTo] = useState(defaultTarget);
+  useEffect(() => {
+    setPayFrom(defaultSource);
+    setPayTo(defaultTarget);
+  }, [defaultSource, defaultTarget]);
+  const currency = payTo;
+  const savedCurrency = banking?.currency ?? workspaceCurrency;
+  const country =
+    getCountry(travelCountry ?? "")?.name ??
+    countries.find((item) => item.currency === workspaceCurrency)?.name ??
+    "";
+  const [view, setView] = useState(initialView);
+  const [reviewing, setReviewing] = useState(paymentStatus !== "not_started");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({
+    amount: String(amount ?? ""),
+    recipient: recipient ?? "",
+    last4: banking?.recipientAccountLast4 ?? "",
+  });
+  const [comparisonAmount, setComparisonAmount] = useState(
+    String(
+      amount == null ? "" : convertMoney(amount, savedCurrency, defaultTarget),
+    ),
+  );
+  useEffect(
+    () =>
+      setComparisonAmount(
+        String(
+          amount == null ? "" : convertMoney(amount, savedCurrency, payTo),
+        ),
+      ),
+    [amount, savedCurrency, payTo],
+  );
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setEditing(false);
+  }, [currency]);
+  const [message, setMessage] = useState("");
+  useEffect(() => setView(initialView), [initialView]);
+  const locked = paymentStatus !== "not_started";
+  useEffect(() => {
+    if (locked) setReviewing(true);
+  }, [locked]);
+  return (
+    <section className="payment-workspace">
+      <div className="payment-workspace-heading">
+        <div className="payment-workspace-title">
+          <span className="tuition-heading-icon">
+            <GraduationCap size={24} />
+          </span>
+          <div>
+            <h1>Payments</h1>
+          </div>
+        </div>
+        <div className="payment-heading-actions">
+          <span className="payment-workspace-sandbox">
+            <ShieldCheck size={14} /> Sandbox · No real funds
+          </span>
+          {help}
+        </div>
+      </div>
+      <Tabs value={view} onValueChange={setView}>
+        <TabsList
+          className="payment-workspace-tabs"
+          aria-label="Payment sections"
+        >
+          <TabsTrigger value="tuition">
+            <GraduationCap size={16} /> Tuition
+          </TabsTrigger>
+          {balances && (
+            <TabsTrigger value="balances">
+              <WalletCards size={16} /> Balances
+            </TabsTrigger>
+          )}
+          {exchange && (
+            <TabsTrigger value="exchange">
+              <ArrowLeftRight size={16} /> Exchange
+            </TabsTrigger>
+          )}
+        </TabsList>
+        <TabsContent value="tuition">
+          {amount !== undefined && !reviewing && (
+            <div className="payment-comparison-search">
+              <div className="payment-comparison-recipient">
+                <span>
+                  <Landmark size={16} aria-hidden="true" />
+                  {recipient || "Choose your university"}
+                </span>
+                <Button
+                  variant="ghost"
+                  aria-label="Edit tuition details"
+                  disabled={locked || busy}
+                  onClick={() => {
+                    setDraft({
+                      amount: String(amount),
+                      recipient: recipient ?? "",
+                      last4: banking?.recipientAccountLast4 ?? "",
+                    });
+                    setEditing(true);
+                    setMessage("");
+                  }}
+                >
+                  <Pencil size={14} />
+                  Edit details
+                </Button>
+              </div>
+              <form
+                className="payment-comparison-bar"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  const nextAmount = Number(comparisonAmount);
+                  if (
+                    busy ||
+                    locked ||
+                    !Number.isFinite(nextAmount) ||
+                    nextAmount <= 0
+                  )
+                    return;
+                  setBusy(true);
+                  setMessage("");
+                  try {
+                    if (onCompare)
+                      await onCompare({
+                        sourceCurrency: payFrom,
+                        targetCurrency: payTo,
+                        amount: nextAmount,
+                      });
+                    else if (convexClient && accountId)
+                      await convexClient.mutation(api.paymentPreferences.save, {
+                        sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
+                        targetCurrency: payTo as "USD" | "GBP" | "CNY",
+                        amount: nextAmount,
+                      });
+                    else if (
+                      onEdit &&
+                      payFrom === sourceCurrency &&
+                      payTo === workspaceCurrency
+                    )
+                      await onEdit({
+                        amount: nextAmount,
+                        recipient: recipient ?? "",
+                        last4: banking?.recipientAccountLast4 ?? "",
+                      });
+                    else
+                      throw new Error(
+                        "Sign in to save your payment currencies.",
+                      );
+                    setMessage("Payment options updated.");
+                  } catch (error) {
+                    setMessage(
+                      error instanceof Error
+                        ? error.message
+                        : "Could not update your amount. Try again.",
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                <div className="payment-comparison-country">
+                  <span id="pay-from-label">Pay from</span>
+                  <Select
+                    value={payFrom}
+                    disabled={locked || busy}
+                    onValueChange={setPayFrom}
+                  >
+                    <SelectTrigger aria-labelledby="pay-from-label">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="ui-select-content">
+                      {countries.map((item) => (
+                        <SelectItem key={item.currency} value={item.currency}>
+                          {item.flag} {item.name} · {item.currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="payment-comparison-country">
+                  <span id="pay-to-label">Pay to</span>
+                  <Select
+                    value={payTo}
+                    disabled={locked || busy}
+                    onValueChange={setPayTo}
+                  >
+                    <SelectTrigger aria-labelledby="pay-to-label">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="ui-select-content">
+                      {countries.map((item) => (
+                        <SelectItem key={item.currency} value={item.currency}>
+                          {item.flag} {item.name} · {item.currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <label className="payment-comparison-amount">
+                  <span>University receives</span>
+                  <div>
+                    <Input
+                      money
+                      required
+                      min="0.01"
+                      max={convertMoney(1000000, "GBP", currency)}
+                      aria-label={`Tuition amount in ${currency}`}
+                      value={comparisonAmount}
+                      disabled={locked || busy}
+                      onChange={(event) =>
+                        setComparisonAmount(event.target.value)
+                      }
+                    />
+                    <strong>{currency}</strong>
+                  </div>
+                </label>
+                <Button
+                  className="payment-comparison-submit"
+                  disabled={locked || busy}
+                >
+                  <Search size={18} />
+                  {busy ? "Updating…" : "Compare"}
+                </Button>
+              </form>
+            </div>
+          )}
+          {editing && (
+            <form
+              className="brief-edit-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setBusy(true);
+                setMessage("");
+                try {
+                  const details = {
+                    amount: Number(draft.amount),
+                    recipient: draft.recipient.trim(),
+                    last4: draft.last4,
+                  };
+                  if (
+                    !Number.isFinite(details.amount) ||
+                    details.amount <= 0 ||
+                    !getUniversity(country, details.recipient) ||
+                    !/^\d{4}$/.test(details.last4)
+                  )
+                    throw new Error(
+                      "Enter a positive amount, select a listed university and enter four account digits.",
+                    );
+                  if (onEdit) await onEdit(details);
+                  else {
+                    if (!convexClient || !accountId)
+                      throw new Error("Sign in to save payment details.");
+                    await convexClient.mutation(api.paymentPreferences.save, {
+                      sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
+                      targetCurrency: payTo as "USD" | "GBP" | "CNY",
+                      ...details,
+                    });
+                  }
+                  setEditing(false);
+                  setMessage("Saved. Confirm the updated recipient below.");
+                } catch (error) {
+                  setMessage(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not save. Try again.",
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <label>
+                Tuition amount · {currency}
+                <Input
+                  required
+                  money
+                  min="0.01"
+                  max={convertMoney(1000000, "GBP", currency)}
+
+                  value={draft.amount}
+                  disabled={busy}
+                  onChange={(e) =>
+                    setDraft({ ...draft, amount: e.target.value })
+                  }
+                />
+              </label>
+              <UniversitySelect
+                label="University / recipient"
+                allowClear={false}
+                country={country}
+                value={draft.recipient}
+                disabled={busy}
+                onChange={(value) => setDraft({ ...draft, recipient: value })}
+              />
+              <label>
+                Recipient account last four digits
+                <Input
+                  required
+                  pattern="[0-9]{4}"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={draft.last4}
+                  disabled={busy}
+                  onChange={(e) =>
+                    setDraft({ ...draft, last4: e.target.value })
+                  }
+                />
+              </label>
+              <div className="brief-actions">
+                <Button disabled={busy}>
+                  {busy ? "Saving…" : "Save details"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setEditing(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+          {message && <p role="status">{message}</p>}
+          {!reviewing && !locked ? (
+            <>
+              <div
+                className="payment-choose-view"
+                inert={
+                  amount !== undefined &&
+                  (Number(comparisonAmount) !==
+                    convertMoney(amount, savedCurrency, payTo) ||
+                    payFrom !== (banking?.sourceCurrency ?? sourceCurrency) ||
+                    payTo !== savedCurrency)
+                }
+              >
+                {typeof plan === "function"
+                  ? plan({
+                      sourceCurrency: payFrom,
+                      targetCurrency: payTo,
+                      amount: Number(comparisonAmount) || 0,
+                    })
+                  : plan}
+              </div>
+              <div className="payment-review-actions">
+                <Button
+                  className="payment-review-next"
+                  disabled={
+                    busy ||
+                    (amount !== undefined &&
+                      (Number(comparisonAmount) !==
+                        convertMoney(amount, savedCurrency, payTo) ||
+                        payFrom !==
+                          (banking?.sourceCurrency ?? sourceCurrency) ||
+                        payTo !== savedCurrency))
+                  }
+                  onClick={() => setReviewing(true)}
+                >
+                  Review payment <ArrowRight size={16} />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                className="payment-back"
+                onClick={() => setReviewing(false)}
+                disabled={locked}
+              >
+                <ArrowLeft size={16} /> Routes
+              </Button>
+              <WorkspaceCurrencyProvider currency={savedCurrency}>
+                {review}
+              </WorkspaceCurrencyProvider>
+            </>
+          )}
+        </TabsContent>
+        <TabsContent value="balances">{balances}</TabsContent>
+        <TabsContent value="exchange">{exchange}</TabsContent>
+      </Tabs>
+    </section>
+  );
+}

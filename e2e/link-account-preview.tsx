@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
-import LinkAccount from "../src/LinkAccount";
-import "../src/styles.css";
-import "../src/typography.css";
+import LinkAccount from "../src/auth/LinkAccount";
+import "../src/styles/styles.css";
+import "../src/styles/typography.css";
 import "../src/components/ui/ui.css";
-import "../src/dark-mode.css";
+import "../src/styles/dark-mode.css";
 function Preview() {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState("");

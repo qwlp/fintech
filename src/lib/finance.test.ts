@@ -10,7 +10,7 @@ import {
   resolvePlanFunding,
   sumCosts,
 } from "./finance";
-import { costs, funding, routes } from "../data";
+import { costs, funding, routes } from "./data";
 
 describe("financial engine", () => {
   it("calculates the demo plan deterministically", () => {
