@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { SponsorConnectionLayout } from "../src/SponsorConnect";
+import { SponsorConnectionLayout } from "../src/auth/SponsorConnect";
 import { UserPlus, QrCode, Check, Unplug } from "lucide-react";
 import { Button } from "../src/components/ui/button";
 import { Input } from "../src/components/ui/input";
-import { SponsorDashboardView } from "../src/SponsorDashboard";
+import { SponsorDashboardView } from "../src/auth/SponsorDashboard";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../convex/_generated/api";
-import "../src/styles.css";
-import "../src/typography.css";
+import "../src/styles/styles.css";
+import "../src/styles/typography.css";
 import "../src/components/ui/ui.css";
-import "../src/dark-mode.css";
-import "../src/app-clean.css";
-import "../src/page-spacing.css";
+import "../src/styles/dark-mode.css";
+import "../src/styles/app-clean.css";
+import "../src/styles/page-spacing.css";
 
 type Student = FunctionReturnType<typeof api.sponsorLinks.dashboard>[number];
 const fixture = [

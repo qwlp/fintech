@@ -5,7 +5,8 @@ import {
   Bot,
   Check,
   CreditCard,
-  Home,
+  CircleDollarSign,
+  WalletCards,
   LayoutDashboard,
   Route,
   ShieldCheck,
@@ -87,9 +88,9 @@ export function Tour({
     "Move Planner": Route,
     "AI Agent": Bot,
     Payments: CreditCard,
-    Exchange: Home,
+    Exchange: CircleDollarSign,
     Sponsors: UsersRound,
-    Wallet: Home,
+    Wallet: WalletCards,
     Security: ShieldCheck,
   }[current.page];
 

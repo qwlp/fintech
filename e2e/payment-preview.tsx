@@ -1,10 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Security } from "../src/App";
-import "../src/app-clean.css";
-import "../src/dark-mode.css";
-import PaymentEvidence from "../src/PaymentEvidence";
-import "../src/styles.css";
+import { Security } from "../src/pages/Security";
+import "../src/styles/app-clean.css";
+import "../src/styles/dark-mode.css";
+import PaymentEvidence from "../src/features/payments/PaymentEvidence";
+import "../src/styles/styles.css";
 import "../src/components/ui/ui.css";
 const pendingRecipient =
   new URLSearchParams(location.search).get("recipient") === "pending";

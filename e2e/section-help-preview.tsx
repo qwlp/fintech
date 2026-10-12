@@ -1,10 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import SectionHelp from "../src/SectionHelp.tsx";
-import "../src/styles.css";
+import SectionHelp from "../src/components/SectionHelp.tsx";
+import "../src/styles/styles.css";
 import "../src/components/ui/ui.css";
-import "../src/sidebar.css";
-import "../src/dark-mode.css";
+import "../src/styles/sidebar.css";
+import "../src/styles/dark-mode.css";
 const sections = [
   "Dashboard",
   "Move Planner",

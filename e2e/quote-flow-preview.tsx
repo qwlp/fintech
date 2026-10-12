@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
-import PaymentWorkspace from "../src/PaymentWorkspace";
-import TuitionDecision from "../src/TuitionDecision";
-import { Payments } from "../src/App";
+import PaymentWorkspace from "../src/features/payments/PaymentWorkspace";
+import TuitionDecision from "../src/features/payments/TuitionDecision";
+import { Payments } from "../src/pages/Payments";
 import { tuitionQuote } from "../convex/tuitionDecision";
-import type { PaymentStatus } from "../src/types";
-import "../src/styles.css";
+import type { PaymentStatus } from "../src/types/app";
+import "../src/styles/styles.css";
 import "../src/components/ui/ui.css";
-import "../src/payment-simple.css";
-import "../src/app-clean.css";
+import "../src/styles/payment-simple.css";
+import "../src/styles/app-clean.css";
 const now = Date.now();
 const providers = [
   {

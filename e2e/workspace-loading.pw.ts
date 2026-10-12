@@ -15,7 +15,7 @@ for (const fail of [false, true]) {
       import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';
       import App from '/src/App.tsx';
       import { convexClient } from '/src/lib/convex.ts';
-      import '/src/styles.css';
+      import '/src/styles/styles.css';
       const state = {
         account: { _id: 'legacy', role: 'Student', setupComplete: true, countryFrom: 'Cambodia', countryTo: 'Canada', university: 'My University', name: 'Legacy Student', initials: 'LS', planName: 'Study', paymentStatus: 'not_started', selectedRoute: '', sponsorRequestSent: false },
         config: { profile: { fundingAmount: 1000, fundingCurrency: 'GBP' } },

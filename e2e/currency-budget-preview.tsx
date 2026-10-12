@@ -1,13 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import MobileNavigation from "../src/MobileNavigation";
-import "../src/brief.css";
-import { MovePlanner } from "../src/App";
-import { WorkspaceCurrencyProvider } from "../src/WorkspaceCurrency";
-import "../src/styles.css";
-import "../src/app-clean.css";
+import MobileNavigation from "../src/components/MobileNavigation";
+import "../src/styles/brief.css";
+import MovePlanner from "../src/features/planner/MovePlanner";
+import { WorkspaceCurrencyProvider } from "../src/components/WorkspaceCurrency";
+import "../src/styles/styles.css";
+import "../src/styles/app-clean.css";
 import "../src/components/ui/ui.css";
-import "../src/dark-mode.css";
+import "../src/styles/dark-mode.css";
 const currency = new URLSearchParams(location.search).get("currency") ?? "GBP";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <WorkspaceCurrencyProvider currency={currency}>

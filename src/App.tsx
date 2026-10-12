@@ -40,7 +40,7 @@ import { Tour } from "./components/Tour";
 import { convexApi, convexClient } from "./lib/convex";
 import { useBackgroundChat } from "./lib/use-background-chat";
 import { comparisonRoute } from "../shared/payment-comparison";
-import { convertMoney, formatCurrency } from "../shared/currency";
+import { convertMoney, convertMoneyText, formatCurrency } from "../shared/currency";
 import { quoteFingerprint } from "../convex/tuitionDecision";
 import {
   fundingCoverage,
@@ -295,7 +295,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       if (!(await transition("prepared"))) return false;
     } else {
       setLocalPaymentStatus("prepared");
-      addAudit("PAYMENT_PREPARED", "£2,000 tuition payment prepared; no funds moved", "MoveWise");
+      addAudit("PAYMENT_PREPARED", convertMoneyText("£2,000 tuition payment prepared; no funds moved", "GBP", currency), "MoveWise");
     }
     announce("Payment prepared — approval is still required");
     return true;
@@ -306,7 +306,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       if (!(await transition("approved"))) return false;
     } else {
       setLocalPaymentStatus("approved");
-      addAudit("PAYMENT_APPROVED", "Explicit approval recorded for £2,000 tuition payment");
+      addAudit("PAYMENT_APPROVED", convertMoneyText("Explicit approval recorded for £2,000 tuition payment", "GBP", currency));
     }
     announce("Approval recorded securely");
     return true;

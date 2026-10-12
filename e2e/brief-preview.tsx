@@ -1,20 +1,22 @@
-import SectionHelp from "../src/SectionHelp";
-import MobileNavigation from "../src/MobileNavigation";
+import SectionHelp from "../src/components/SectionHelp";
+import MobileNavigation from "../src/components/MobileNavigation";
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
-import { MovePlanner, Profile, Wallet } from "../src/App";
-import AgentTour from "../src/AgentTour";
-import InfoHelp from "../src/InfoHelp";
-import "../src/styles.css";
+import MovePlanner from "../src/features/planner/MovePlanner";
+import { Profile } from "../src/pages/Profile";
+import { Wallet } from "../src/pages/Wallet";
+import AgentTour from "../src/features/agent/AgentTour";
+import InfoHelp from "../src/components/InfoHelp";
+import "../src/styles/styles.css";
 import "../src/components/ui/ui.css";
-import "../src/workspace-polish.css";
-import "../src/headerless.css";
-import "../src/experience.css";
-import "../src/app-clean.css";
-import "../src/page-spacing.css";
-import "../src/brief.css";
-import "../src/dark-mode.css";
-import "../src/setup.css";
+import "../src/styles/workspace-polish.css";
+import "../src/styles/headerless.css";
+import "../src/styles/experience.css";
+import "../src/styles/app-clean.css";
+import "../src/styles/page-spacing.css";
+import "../src/styles/brief.css";
+import "../src/styles/dark-mode.css";
+import "../src/styles/setup.css";
 function Preview() {
   const [view, setView] = useState("Planner");
   const [account, setAccount] = useState({
