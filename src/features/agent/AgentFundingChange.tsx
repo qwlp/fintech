@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { convexApi, convexClient } from "../../lib/convex";
-import FundingConfirmation from "../../FundingConfirmation";
+import FundingConfirmation from "../../features/payments/FundingConfirmation";
 import { Button } from "../../components/ui/button";
 import { formatCurrency } from "../../../shared/currency";
 

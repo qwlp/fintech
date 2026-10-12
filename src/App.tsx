@@ -18,17 +18,17 @@ import {
   X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { WorkspaceCurrencyProvider } from "./WorkspaceCurrency";
+import { WorkspaceCurrencyProvider } from "./components/WorkspaceCurrency";
 import { Button } from "./components/ui/button";
-import Brand from "./Brand";
-import MobileNavigation from "./MobileNavigation";
-import SectionHelp from "./SectionHelp";
+import Brand from "./components/Brand";
+import MobileNavigation from "./components/MobileNavigation";
+import SectionHelp from "./components/SectionHelp";
 import AgentTour from "./features/agent/AgentTour";
-import MovePlanner from "./MovePlanner";
-import PaymentWorkspace from "./PaymentWorkspace";
-import PaymentEvidence from "./PaymentEvidence";
-import TuitionDecision from "./TuitionDecision";
-import FundingConfirmation from "./FundingConfirmation";
+import MovePlanner from "./features/planner/MovePlanner";
+import PaymentWorkspace from "./features/payments/PaymentWorkspace";
+import PaymentEvidence from "./features/payments/PaymentEvidence";
+import TuitionDecision from "./features/payments/TuitionDecision";
+import FundingConfirmation from "./features/payments/FundingConfirmation";
 import { Assistant, ChatHistory } from "./features/agent/Chat";
 import { Dashboard, ExchangeWorkspace } from "./pages/Dashboard";
 import { Profile } from "./pages/Profile";
@@ -48,8 +48,8 @@ import {
   resolvePlanFunding,
   sumCosts,
 } from "./lib/finance";
-import { initialAudit, costs, funding } from "./data";
-import type { AuditEvent, PaymentStatus } from "./types";
+import { initialAudit, costs, funding } from "./lib/data";
+import type { AuditEvent, PaymentStatus } from "./types/app";
 import type { DatabaseState, Page } from "./types/database";
 import type { Id } from "../convex/_generated/dataModel";
 import "./styles/brief.css";

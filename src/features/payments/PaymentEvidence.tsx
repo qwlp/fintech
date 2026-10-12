@@ -1,6 +1,6 @@
-import { routeProviderName } from "../shared/payment-routes";
-import { useWorkspaceCurrency } from "./WorkspaceCurrency";
-import { convertMoney, formatCurrency } from "../shared/currency";
+import { routeProviderName } from "../../../shared/payment-routes";
+import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
+import { convertMoney, formatCurrency } from "../../../shared/currency";
 import { useState } from "react";
 import {
   ShieldCheck,
@@ -12,9 +12,9 @@ import {
   ChevronRight,
   Play,
 } from "lucide-react";
-import { convexApi, convexClient } from "./lib/convex";
-import { Button } from "./components/ui/button";
-import "./styles/tuition-decision.css";
+import { convexApi, convexClient } from "../../lib/convex";
+import { Button } from "../../components/ui/button";
+import "../../styles/tuition-decision.css";
 
 type Proposal = {
   _id: string;

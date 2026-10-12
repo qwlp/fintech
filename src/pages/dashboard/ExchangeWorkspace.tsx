@@ -14,10 +14,10 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import InfoHelp from "../../InfoHelp";
+import InfoHelp from "../../components/InfoHelp";
 import { currencyRate, formatCurrency } from "../../../shared/currency";
 import { formatUSD } from "../../lib/finance";
-import { useWorkspaceCurrency } from "../../WorkspaceCurrency";
+import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
 import type { DatabaseState, Page } from "../../types/database";
 
 export function ExchangeWorkspace({

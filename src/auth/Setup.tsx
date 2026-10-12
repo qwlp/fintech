@@ -14,8 +14,8 @@ import {
 import { useMutation } from "convex/react";
 import type { Doc } from "../../convex/_generated/dataModel";
 import { convexApi } from "../lib/convex";
-import Brand from "../Brand";
-import FundingConfirmation from "../FundingConfirmation";
+import Brand from "../components/Brand";
+import FundingConfirmation from "../features/payments/FundingConfirmation";
 import UniversitySelect from "./UniversitySelect";
 import { convertMoney, studyCurrency } from "../../shared/currency";
 import {

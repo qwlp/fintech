@@ -18,12 +18,12 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import FundingConfirmation from "../FundingConfirmation";
+import FundingConfirmation from "../features/payments/FundingConfirmation";
 import LinkAccount from "../auth/LinkAccount";
-import SectionHelp from "../SectionHelp";
+import SectionHelp from "../components/SectionHelp";
 import SetupCountrySelect from "../auth/SetupCountrySelect";
 import UniversitySelect from "../auth/UniversitySelect";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../WorkspaceCurrency";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "../components/WorkspaceCurrency";
 import { formatCurrency, studyCurrency, convertMoney } from "../../shared/currency";
 import { countries, getCountry, getUniversity } from "../../shared/study";
 import type { Page } from "../types/database";

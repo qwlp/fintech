@@ -6,8 +6,8 @@ import {
   ExternalLink,
   RefreshCw,
 } from "lucide-react";
-import { Button } from "./components/ui/button";
-import "./styles/mid-market-rate.css";
+import { Button } from "./ui/button";
+import "../styles/mid-market-rate.css";
 
 type Observation = { date: string; base: string; quote: string; rate: number };
 const cache = new Map<string, { fetchedAt: number; rates: Observation[] }>();

@@ -1,7 +1,7 @@
-import { convertMoney, formatCurrency } from "../shared/currency";
-import { useWorkspaceCurrency } from "./WorkspaceCurrency";
-import { countries, getCountry, getUniversity } from "../shared/study";
-import UniversitySelect from "./auth/UniversitySelect";
+import { convertMoney, formatCurrency } from "../../../shared/currency";
+import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
+import { countries, getCountry, getUniversity } from "../../../shared/study";
+import UniversitySelect from "../../auth/UniversitySelect";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Landmark,
@@ -14,28 +14,28 @@ import {
   ArrowLeft,
   Search,
 } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "./components/ui/select";
-import { WorkspaceCurrencyProvider } from "./WorkspaceCurrency";
-import { api } from "../convex/_generated/api";
+} from "../../components/ui/select";
+import { WorkspaceCurrencyProvider } from "../../components/WorkspaceCurrency";
+import { api } from "../../../convex/_generated/api";
 export type Comparison = {
   sourceCurrency: string;
   targetCurrency: string;
   amount: number;
 };
-import { convexApi, convexClient } from "./lib/convex";
-import "./styles/tuition-decision.css";
-import "./styles/brief.css";
-import "./styles/payment-compact.css";
-import "./styles/payment-comparison.css";
+import { convexApi, convexClient } from "../../lib/convex";
+import "../../styles/tuition-decision.css";
+import "../../styles/brief.css";
+import "../../styles/payment-compact.css";
+import "../../styles/payment-comparison.css";
 export default function PaymentWorkspace({
   help,
   sourceCurrency = "USD",

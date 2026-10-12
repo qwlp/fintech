@@ -1,5 +1,5 @@
 import CountryBudget from "./CountryBudget";
-import Brand from "../Brand";
+import Brand from "../components/Brand";
 import { lazy, Suspense } from "react";
 import AppShowcase from "./AppShowcase";
 import { motion, useReducedMotion } from "motion/react";

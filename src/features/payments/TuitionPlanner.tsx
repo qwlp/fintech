@@ -1,4 +1,4 @@
-import InfoHelp from "./InfoHelp";
+import InfoHelp from "../../components/InfoHelp";
 import { useState } from "react";
 import {
   Check,
@@ -14,23 +14,23 @@ import {
   Clock3,
   CircleDollarSign,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import { Checkbox } from "./components/ui/checkbox";
+import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Checkbox } from "../../components/ui/checkbox";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "./components/ui/select";
+} from "../../components/ui/select";
 import {
   tuitionEstimates,
   universities,
   type TuitionCountry,
   type TuitionRoute,
-} from "./lib/tuition";
+} from "../../lib/tuition";
 const formatUSD = (value: number) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",

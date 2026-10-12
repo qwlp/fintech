@@ -1,6 +1,6 @@
-import { routeProviderName } from "../shared/payment-routes";
-import { useWorkspaceCurrency } from "./WorkspaceCurrency";
-import { studyCurrency } from "../shared/currency";
+import { routeProviderName } from "../../../shared/payment-routes";
+import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
+import { studyCurrency } from "../../../shared/currency";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -9,8 +9,8 @@ import {
   ReceiptText,
   WalletCards,
 } from "lucide-react";
-import { tuitionQuote, type DecisionRoute } from "../convex/tuitionDecision";
-import InfoHelp from "./InfoHelp";
+import { tuitionQuote, type DecisionRoute } from "../../../convex/tuitionDecision";
+import InfoHelp from "../../components/InfoHelp";
 
 type Proposal = {
   recipient: string;

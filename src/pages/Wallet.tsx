@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { ChevronRight, CircleDollarSign } from "lucide-react";
 import { formatCurrency, walletValue } from "../../shared/currency";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../WorkspaceCurrency";
-import InfoHelp from "../InfoHelp";
-import { wallets as fallbackWallets } from "../data";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "../components/WorkspaceCurrency";
+import InfoHelp from "../components/InfoHelp";
+import { wallets as fallbackWallets } from "../lib/data";
 import type { DatabaseState, Page } from "../types/database";
 
 export function Wallet({

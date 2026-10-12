@@ -1,8 +1,8 @@
 import { AlertDialog } from "radix-ui";
 import { Wallet } from "lucide-react";
-import { formatCurrency } from "../shared/currency";
-import { Button } from "./components/ui/button";
-import "./styles/funding-confirmation.css";
+import { formatCurrency } from "../../../shared/currency";
+import { Button } from "../../components/ui/button";
+import "../../styles/funding-confirmation.css";
 
 export default function FundingConfirmation({
   open,

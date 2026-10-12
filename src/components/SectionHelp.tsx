@@ -1,6 +1,6 @@
 import { CircleHelp, X } from "lucide-react";
 import { Popover } from "radix-ui";
-import "./styles/section-help.css";
+import "../styles/section-help.css";
 
 const descriptions: Record<string, string> = {
   Dashboard:

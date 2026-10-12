@@ -2,8 +2,8 @@ import { Slider } from "../components/ui/slider";
 import BudgetDonut, {
   planChartColors,
   FundingSourcesChart,
-} from "../BudgetDonut";
-import Brand from "../Brand";
+} from "../components/BudgetDonut";
+import Brand from "../components/Brand";
 import { useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,

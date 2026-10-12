@@ -5,7 +5,7 @@ import { Input } from "../../components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../components/ui/select";
 import { DatePicker } from "../../components/ui/date-picker";
 import { convertMoney } from "../../../shared/currency";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../../WorkspaceCurrency";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "../../components/WorkspaceCurrency";
 import type { DatabaseState, Page } from "../../types/database";
 
 function WorkspaceHeader({

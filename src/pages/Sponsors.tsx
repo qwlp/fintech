@@ -4,9 +4,9 @@ import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
 import SponsorConnect from "../auth/SponsorConnect";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../WorkspaceCurrency";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "../components/WorkspaceCurrency";
 import { convertMoney } from "../../shared/currency";
-import { sponsors as fallbackSponsors } from "../data";
+import { sponsors as fallbackSponsors } from "../lib/data";
 import type { DatabaseState } from "../types/database";
 
 export function Sponsors({

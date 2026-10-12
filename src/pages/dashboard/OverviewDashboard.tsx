@@ -8,10 +8,10 @@ import {
   Route,
   WalletCards,
 } from "lucide-react";
-import BudgetDonut, { planChartColors } from "../../BudgetDonut";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../../WorkspaceCurrency";
+import BudgetDonut, { planChartColors } from "../../components/BudgetDonut";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "../../components/WorkspaceCurrency";
 import { calculateMove } from "../../../shared/move-planner";
-import { funding as fallbackFunding, costs as fallbackCosts } from "../../data";
+import { funding as fallbackFunding, costs as fallbackCosts } from "../../lib/data";
 import {
   fundingGap,
   fundingCoverage,

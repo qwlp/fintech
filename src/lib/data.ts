@@ -5,7 +5,7 @@ import type {
   PaymentRoute,
   Sponsor,
   Wallet,
-} from "./types";
+} from "../types/app";
 
 export const costs: CostItem[] = [
   {

@@ -2,7 +2,7 @@ import { convertMoney } from "../../../shared/currency";
 import {
   useWorkspaceCurrency,
   useWorkspaceMoney,
-} from "../../WorkspaceCurrency";
+} from "../../components/WorkspaceCurrency";
 import {
   Area,
   AreaChart,

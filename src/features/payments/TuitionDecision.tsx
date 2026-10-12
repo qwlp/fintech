@@ -1,10 +1,10 @@
-import { routeProviderDetails } from "../shared/payment-routes";
-import { useWorkspaceCurrency } from "./WorkspaceCurrency";
-import { formatCurrency } from "../shared/currency";
-import { paymentOptionScore } from "../shared/payment-comparison";
+import { routeProviderDetails } from "../../../shared/payment-routes";
+import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
+import { formatCurrency } from "../../../shared/currency";
+import { paymentOptionScore } from "../../../shared/payment-comparison";
 import { Dialog } from "radix-ui";
-import InfoHelp from "./InfoHelp";
-import MidMarketRate from "./MidMarketRate";
+import InfoHelp from "../../components/InfoHelp";
+import MidMarketRate from "../../components/MidMarketRate";
 import { useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -17,12 +17,12 @@ import {
   ChevronDown,
   CreditCard,
 } from "lucide-react";
-import { assessTuition, type DecisionRoute } from "../convex/tuitionDecision";
-import { convexApi, convexClient } from "./lib/convex";
-import { Button } from "./components/ui/button";
-import { DatePicker } from "./components/ui/date-picker";
-import { Input } from "./components/ui/input";
-import "./styles/tuition-decision.css";
+import { assessTuition, type DecisionRoute } from "../../../convex/tuitionDecision";
+import { convexApi, convexClient } from "../../lib/convex";
+import { Button } from "../../components/ui/button";
+import { DatePicker } from "../../components/ui/date-picker";
+import { Input } from "../../components/ui/input";
+import "../../styles/tuition-decision.css";
 
 type Plan = {
   deadline: string;

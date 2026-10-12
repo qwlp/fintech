@@ -1,4 +1,4 @@
-import type { PaymentStatus } from "../types";
+import type { PaymentStatus } from "./app";
 
 export type DatabaseState = {
   account: {

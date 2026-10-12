@@ -10,9 +10,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import SectionHelp from "../SectionHelp";
-import { useWorkspaceMoney } from "../WorkspaceCurrency";
-import type { AuditEvent } from "../types";
+import SectionHelp from "../components/SectionHelp";
+import { useWorkspaceMoney } from "../components/WorkspaceCurrency";
+import type { AuditEvent } from "../types/app";
 
 export function Security({
   audit,

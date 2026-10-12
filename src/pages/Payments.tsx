@@ -17,7 +17,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
-import InfoHelp from "../InfoHelp";
+import InfoHelp from "../components/InfoHelp";
 import { formatCurrency } from "../../shared/currency";
 import {
   routeProviderName,
@@ -25,9 +25,9 @@ import {
 } from "../../shared/payment-routes";
 import { tuitionQuote } from "../../convex/tuitionDecision";
 import { convexApi, convexClient } from "../lib/convex";
-import { useWorkspaceCurrency } from "../WorkspaceCurrency";
+import { useWorkspaceCurrency } from "../components/WorkspaceCurrency";
 import type { DatabaseState } from "../types/database";
-import type { PaymentStatus } from "../types";
+import type { PaymentStatus } from "../types/app";
 
 export function Payments({
   accountId,

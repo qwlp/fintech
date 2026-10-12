@@ -1,6 +1,6 @@
 import SponsorDashboard from "./SponsorDashboard";
 import { needsStudySelectionUpdate } from "../../shared/study";
-import Brand from "../Brand";
+import Brand from "../components/Brand";
 import {
   Component,
   type ReactNode,

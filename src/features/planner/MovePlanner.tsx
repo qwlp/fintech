@@ -29,7 +29,7 @@ import {
   UserRound,
   Clock,
 } from "lucide-react";
-import profiles from "../shared/move-planner-data.json";
+import profiles from "../../../shared/move-planner-data.json";
 import {
   calculateMove,
   moveFields,
@@ -37,23 +37,23 @@ import {
   defaultMoveSettings,
   type MoveSettings,
   type MoveField,
-} from "../shared/move-planner";
-import { convertMoney } from "../shared/currency";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "./WorkspaceCurrency";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import { Checkbox } from "./components/ui/checkbox";
-import { DatePicker } from "./components/ui/date-picker";
+} from "../../../shared/move-planner";
+import { convertMoney } from "../../../shared/currency";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "../../components/WorkspaceCurrency";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Checkbox } from "../../components/ui/checkbox";
+import { DatePicker } from "../../components/ui/date-picker";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "./components/ui/select";
-import BudgetDonut from "./BudgetDonut";
-import { convexApi, convexClient } from "./lib/convex";
-import "./styles/move-planner.css";
+} from "../../components/ui/select";
+import BudgetDonut from "../../components/BudgetDonut";
+import { convexApi, convexClient } from "../../lib/convex";
+import "../../styles/move-planner.css";
 
 const groups: {
   name: string;

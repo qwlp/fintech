@@ -1,4 +1,4 @@
-import type { CostItem, FundingSource, PaymentRoute } from "../types";
+import type { CostItem, FundingSource, PaymentRoute } from "../types/app";
 
 export const sumCosts = (items: CostItem[]) =>
   items.reduce((sum, item) => sum + item.amount, 0);

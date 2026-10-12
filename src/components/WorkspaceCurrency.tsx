@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { formatCurrency } from "../shared/currency";
+import { formatCurrency } from "../../shared/currency";
 const CurrencyContext = createContext("GBP");
 export function WorkspaceCurrencyProvider({
   currency,

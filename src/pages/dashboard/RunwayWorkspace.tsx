@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { convertMoney, walletValue } from "../../../shared/currency";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../../WorkspaceCurrency";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "../../components/WorkspaceCurrency";
 import { StaticForecastChart } from "../../components/charts/ForecastCharts";
 import type { DatabaseState } from "../../types/database";
 

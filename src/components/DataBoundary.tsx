@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from "react";
-import { Button } from "./components/ui/button";
+import { Button } from "./ui/button";
 export default class DataBoundary extends Component<
   { children: ReactNode },
   { failed: boolean }

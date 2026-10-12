@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, Check, FileCheck2 } from "lucide-react";
 import { convertMoney, convertMoneyText } from "../../../shared/currency";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../../WorkspaceCurrency";
+import { useWorkspaceCurrency, useWorkspaceMoney } from "../../components/WorkspaceCurrency";
 import type { DatabaseState, Page } from "../../types/database";
 
 function WorkspaceHeader({
