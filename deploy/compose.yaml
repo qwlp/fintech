@@ -1,0 +1,25 @@
+services:
+  backend:
+    image: ${CONVEX_BACKEND_IMAGE:-ghcr.io/get-convex/convex-backend:latest}
+    stop_signal: SIGINT
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-3210}:3210"
+      - "${BIND_ADDRESS:-127.0.0.1}:${SITE_PORT:-3211}:3211"
+    volumes:
+      - convex-data:/convex/data
+    environment:
+      CONVEX_CLOUD_ORIGIN: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
+      CONVEX_SITE_ORIGIN: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
+      DISABLE_BEACON: "true"
+      DISABLE_METRICS_ENDPOINT: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  web:
+    image: ${WEB_SERVER_IMAGE:-nginx:alpine}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8080}:80"
+    volumes:
+      - ../dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+volumes:
+  convex-data:

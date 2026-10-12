@@ -1,4 +1,5 @@
-declare const process: { env: Record<string, string | undefined> };
+import { env } from "./_generated/server";
+import { aiConfiguration } from "../shared/ai-config";
 import {
   workspaceToolDefinitions,
   type WorkspaceTool,
@@ -107,8 +108,7 @@ export async function requestReply(
   text: string,
   executeTool?: ToolExecutor,
 ): Promise<string> {
-  const key = process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY;
-  if (!key) throw new Error("OpenRouter is not configured");
+  const config = aiConfiguration(env);
   const { history, bestProvider: _legacyProvider, ...financials } = context;
   const messages: any[] = [
     {
@@ -139,31 +139,28 @@ Account summary: ${JSON.stringify(financials)}`,
   ];
   const maxToolRounds = 10;
   for (let step = 0; step <= maxToolRounds; step++) {
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-          "X-OpenRouter-Title": "MoveWise",
-        },
-        signal: AbortSignal.timeout(45000),
-        body: JSON.stringify({
-          model: process.env.OPENROUTER_MODEL || "minimax/minimax-m2.5",
-          provider: { sort: "price" },
-          max_tokens: 2048,
-          reasoning: { exclude: true },
-          messages,
-          ...(executeTool
-            ? {
-                tools: toolDefinitions,
-                tool_choice: step === maxToolRounds ? "none" : "auto",
-              }
-            : {}),
-        }),
+    const response = await fetch(config.endpoint, {
+      method: "POST",
+      headers: {
+        ...(config.key ? { Authorization: `Bearer ${config.key}` } : {}),
+        "Content-Type": "application/json",
       },
-    );
+      signal: AbortSignal.timeout(config.timeoutMs),
+      body: JSON.stringify({
+        model: config.model,
+        ...(config.provider === "openrouter"
+          ? { provider: { sort: "price" }, reasoning: { exclude: true } }
+          : {}),
+        max_tokens: 2048,
+        messages,
+        ...(executeTool
+          ? {
+              tools: toolDefinitions,
+              tool_choice: step === maxToolRounds ? "none" : "auto",
+            }
+          : {}),
+      }),
+    });
     if (!response.ok)
       throw new Error(`AI service unavailable (${response.status})`);
     const data = await response.json();

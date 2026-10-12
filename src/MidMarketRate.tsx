@@ -1,3 +1,4 @@
+import { deployment } from "./lib/deployment";
 import { useEffect, useState } from "react";
 import {
   ArrowDownRight,
@@ -48,10 +49,14 @@ export default function MidMarketRate({
       .slice(0, 10);
     void (async () => {
       try {
-        const response = await fetch(
-          `https://api.frankfurter.dev/v2/rates?base=${encodeURIComponent(source)}&quotes=${encodeURIComponent(target)}&from=${from}&to=${today}`,
-          { signal: controller.signal },
-        );
+        if (!deployment.fxRatesUrl)
+          throw new Error("Rate service is not configured");
+        const url = new URL(deployment.fxRatesUrl, window.location.origin);
+        url.searchParams.set("base", source);
+        url.searchParams.set("quotes", target);
+        url.searchParams.set("from", from);
+        url.searchParams.set("to", today);
+        const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error("Rate unavailable");
         const payload: unknown = await response.json();
         if (!Array.isArray(payload)) throw new Error("Invalid rate data");
@@ -153,15 +158,17 @@ export default function MidMarketRate({
           />
         </svg>
       )}
-      <a
-        className="mid-market-rate-source"
-        href="https://frankfurter.dev/"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Exchange rate source: Frankfurter (opens in a new tab)"
-      >
-        <ExternalLink size={14} />
-      </a>
+      {deployment.fxSourceUrl && (
+        <a
+          className="mid-market-rate-source"
+          href={deployment.fxSourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${deployment.fxSourceLabel} (opens in a new tab)`}
+        >
+          <ExternalLink size={14} />
+        </a>
+      )}
     </aside>
   );
 }

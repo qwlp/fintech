@@ -4,6 +4,10 @@ A Topic C cross-border finance assistant for international students. MoveWise co
 
 **All payments, balances, recipient checks and route quotes are simulated. No real money moves.** The AI may calculate and prepare, but only the authenticated student can approve and execute a payment.
 
+## Self-host locally or in China
+
+See [Local deployment](docs/local-deployment.md) for the Docker setup, runtime frontend configuration and local AI model settings. Required service URLs and the AI model are configured explicitly; there are no external service defaults.
+
 ## Run locally
 
 Requires Bun and a configured Convex development account.
@@ -16,7 +20,7 @@ bun run ai:setup
 bun run dev
 ```
 
-The first Convex run configures the deployment and writes `.env.local`. Add a server-only `OPENROUTER_KEY` to `.env` before `ai:setup`; never prefix a secret with `VITE_`. `auth:setup` preserves existing signing keys. See `.env.example`. Email verification and emailed recovery require an email provider and are not enabled.
+The first Convex run configures the deployment and writes `.env.local`. Set server-only `AI_BASE_URL`, `AI_MODEL` and `AI_API_KEY` (or explicitly allow a private keyless local model) before `ai:setup`; never prefix a secret with `VITE_`. `auth:setup` preserves existing signing keys. See `.env.example`. Email verification and emailed recovery require an email provider and are not enabled.
 
 Create a Student account, finish onboarding, and open the workspace. New accounts start with an empty study plan; no passwordless demo account is automatically created. A separate Sponsor account can connect using a student's single-use, 24-hour invitation. Linked accounts share names; financial-request visibility requires a separate student permission.
 
@@ -68,7 +72,7 @@ For a live-model check using six fictional scenarios and local read-only tools:
 RUN_AGENT_EVAL=1 bun run eval:live
 ```
 
-This sends synthetic prompts and tool results to OpenRouter using the server key. It creates no accounts or payment proposals. The report preserves prior run summaries, raw current responses, errors and check outcomes; simple text checks are not a semantic guarantee or a full authenticated end-to-end test.
+This sends synthetic prompts and tool results to the configured AI service using its server settings. It creates no accounts or payment proposals. The report preserves prior run summaries, raw current responses, errors and check outcomes; simple text checks are not a semantic guarantee or a full authenticated end-to-end test.
 
 The AI chat shows recorded calculation details separately from generated prose. If a tool completes but the subsequent model explanation times out, those results remain visible, and any prepared proposal stays available in Payments. AI requests are limited to one per ten seconds and 100 per UTC day per account.
 
@@ -90,4 +94,4 @@ Existing sandbox accounts must save a deadline and refresh known fixture quotes 
 
 ## Scope
 
-React/TypeScript and Convex provide the application and authentication. OpenRouter supplies the model; model replies may be inaccurate. Budget calculations, quote arithmetic, approval checks and wallet debits are server-controlled. Quotes are illustrative fixtures, not current financial-provider recommendations. Real banking integrations, jurisdiction-specific compliance validation, verified recipients, operational monitoring and independent security review remain outside this sandbox.
+React/TypeScript and Convex provide the application and authentication. The configured AI service supplies the model; model replies may be inaccurate. Budget calculations, quote arithmetic, approval checks and wallet debits are server-controlled. Quotes are illustrative fixtures, not current financial-provider recommendations. Real banking integrations, jurisdiction-specific compliance validation, verified recipients, operational monitoring and independent security review remain outside this sandbox.

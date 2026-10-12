@@ -1,3 +1,4 @@
+import { aiConfiguration } from "../shared/ai-config";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { requestReply, type AgentTool } from "../convex/openrouter";
 import {
@@ -13,12 +14,11 @@ import {
 
 if (process.env.RUN_AGENT_EVAL !== "1") {
   console.log(
-    "Opt in with RUN_AGENT_EVAL=1 bun run eval:live. Sends six fictional scenarios to your configured OpenRouter model. Uses local read-only calculations, creates no accounts and performs no payments.",
+    "Opt in with RUN_AGENT_EVAL=1 bun run eval:live. Sends six fictional scenarios to your configured AI model. Uses local read-only calculations, creates no accounts and performs no payments.",
   );
   process.exit(0);
 }
-if (!process.env.OPENROUTER_KEY && !process.env.OPENROUTER_API_KEY)
-  throw new Error("Configure the server-only OpenRouter key first");
+const aiConfig = aiConfiguration(process.env);
 let previousRuns: unknown[] = [];
 try {
   const previous = JSON.parse(
@@ -223,7 +223,7 @@ const report = {
   harnessVersion: 3,
   previousRuns,
   generatedAt: new Date().toISOString(),
-  model: process.env.OPENROUTER_MODEL || "minimax/minimax-m2.5",
+  model: aiConfig.model,
   environment:
     "Live external model with fictional context and local read-only tool executor; no remote account or payment",
   scope:

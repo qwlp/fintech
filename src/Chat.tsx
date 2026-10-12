@@ -180,7 +180,7 @@ export function Assistant({
               <Dialog.Title>AI privacy</Dialog.Title>
               <Dialog.Description>
                 Your messages, recent conversation and minimized financial
-                summaries are sent to OpenRouter and its model provider.
+                summaries are sent to the AI service configured by this deployment’s operator.
               </Dialog.Description>
               <p className="assistant-privacy-status">
                 {aiEnabled ? "AI processing enabled" : "AI processing disabled"}

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { requestReply } from "../../convex/openrouter";
 
 const context = {
@@ -10,12 +10,46 @@ const context = {
   bestProvider: "Provider A",
   history: [{ role: "user", content: "My earlier question" }],
 };
+beforeEach(() => {
+  vi.stubEnv("AI_BASE_URL", "https://openrouter.ai/api/v1");
+  vi.stubEnv("AI_MODEL", "minimax/minimax-m2.5");
+  vi.stubEnv("AI_PROVIDER", "openrouter");
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
 
-describe("OpenRouter replies", () => {
+describe("AI replies", () => {
+  it("uses a local compatible server without OpenRouter-only fields or a bearer token", async () => {
+    vi.stubEnv("AI_PROVIDER", "openai-compatible");
+    vi.stubEnv("AI_BASE_URL", "http://localhost:11434/v1");
+    vi.stubEnv("AI_MODEL", "local-tool-model");
+    vi.stubEnv("AI_API_KEY", "");
+    vi.stubEnv("OPENROUTER_KEY", "");
+    vi.stubEnv("OPENROUTER_API_KEY", "");
+    vi.stubEnv("AI_ALLOW_NO_KEY", "true");
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: "Local reply" } }],
+          }),
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await requestReply(context, "Hello")).toBe("Local reply");
+    const [endpoint, options] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(endpoint).toBe("http://localhost:11434/v1/chat/completions");
+    expect(options.headers).not.toHaveProperty("Authorization");
+    const body = JSON.parse(options.body as string);
+    expect(body.model).toBe("local-tool-model");
+    expect(body).not.toHaveProperty("provider");
+    expect(body).not.toHaveProperty("reasoning");
+  });
   it("sends the server key, inexpensive model, account summary and history", async () => {
     vi.stubEnv("OPENROUTER_KEY", "test-key");
     vi.stubEnv("OPENROUTER_MODEL", "");

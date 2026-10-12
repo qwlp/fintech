@@ -3,13 +3,42 @@ import { parseEnv } from "node:util";
 import { spawnSync } from "node:child_process";
 
 const values = {};
-for (const file of [".env"]) {
-  if (existsSync(file)) Object.assign(values, parseEnv(readFileSync(file, "utf8")));
+for (const file of [".env", ".env.local"]) {
+  if (existsSync(file))
+    Object.assign(values, parseEnv(readFileSync(file, "utf8")));
 }
-const key = values.OPENROUTER_KEY || values.OPENROUTER_API_KEY;
-if (!key) throw new Error("Add OPENROUTER_KEY to .env");
-const result = spawnSync("bunx", ["convex", "env", "set", "OPENROUTER_KEY"], {
-  input: key, encoding: "utf8",
-});
-if (result.status !== 0) throw new Error("Could not configure OpenRouter on Convex");
-console.log("OpenRouter key configured on the development deployment.");
+Object.assign(values, process.env);
+if (!values.AI_BASE_URL || !(values.AI_MODEL || values.OPENROUTER_MODEL))
+  throw new Error("Set AI_BASE_URL and AI_MODEL in .env or the environment");
+if (
+  !(values.AI_API_KEY || values.OPENROUTER_KEY || values.OPENROUTER_API_KEY) &&
+  values.AI_ALLOW_NO_KEY !== "true"
+)
+  throw new Error(
+    "Set AI_API_KEY or explicitly set AI_ALLOW_NO_KEY=true for a local service",
+  );
+console.log(
+  values.CONVEX_SELF_HOSTED_URL
+    ? `Target: self-hosted backend at ${values.CONVEX_SELF_HOSTED_URL}`
+    : `Target: ${values.CONVEX_DEPLOYMENT || "CLI-selected deployment"}`,
+);
+for (const name of [
+  "AI_PROVIDER",
+  "AI_BASE_URL",
+  "AI_MODEL",
+  "AI_API_KEY",
+  "AI_ALLOW_NO_KEY",
+  "AI_TIMEOUT_MS",
+  "OPENROUTER_KEY",
+  "OPENROUTER_API_KEY",
+  "OPENROUTER_MODEL",
+]) {
+  // Include empty values to clear stale settings when switching providers.
+  const result = spawnSync("bunx", ["convex", "env", "set", name], {
+    input: values[name] || "",
+    encoding: "utf8",
+    env: { ...process.env, ...values },
+  });
+  if (result.status !== 0) throw new Error(`Could not configure ${name}`);
+}
+console.log("AI settings configured. Secrets were not printed.");
