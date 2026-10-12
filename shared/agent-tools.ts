@@ -89,11 +89,16 @@ const baseWorkspaceTools = {
   },
   update_profile: {
     description:
-      "Save requested profile fields, preserving omitted values. Only listed countries/universities. confirmedFunding sets the TOTAL declared study-plan funding, not a wallet balance. Explicit confirmedFunding changes return a pending confirmation card; they are NOT saved until the owner confirms in chat. Requested study-country changes save directly with currency rebasing. Changing study country clears university unless provided and rebases plan amounts.",
+      "Save requested profile fields, preserving omitted values. Only listed countries/universities. confirmedFunding sets the TOTAL declared study-plan funding, not a wallet balance. Explicit confirmedFunding changes return a pending confirmation card; they are NOT saved until the owner confirms in chat. Requested study-country changes save directly with currency rebasing. Changing study country clears university unless provided and rebases plan amounts. destinationCountries replaces the saved destination list and must include studyCountry (the primary destination). Adding destinations alone preserves the active financial plan.",
     parameters: object({
       name: { ...string(100), minLength: 1 },
       homeCountry: choice(countries.map((c) => c.name)),
       studyCountry: choice(countries.map((c) => c.name)),
+      destinationCountries: {
+        type: "array",
+        maxItems: countries.length,
+        items: choice(countries.map((c) => c.name)),
+      },
       university: choice(["", ...Object.values(universities).flat()]),
       course: string(100),
       courseStart: string(10),

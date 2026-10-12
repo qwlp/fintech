@@ -3,7 +3,6 @@ import { routeProviderName } from "../shared/payment-routes";
 import { isWorkspaceTool } from "../shared/agent-tools";
 import { runWorkspaceTool, resolveFundingChange } from "./agentTools";
 import {
-  mutationGeneric as mutation,
   actionGeneric as action,
   internalMutationGeneric as internalMutation,
   queryGeneric as query,
@@ -22,11 +21,13 @@ import {
   getUniversity,
   universities,
   validateStudySelection,
+  destinationCountries,
+  validateDestinations,
 } from "../shared/study";
 
 import { requireAccount } from "./ownership";
 import { internal } from "./_generated/api";
-import { internalQuery } from "./_generated/server";
+import { internalQuery, mutation } from "./_generated/server";
 import { requestReply } from "./openrouter";
 import { paymentTransition } from "./paymentEngine";
 import {
@@ -500,14 +501,20 @@ export const completeSetup = mutation({
     name: v.string(),
     countryFrom: v.string(),
     countryTo: v.string(),
+    countriesTo: v.optional(v.array(v.string())),
     university: v.string(),
     course: v.string(),
     courseStart: v.string(),
     fundingAmount: v.number(),
     sponsorSupport: v.string(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const account = await requireAccount(ctx);
+    const countriesTo = validateDestinations(
+      args.countryTo,
+      args.countriesTo ?? destinationCountries({ ...account, countryTo: args.countryTo }),
+    );
     validateStudySelection(
       args.countryFrom,
       args.countryTo,
@@ -527,7 +534,7 @@ export const completeSetup = mutation({
     const rows = await ctx.db
       .query("appConfig")
       .withIndex("by_account", (q) => q.eq("accountId", account._id))
-      .collect();
+      .take(100);
     const row = rows.find((item) => item.key === "profile");
     const value = {
       ...(row?.value ?? {}),
@@ -548,6 +555,7 @@ export const completeSetup = mutation({
         .join(""),
       countryFrom: getCountry(args.countryFrom)!.name,
       countryTo: getCountry(args.countryTo)?.name ?? "",
+      countriesTo,
       university: getUniversity(args.countryTo, args.university) ?? "",
       course: args.course.trim(),
       setupComplete: true,
@@ -559,6 +567,7 @@ export const completeSetup = mutation({
         key: "profile",
         value,
       });
+    return null;
   },
 });
 
@@ -568,6 +577,7 @@ export const updateProfile = mutation({
     name: v.string(),
     countryFrom: v.string(),
     countryTo: v.string(),
+    countriesTo: v.optional(v.array(v.string())),
     university: v.string(),
     course: v.string(),
     courseStart: v.string(),
@@ -575,8 +585,13 @@ export const updateProfile = mutation({
     sponsorSupport: v.string(),
     fundingAmount: v.number(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const owner = await requireAccount(ctx, args.accountId);
+    const countriesTo = validateDestinations(
+      args.countryTo,
+      args.countriesTo ?? destinationCountries({ ...owner, countryTo: args.countryTo }),
+    );
     validateStudySelection(
       args.countryFrom,
       args.countryTo,
@@ -589,6 +604,7 @@ export const updateProfile = mutation({
       financialStatus,
       sponsorSupport,
       fundingAmount,
+      countriesTo: _countriesTo,
       ...account
     } = args;
     if (!Number.isFinite(fundingAmount) || fundingAmount < 0)
@@ -604,12 +620,12 @@ export const updateProfile = mutation({
       .map((part) => part[0]?.toUpperCase())
       .join("");
     await syncWorkspaceCurrency(ctx, owner, account.countryTo);
-    await ctx.db.patch(accountId, { ...account, initials });
+    await ctx.db.patch(accountId, { ...account, countriesTo, initials });
     const row = (
       await ctx.db
         .query("appConfig")
         .withIndex("by_account", (q) => q.eq("accountId", accountId))
-        .collect()
+        .take(100)
     ).find((item) => item.key === "profile");
     const value = {
       ...(row?.value ?? {}),
@@ -631,6 +647,7 @@ export const updateProfile = mutation({
       actor: account.name,
       timestamp: Date.now(),
     });
+    return null;
   },
 });
 
@@ -957,6 +974,7 @@ export const chatContext = internalQuery({
         role: account.role ?? "",
         homeCountry: account.countryFrom ?? "",
         studyCountry: account.countryTo ?? "",
+        destinationCountries: destinationCountries(account),
         university: account.university ?? "",
         course: account.course ?? "",
         courseStart:

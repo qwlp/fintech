@@ -58,10 +58,13 @@ for (const width of [1440, 390]) {
     await expect(page.locator(".setup-country-menu")).toHaveCSS("opacity", "1");
     await page.screenshot({ path: `/tmp/movewise-countries-${width}.png` });
     await page.getByRole("option", { name: "China", exact: true }).click();
-    await page.getByRole("combobox", { name: "Study country" }).click();
+    await page
+      .getByRole("button", { name: "Destination countries", exact: true })
+      .click();
     await page
       .getByRole("option", { name: "United Kingdom", exact: true })
       .click();
+    await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(
       page.getByRole("heading", { name: "A little about your studies." }),
@@ -123,7 +126,8 @@ for (const width of [1440, 390]) {
     ).toBeUndefined();
     await confirmation.getByRole("button", { name: "Edit amount" }).click();
     await expect(confirmation).toHaveCount(0);
-    await expect(page.getByLabel("Confirmed funding (GBP)")).toHaveValue(
+    await expect(page.getByLabel("Confirmed funding (GBP)")).toHaveAttribute(
+      "aria-valuenow",
       "12000",
     );
     await page.getByRole("button", { name: "Finish setup" }).click();
@@ -169,10 +173,13 @@ test("country search, destination reset and rejection of unlisted universities",
   await page.getByRole("textbox", { name: "Search home country" }).fill("CNY");
   await expect(page.getByRole("option")).toHaveCount(1);
   await page.getByRole("option", { name: "China", exact: true }).click();
-  await page.getByRole("combobox", { name: "Study country" }).click();
+  await page
+    .getByRole("button", { name: "Destination countries", exact: true })
+    .click();
   await page
     .getByRole("option", { name: "United States", exact: true })
     .click();
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(
     page.getByText("Study currency: USD.", { exact: false }),
@@ -189,8 +196,14 @@ test("country search, destination reset and rejection of unlisted universities",
     page.getByRole("combobox", { name: "University · optional" }),
   ).toContainText("Columbia University");
   await page.getByRole("button", { name: "Back" }).click();
-  await page.getByRole("combobox", { name: "Study country" }).click();
+  await page
+    .getByRole("button", { name: "Destination countries", exact: true })
+    .click();
   await page.getByRole("option", { name: "China", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("button", { name: "Make China primary", exact: true })
+    .click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(
     page.getByRole("combobox", { name: "University · optional" }),
@@ -217,3 +230,93 @@ test("country search, destination reset and rejection of unlisted universities",
     university: "Tsinghua University",
   });
 });
+
+for (const width of [1440, 390]) {
+  test(`multiple destinations, keyboard search and primary removal at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openSetup(page);
+    await page.getByRole("combobox", { name: "Home country" }).click();
+    await page.getByRole("option", { name: "China", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Destination countries", exact: true })
+      .click();
+    await page
+      .getByRole("textbox", { name: "Search destination countries" })
+      .fill("GBP");
+    await expect(page.getByRole("option")).toHaveCount(1);
+    await page
+      .getByRole("textbox", { name: "Search destination countries" })
+      .press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("option", { name: "United Kingdom", exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
+    await page
+      .getByRole("textbox", { name: "Search destination countries" })
+      .fill("USD");
+    await page
+      .getByRole("option", { name: "United States", exact: true })
+      .click();
+    await page.keyboard.press("Escape");
+    await expect(
+      page
+        .getByRole("list", { name: "Selected destinations" })
+        .getByRole("listitem"),
+    ).toHaveCount(2);
+    await page
+      .getByRole("button", { name: "Make United States primary", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Remove United States", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", {
+        name: "United Kingdom is the primary destination",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Remove United Kingdom", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText(
+      "Choose your countries",
+    );
+    await page
+      .getByRole("button", { name: "Destination countries", exact: true })
+      .click();
+    await page
+      .getByRole("option", { name: "United Kingdom", exact: true })
+      .click();
+    await page
+      .getByRole("option", { name: "United States", exact: true })
+      .click();
+    await page.keyboard.press("Escape");
+    await page.screenshot({ path: `/tmp/multiple-destinations-${width}.png` });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(
+      page.getByText("Primary destination: United Kingdom.", { exact: false }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Finish setup", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Yes, confirm amount" }).click();
+    await expect(
+      page.getByRole("heading", { name: "You’re all set." }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => (window as any).savedSetup)).toMatchObject(
+      {
+        countryTo: "United Kingdom",
+        countriesTo: ["United Kingdom", "United States"],
+      },
+    );
+  });
+}

@@ -6,6 +6,7 @@ export type DatabaseState = {
     university: string;
     countryFrom: string;
     countryTo: string;
+    countriesTo?: string[];
     name: string;
     initials: string;
     role: string;

@@ -58,3 +58,36 @@ export function needsStudySelectionUpdate(account: {
     return true;
   }
 }
+
+/** Canonical destinations, with the active country first. Supports legacy profiles. */
+export function destinationCountries(account: {
+  countryTo: string;
+  countriesTo?: string[];
+}): string[] {
+  return [
+    ...new Set(
+      [account.countryTo, ...(account.countriesTo ?? [])]
+        .map((value) => getCountry(value ?? "")?.name)
+        .filter((value): value is NonNullable<typeof value> => !!value),
+    ),
+  ];
+}
+
+export function validateDestinations(
+  primary: string,
+  selected: string[],
+): string[] {
+  if (selected.length > countries.length)
+    throw new Error("Too many destination countries");
+  const normalized = selected.map((value) => {
+    const country = getCountry(value);
+    if (!country) throw new Error("Choose supported destination countries");
+    return country.name;
+  });
+  const active = getCountry(primary)?.name;
+  if (active && !normalized.includes(active))
+    throw new Error("Your primary destination must be selected");
+  if (!active && normalized.length)
+    throw new Error("Choose a primary destination");
+  return [...new Set(normalized)];
+}

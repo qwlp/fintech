@@ -1,3 +1,5 @@
+import AccountMenu from "../components/AccountMenu";
+import UniversityLabel from "../components/UniversityLabel";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -8,6 +10,7 @@ import {
   Home,
   Landmark,
   MapPin,
+  MoreHorizontal,
   Plus,
   Settings,
   ShieldCheck,
@@ -21,11 +24,23 @@ import { Input } from "../components/ui/input";
 import FundingConfirmation from "../features/payments/FundingConfirmation";
 import LinkAccount from "../auth/LinkAccount";
 import SectionHelp from "../components/SectionHelp";
+import DestinationCountries from "../auth/DestinationCountries";
 import SetupCountrySelect from "../auth/SetupCountrySelect";
 import UniversitySelect from "../auth/UniversitySelect";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../components/WorkspaceCurrency";
-import { formatCurrency, studyCurrency, convertMoney } from "../../shared/currency";
-import { countries, getCountry, getUniversity } from "../../shared/study";
+import {
+  useWorkspaceCurrency,
+  useWorkspaceMoney,
+} from "../components/WorkspaceCurrency";
+import {
+  formatCurrency,
+  studyCurrency,
+  convertMoney,
+} from "../../shared/currency";
+import {
+  destinationCountries,
+  getCountry,
+  getUniversity,
+} from "../../shared/study";
 import type { Page } from "../types/database";
 
 export function Profile({
@@ -36,14 +51,21 @@ export function Profile({
   totals,
   onSave,
   onAddCountry,
+  onSetup,
+  onSignOut,
 }: {
   announce: (message: string) => void;
   account?: any;
   config?: any;
   totals: { funded: number; gap: number; coverage: number };
-  onSave: (profile: Record<string, string>) => Promise<boolean>;
+  onSave: (
+    profile: Record<string, string>,
+    destinations: string[],
+  ) => Promise<boolean>;
   go: (page: Page) => void;
   onAddCountry: (country: string, label: string) => Promise<boolean>;
+  onSetup?: () => void;
+  onSignOut?: () => void;
 }) {
   const currency = useWorkspaceCurrency();
   const formatMoney = useWorkspaceMoney();
@@ -52,6 +74,9 @@ export function Profile({
   const [saving, setSaving] = useState(false);
   const [confirmingFunding, setConfirmingFunding] = useState(false);
   const [addingCountry, setAddingCountry] = useState(false);
+  const [destinations, setDestinations] = useState<string[]>(
+    destinationCountries(account ?? { countryTo: "" }),
+  );
   const [profile, setProfile] = useState({
     name: account?.name ?? "",
     home: getCountry(account?.countryFrom ?? "")?.name ?? "",
@@ -97,6 +122,7 @@ export function Profile({
 
   useEffect(() => {
     if (!account || editing) return;
+    setDestinations(destinationCountries(account));
     setProfile({
       name: account.name,
       home: getCountry(account.countryFrom)?.name ?? "",
@@ -114,7 +140,7 @@ export function Profile({
     if (saving) return;
     setSaving(true);
     try {
-      const saved = await onSave(profile);
+      const saved = await onSave(profile, destinations);
       setConfirmingFunding(false);
       if (!saved) return;
       announce("Profile saved");
@@ -145,6 +171,17 @@ export function Profile({
           </h2>
         </div>
         <div className="profile-edit-actions">
+          {onSetup && onSignOut && (
+            <AccountMenu onSetup={onSetup} onSignOut={onSignOut}>
+              <button
+                type="button"
+                className="profile-account-menu-trigger"
+                aria-label="Open account menu"
+              >
+                <MoreHorizontal size={18} aria-hidden="true" />
+              </button>
+            </AccountMenu>
+          )}
           {editing && (
             <button
               className="secondary"
@@ -160,6 +197,15 @@ export function Profile({
             disabled={saving}
             onClick={async () => {
               if (editing) {
+                if (
+                  !profile.home ||
+                  (account?.role === "Student" && !profile.study)
+                ) {
+                  announce(
+                    "Choose your home country and at least one destination",
+                  );
+                  return;
+                }
                 if (
                   !profile.funding.trim() ||
                   !Number.isFinite(Number(profile.funding)) ||
@@ -247,6 +293,25 @@ export function Profile({
               </h3>
             </div>
           </div>
+          {!editing && (
+            <div className="setup-field destination-countries">
+              <span>Destination countries</span>
+              <ul className="destination-list">
+                {destinations.map((country) => (
+                  <li key={country}>
+                    <span className="destination-name">
+                      <span aria-hidden="true">
+                        {getCountry(country)?.flag}
+                      </span>
+                      {country}
+                      <small>{getCountry(country)?.currency}</small>
+                    </span>
+                    {country === profile.study && <small>Primary</small>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="field-grid">
             {(
               [
@@ -278,7 +343,17 @@ export function Profile({
                     {!(
                       editing && ["home", "study", "university"].includes(key)
                     ) && <label htmlFor={`profile-${key}`}>{label}</label>}
-                    {editing && (key === "home" || key === "study") ? (
+                    {editing && key === "study" ? (
+                      <DestinationCountries
+                        value={destinations}
+                        primary={profile.study}
+                        disabled={saving}
+                        onChange={(selected, primary) => {
+                          setDestinations(selected);
+                          update("study", primary);
+                        }}
+                      />
+                    ) : editing && key === "home" ? (
                       <SetupCountrySelect
                         label={label}
                         value={profile[key]}
@@ -300,7 +375,11 @@ export function Profile({
                       />
                     ) : (
                       <strong className="profile-value">
-                        {profile[key] || "—"}
+                        {key === "university" && profile[key] ? (
+                          <UniversityLabel name={profile[key]} />
+                        ) : (
+                          profile[key] || "—"
+                        )}
                       </strong>
                     )}
                   </div>

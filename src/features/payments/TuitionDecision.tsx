@@ -12,9 +12,15 @@ import MidMarketRate from "../../components/MidMarketRate";
 import { useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowRight,
+  Check,
+  Coins,
+  FileText,
+  ReceiptText,
+  Wallet,
+  Zap,
+  SlidersHorizontal,
   RefreshCw,
   Clock3,
-  CheckCircle2,
   CircleAlert,
   Landmark,
   CalendarDays,
@@ -294,53 +300,34 @@ export default function TuitionDecision(props: Props) {
               </strong>
             </div>
           )}
-          <aside
-            className="payment-option-highlights"
-            aria-label="Payment comparison highlights"
-          >
-            <div className="payment-highlight payment-highlight-cheapest">
-              <Landmark size={18} aria-hidden="true" />
-              <div>
-                <span>Cheapest</span>
-                <strong>
-                  {cheapestOptions.map((route) => route.provider).join(" · ") ||
-                    "Quote unavailable"}
-                </strong>
-                <small>
-                  {cheapestOptions[0]
-                    ? sourceMoney(cheapest, cheapestOptions[0].sourceCurrency) +
-                      " total"
-                    : "Refresh quotes to compare costs"}
-                </small>
-              </div>
+          <div className="payment-comparison-heading">
+            <h2>
+              <SlidersHorizontal size={16} aria-hidden="true" />
+              Compare payment options
+            </h2>
+            <div className="payment-quote-tools">
+              <span>Totals include fees · Estimated delivery</span>{" "}
+              <InfoHelp term="Provider quote" />
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Refresh sandbox quotes"
+                disabled={busy || locked}
+                onClick={() =>
+                  void run(
+                    () =>
+                      props.onRefresh
+                        ? props.onRefresh()
+                        : mutation("refreshSandboxQuotes", {}),
+                    "Quotes refreshed.",
+                  )
+                }
+              >
+                <RefreshCw size={14} />
+                Refresh quotes
+              </Button>
             </div>
-            <div className="payment-highlight payment-highlight-fastest">
-              <Clock3 size={18} aria-hidden="true" />
-              <div>
-                <span>
-                  {fastestOptions.length > 1 ? "Fastest · tied" : "Fastest"}
-                </span>
-                <strong>
-                  {fastestOptions.map((route) => route.provider).join(" · ") ||
-                    "Timing unavailable"}
-                </strong>
-                <small>
-                  {fastestOptions
-                    .map((route) => route.delivery)
-                    .filter(
-                      (value, index, values) => values.indexOf(value) === index,
-                    )
-                    .join(" · ") || "Check route details for delivery times"}
-                </small>
-              </div>
-            </div>
-            <p>
-              Based on the displayed quotes and estimated delivery times.
-              {decision.routes.some((route) => !route.fresh)
-                ? " Refresh quotes before choosing an option."
-                : ""}
-            </p>
-          </aside>
+          </div>
           <div className="tuition-route-list">
             {decision.routes.map((route) => (
               <article
@@ -352,6 +339,8 @@ export default function TuitionDecision(props: Props) {
                   <div className="payment-option-rating">
                     <span
                       className="payment-option-score"
+                      role="img"
+                      aria-label={`${route.provider} score: ${paymentOptionScore(route, cheapest, props.routes.find((item) => item.key === route.routeKey)?.maxBusinessDays).toFixed(1)} out of 10`}
                       data-score-band={
                         paymentOptionScore(
                           route,
@@ -394,9 +383,13 @@ export default function TuitionDecision(props: Props) {
                       </strong>
                     </span>
                     <span>
-                      Our score <InfoHelp term="Payment score" />
+                      <span>
+                        Our score<small>out of 10</small>
+                      </span>{" "}
+                      <InfoHelp term="Payment score" />
                     </span>
                   </div>
+
                   <strong>
                     {paymentRouteCategory(route.provider) === "bankCard" ? (
                       <CreditCard size={18} />
@@ -411,7 +404,12 @@ export default function TuitionDecision(props: Props) {
                   >
                     {providerBrands(route.provider, route.targetCurrency).map(
                       (brand) => (
-                        <span className="payment-provider-brand" key={brand.id}>
+                        <span
+                          className="payment-provider-brand"
+                          key={brand.id}
+                          aria-label={brand.name}
+                          title={brand.name}
+                        >
                           <span className="payment-provider-logo">
                             <img
                               src={`/provider-logos/${brand.id}.${brand.id === "swift" ? "jpg" : "png"}`}
@@ -428,52 +426,44 @@ export default function TuitionDecision(props: Props) {
                       ),
                     )}
                   </div>
-                  {(cheapestOptions.some(
-                    (item) => item.routeKey === route.routeKey,
-                  ) ||
-                    fastestOptions.some(
-                      (item) => item.routeKey === route.routeKey,
-                    )) && (
-                    <div className="payment-route-badges">
-                      {cheapestOptions.some(
-                        (item) => item.routeKey === route.routeKey,
-                      ) && (
-                        <small className="payment-route-badge payment-route-badge-cost">
-                          Cheapest{!route.fresh ? " estimate" : ""}
-                        </small>
-                      )}
-                      {fastestOptions.some(
-                        (item) => item.routeKey === route.routeKey,
-                      ) && (
-                        <small className="payment-route-badge payment-route-badge-speed">
-                          Fastest estimate
-                        </small>
-                      )}
-                    </div>
-                  )}
-                  <span>
-                    {route.eligible ? (
-                      <CheckCircle2 size={14} />
-                    ) : (
-                      <CircleAlert size={14} />
-                    )}
-                    {props.selectedRoute === route.routeKey
-                      ? "Selected"
-                      : route.eligible
-                        ? "Available"
-                        : "Unavailable"}
-                  </span>
                 </div>
+                {(cheapestOptions.some(
+                  (item) => item.routeKey === route.routeKey,
+                ) ||
+                  fastestOptions.some(
+                    (item) => item.routeKey === route.routeKey,
+                  )) && (
+                  <div className="payment-route-badges">
+                    {cheapestOptions.some(
+                      (item) => item.routeKey === route.routeKey,
+                    ) && (
+                      <small className="payment-route-badge payment-route-badge-cost">
+                        <Coins size={11} aria-hidden="true" />
+                        Cheapest{!route.fresh ? " estimate" : ""}
+                      </small>
+                    )}
+                    {fastestOptions.some(
+                      (item) => item.routeKey === route.routeKey,
+                    ) && (
+                      <small className="payment-route-badge payment-route-badge-speed">
+                        <Zap size={11} aria-hidden="true" />
+                        Fastest estimate
+                      </small>
+                    )}
+                  </div>
+                )}
                 <div className="payment-comparison-delivery">
-                  <small>Transfer time</small>
-                  <strong>
-                    <Clock3 size={15} />
-                    {route.delivery}
-                  </strong>
-                  <span>{route.provider}</span>
+                  <small>
+                    <Clock3 size={13} aria-hidden="true" />
+                    Transfer time
+                  </small>
+                  <strong>{route.delivery}</strong>
                 </div>
                 <div className="payment-comparison-fees">
-                  <small>Fee & exchange rate</small>
+                  <small>
+                    <ReceiptText size={13} aria-hidden="true" />
+                    Fee & exchange rate
+                  </small>
                   <strong>
                     Fee {sourceMoney(route.feeUSD, route.sourceCurrency)}
                   </strong>
@@ -484,18 +474,13 @@ export default function TuitionDecision(props: Props) {
                 </div>
                 <div className="tuition-route-summary">
                   <div className="payment-comparison-total">
-                    <small>Total you pay</small>
+                    <small>
+                      <Wallet size={13} aria-hidden="true" />
+                      Total you pay
+                    </small>
                     <strong>
                       {sourceMoney(route.totalUSD, route.sourceCurrency)}
                     </strong>
-                    <span>
-                      University gets{" "}
-                      {formatCurrency(
-                        banking.paymentAmount ?? 0,
-                        route.targetCurrency,
-                        2,
-                      )}
-                    </span>
                   </div>
                   <Button
                     variant="outline"
@@ -523,11 +508,44 @@ export default function TuitionDecision(props: Props) {
                     {props.selectedRoute === route.routeKey
                       ? "Selected"
                       : "Choose option"}
-                    <ArrowRight size={15} />
+                    {props.selectedRoute === route.routeKey ? (
+                      <Check size={15} aria-hidden="true" />
+                    ) : (
+                      <ArrowRight size={15} aria-hidden="true" />
+                    )}
                   </Button>
                 </div>
                 {!route.eligible && (
-                  <p className="tuition-route-blocker">{route.blockers[0]}</p>
+                  <div className="tuition-route-blocker">
+                    {route.blockers[0] === "Set a tuition deadline" ? (
+                      <button
+                        type="button"
+                        className="payment-deadline-action"
+                        aria-label="Set a tuition deadline"
+                        title="Set a tuition deadline"
+                        disabled={locked || busy}
+                        onClick={(event) => {
+                          const settings = event.currentTarget
+                            .closest(".tuition-decision")
+                            ?.querySelector<HTMLDetailsElement>(
+                              ".payment-plan-settings",
+                            );
+                          if (settings) {
+                            settings.open = true;
+                            settings
+                              .querySelector<HTMLButtonElement>(
+                                '[aria-label="Tuition deadline"]',
+                              )
+                              ?.click();
+                          }
+                        }}
+                      >
+                        <CalendarDays size={16} aria-hidden="true" />
+                      </button>
+                    ) : (
+                      route.blockers[0]
+                    )}
+                  </div>
                 )}
                 <Dialog.Root
                   open={detailRoute === route.routeKey}
@@ -542,6 +560,7 @@ export default function TuitionDecision(props: Props) {
                       className="route-detail-button"
                       aria-label={`Details for ${route.provider}`}
                     >
+                      <FileText size={13} aria-hidden="true" />
                       Details
                     </Button>
                   </Dialog.Trigger>
@@ -558,6 +577,15 @@ export default function TuitionDecision(props: Props) {
                       <Dialog.Description>
                         Rate, fees and availability for this quote.
                       </Dialog.Description>
+                      <p>
+                        University receives{" "}
+                        {formatCurrency(
+                          banking.paymentAmount ?? 0,
+                          route.targetCurrency,
+                          2,
+                        )}
+                        .
+                      </p>
                       <dl className="route-quick-facts">
                         <div>
                           <dt>
@@ -635,34 +663,15 @@ export default function TuitionDecision(props: Props) {
             ))}
           </div>
           <div className="tuition-decision-footer">
-            <InfoHelp term="Provider quote" />
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Refresh sandbox quotes"
-              disabled={busy || locked}
-              onClick={() =>
-                void run(
-                  () =>
-                    props.onRefresh
-                      ? props.onRefresh()
-                      : mutation("refreshSandboxQuotes", {}),
-                  "Quotes refreshed.",
-                )
-              }
-            >
-              <RefreshCw size={14} />
-              Refresh
-            </Button>
+            <div className="payment-comparison-market-bottom">
+              <MidMarketRate
+                source={props.routes[0]?.sourceCurrency ?? "USD"}
+                target={currency}
+              />
+            </div>
           </div>
         </>
       )}
-      <div className="payment-comparison-market-bottom">
-        <MidMarketRate
-          source={props.routes[0]?.sourceCurrency ?? "USD"}
-          target={currency}
-        />
-      </div>
       {(error || assessment.error) && (
         <p className="tuition-error" role="alert">
           {error || assessment.error}

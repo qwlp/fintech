@@ -1,3 +1,4 @@
+import UniversityLabel from "../components/UniversityLabel";
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -315,9 +316,10 @@ export function Payments({
                     </form>
                   )}
                 <div className="pay-recipient">
-                  <Landmark size={20} />
                   <div>
-                    <strong>{recipient}</strong>
+                    <strong>
+                      <UniversityLabel name={recipient} />
+                    </strong>
                     <small>
                       ••••{" "}
                       {activeProposal?.recipientLast4 ??

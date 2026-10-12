@@ -5,6 +5,8 @@ import { requireAccount } from "./ownership";
 import { convertMoney, studyCurrency } from "../shared/currency";
 import {
   validateStudySelection,
+  destinationCountries,
+  validateDestinations,
   countries,
   universities,
 } from "../shared/study";
@@ -43,6 +45,10 @@ function profilePatch(state: any, args: any) {
     name: args.name ?? account.name,
     countryFrom: args.homeCountry ?? account.countryFrom,
     countryTo,
+    countriesTo: validateDestinations(
+      countryTo,
+      args.destinationCountries ?? destinationCountries({ ...account, countryTo }),
+    ),
     university:
       args.university ??
       (countryTo === account.countryTo ? account.university : ""),
@@ -106,6 +112,7 @@ function changeVersion(state: any, name: string, args: any) {
       name: state.account.name,
       countryFrom: state.account.countryFrom,
       countryTo: state.account.countryTo,
+      countriesTo: destinationCountries(state.account),
       university: state.account.university,
       course: state.account.course,
       profile: state.config.profile ?? {},
@@ -161,6 +168,7 @@ export async function runWorkspaceTool(
         name: account.name,
         homeCountry: account.countryFrom,
         studyCountry: account.countryTo,
+        destinationCountries: destinationCountries(account),
         university: account.university,
         course: account.course,
         ...state.config.profile,

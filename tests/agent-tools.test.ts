@@ -71,6 +71,31 @@ async function fixture() {
 }
 
 describe("agent workspace editing", () => {
+  it("adds and removes destinations without changing the primary financial plan", async () => {
+    const { tool, state } = await fixture();
+    await tool("update_profile", {
+      destinationCountries: ["United Kingdom", "United States"],
+    });
+    let saved = await state();
+    expect(saved.account.countriesTo).toEqual([
+      "United Kingdom",
+      "United States",
+    ]);
+    expect(saved.account.countryTo).toBe("United Kingdom");
+    expect(saved.costs[0].amount).toBe(7800);
+    expect(saved.account.university).toBe("University of Manchester");
+    await tool("update_profile", { course: "Mathematics" });
+    expect((await state()).account.countriesTo).toEqual([
+      "United Kingdom",
+      "United States",
+    ]);
+    await tool("update_profile", { destinationCountries: ["United Kingdom"] });
+    saved = await state();
+    expect(saved.account.countriesTo).toEqual(["United Kingdom"]);
+    await expect(
+      tool("update_profile", { destinationCountries: ["United States"] }),
+    ).rejects.toThrow("primary");
+  });
   it("saves combined university, tuition, payment and planner edits without touching money", async () => {
     const { tool, state } = await fixture();
     const before = await state();

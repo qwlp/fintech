@@ -1,3 +1,4 @@
+import AccountMenu from "./components/AccountMenu";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
@@ -10,7 +11,6 @@ import {
   LayoutDashboard,
   Moon,
   Route,
-  Settings,
   ShieldCheck,
   Sun,
   UserRound,
@@ -373,13 +373,14 @@ function App({ onSignOut }: { onSignOut: () => void }) {
 
   const sendMessage = (text: string) => backgroundChat.send(text, activeChat);
 
-  const saveProfile = (profile: Record<string, string>) =>
+  const saveProfile = (profile: Record<string, string>, destinations: string[]) =>
     account
       ? mutate(convexApi.updateProfile, {
           accountId: account._id,
           name: profile.name,
           countryFrom: profile.home,
           countryTo: profile.study,
+          countriesTo: destinations,
           university: profile.university,
           course: profile.course,
           courseStart: profile.start,
@@ -564,17 +565,11 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   )}
               </div>
             </div>
-            <button className="btn secondary" onClick={() => { location.hash = "setup"; }}>
-              <Settings size={16} /> Set up account
-            </button>
-            <button className="btn secondary" onClick={onSignOut}>
-              Sign out
-            </button>
+            <AccountMenu onProfile={() => go("Profile")} onSetup={() => { location.hash = "setup"; }} onSignOut={onSignOut}>
             <button
               className={`profile ${page === "Profile" ? "active" : ""}`}
-              aria-label="Open your profile"
+              aria-label="Open account menu"
               aria-current={page === "Profile" ? "page" : undefined}
-              onClick={() => go("Profile")}
             >
               <span>{account?.initials ?? "DC"}</span>
               <div>
@@ -583,6 +578,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               </div>
               <ChevronRight size={17} />
             </button>
+            </AccountMenu>
           </div>
         </aside>
         <main className={page === "Dashboard" ? "dashboard-page" : ""}>
@@ -630,6 +626,8 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                         })
                       : Promise.resolve(false)
                   }
+                  onSignOut={onSignOut}
+                  onSetup={() => { location.hash = "setup"; }}
                 />
               )}
               {page === "Move Planner" && (

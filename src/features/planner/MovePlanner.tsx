@@ -1,3 +1,4 @@
+import UniversityLabel from "../../components/UniversityLabel";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
@@ -39,7 +40,10 @@ import {
   type MoveField,
 } from "../../../shared/move-planner";
 import { convertMoney } from "../../../shared/currency";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../../components/WorkspaceCurrency";
+import {
+  useWorkspaceCurrency,
+  useWorkspaceMoney,
+} from "../../components/WorkspaceCurrency";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -353,7 +357,11 @@ export default function MovePlanner({
           <SelectContent className="ui-select-content">
             {options.map((o) => (
               <SelectItem key={o.value} value={o.value}>
-                {o.label}
+                {label === "University estimates" ? (
+                  <UniversityLabel name={o.label} />
+                ) : (
+                  o.label
+                )}
               </SelectItem>
             ))}
           </SelectContent>

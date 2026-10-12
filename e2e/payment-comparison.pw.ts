@@ -33,21 +33,12 @@ for (const width of [390, 1440])
           .locator(".tuition-route-title")
           .filter({ hasText: "Education Platforms" }),
       ).toHaveCount(1);
-      const highlights = page.getByRole("complementary", {
-        name: "Payment comparison highlights",
-      });
       await expect(
-        highlights.locator(".payment-highlight-cheapest"),
-      ).toContainText("Fintech Provider");
+        page.locator(".tuition-route").first().locator(".payment-route-badges"),
+      ).toContainText("Cheapest");
       await expect(
-        highlights.locator(".payment-highlight-cheapest"),
-      ).toContainText("$2,592.38 total");
-      await expect(
-        highlights.locator(".payment-highlight-fastest"),
-      ).toContainText("Fintech Provider");
-      await expect(
-        highlights.locator(".payment-highlight-fastest"),
-      ).toContainText("1–2 business days");
+        page.locator(".tuition-route").first().locator(".payment-route-badges"),
+      ).toContainText("Fastest");
       await expect(
         page.locator('.tuition-route[data-category="platform"]'),
       ).toHaveCSS("border-left-width", "1px");
@@ -87,7 +78,7 @@ for (const width of [390, 1440])
         "Payment options updated",
       );
       await expect(first.locator(".payment-comparison-total")).toContainText(
-        "£2,500.50",
+        "$3,239.03",
       );
       await page
         .getByRole("button", {
@@ -96,6 +87,7 @@ for (const width of [390, 1440])
         })
         .click();
       await expect(page.getByRole("dialog")).toBeVisible();
+      await expect(page.getByRole("dialog")).toContainText("£2,500.50");
       await page.getByRole("button", { name: "Close", exact: true }).click();
       expect(
         await page.evaluate(
@@ -107,7 +99,7 @@ for (const width of [390, 1440])
           await first
             .locator(".tuition-route-summary")
             .evaluate((el) => getComputedStyle(el).display),
-        ).toBe("flex");
+        ).toBe("contents");
     });
   }
 
@@ -160,7 +152,9 @@ test("currency controls default to home and travel countries and recalculate opt
     .getByRole("button", { name: "About payment score", exact: true })
     .first()
     .click();
-  await expect(page.getByRole("dialog")).toContainText("A score out of 10");
+  await expect(
+    page.getByText("A score out of 10", { exact: false }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   expect(
     await page.evaluate(

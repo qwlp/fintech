@@ -159,10 +159,13 @@ test("registration opens the workspace, restores the session, and signs in again
   await expect(page.locator(".setup-page")).toBeVisible({ timeout: 15000 });
   await page.getByRole("combobox", { name: "Home country" }).click();
   await page.getByRole("option", { name: "China", exact: true }).click();
-  await page.getByRole("combobox", { name: "Study country" }).click();
+  await page
+    .getByRole("button", { name: "Destination countries", exact: true })
+    .click();
   await page
     .getByRole("option", { name: "United Kingdom", exact: true })
     .click();
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Continue" }).click();
   await page
     .getByRole("heading", { name: "A little about your studies." })
@@ -255,7 +258,9 @@ test("country budget currencies and editable controls", async ({ page }) => {
     "US$36,000",
   );
   await budget.getByRole("tab", { name: "China", exact: true }).click();
-  await expect(budget.locator(".home-budget-results")).toContainText("CN¥100,000");
+  await expect(budget.locator(".home-budget-results")).toContainText(
+    "CN¥100,000",
+  );
   await budget
     .getByRole("tab", { name: "United Kingdom", exact: true })
     .click();

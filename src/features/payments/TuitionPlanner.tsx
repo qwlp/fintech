@@ -1,3 +1,4 @@
+import UniversityLabel from "../../components/UniversityLabel";
 import InfoHelp from "../../components/InfoHelp";
 import { useState } from "react";
 import {
@@ -14,7 +15,12 @@ import {
   Clock3,
   CircleDollarSign,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -146,7 +152,7 @@ export default function TuitionPlanner() {
                   <SelectContent className="ui-select-content">
                     {universities[destination].map((name) => (
                       <SelectItem key={name} value={name}>
-                        {name}
+                        <UniversityLabel name={name} />
                       </SelectItem>
                     ))}
                   </SelectContent>

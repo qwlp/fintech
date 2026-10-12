@@ -15,6 +15,7 @@ export default defineSchema({
     planName: v.string(),
     countryFrom: v.string(),
     countryTo: v.string(),
+    countriesTo: v.optional(v.array(v.string())),
     university: v.string(),
     course: v.string(),
     setupComplete: v.optional(v.boolean()),

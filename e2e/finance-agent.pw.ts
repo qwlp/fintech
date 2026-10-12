@@ -22,10 +22,13 @@ test("authenticated student completes an approved tuition task", async ({
   await expect(page.locator(".setup-page")).toBeVisible({ timeout: 20000 });
   await page.getByRole("combobox", { name: "Home country" }).click();
   await page.getByRole("option", { name: "Cambodia", exact: true }).click();
-  await page.getByRole("combobox", { name: "Study country" }).click();
+  await page
+    .getByRole("button", { name: "Destination countries", exact: true })
+    .click();
   await page
     .getByRole("option", { name: "United Kingdom", exact: true })
     .click();
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("University · optional").fill("Example UK University");
   await page.getByRole("button", { name: "Continue" }).click();

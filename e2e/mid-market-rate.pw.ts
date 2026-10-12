@@ -47,15 +47,17 @@ for (const width of [320, 390, 1440]) {
       await expect(card).toContainText("Daily reference · 2026-10-09");
       await expect(card.getByRole("img")).toBeVisible();
       await expect(page.locator(".tuition-route-title").first()).toContainText(
-        "Wise",
+        "Fintech Provider",
       );
       await expect(page.locator(".tuition-route-title").nth(1)).toContainText(
-        "Debit / credit card",
+        "Education Platforms",
       );
       await expect(page.locator(".tuition-route-title").last()).toContainText(
-        "SWIFT bank transfer",
+        "Bank & Card",
       );
-      await page.getByRole("button", { name: "Details for Wise" }).click();
+      await page
+        .getByRole("button", { name: "Details for Fintech Provider" })
+        .click();
       await expect(page.getByRole("dialog")).toContainText("7.1208");
       await page.getByRole("button", { name: "Close", exact: true }).click();
       expect(
@@ -63,13 +65,10 @@ for (const width of [320, 390, 1440]) {
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      if (width === 1440) {
-        const heading = await page
-          .getByRole("heading", { name: "Choose a route" })
-          .boundingBox();
-        const rate = await card.boundingBox();
-        expect(rate!.x).toBeGreaterThan(heading!.x + heading!.width);
-      }
+      await expect(
+        page.locator(".payment-comparison-market-bottom"),
+      ).toBeVisible();
+      await expect(page.locator(".payment-market-details")).toHaveCount(0);
       await page.screenshot({
         path: `/tmp/movewise-market-rate-${width}-${theme}.png`,
         fullPage: true,
@@ -114,4 +113,30 @@ test("same-currency payments show an identity rate without requesting market dat
     page.getByRole("complementary", { name: "Mid-market exchange rate" }),
   ).toContainText("1 USD = 1 USD");
   expect(requested).toBe(false);
+});
+
+test("an empty date window falls back to the latest real observation and refresh bypasses the cache", async ({
+  page,
+}) => {
+  let rate = 0.81;
+  let latestRequests = 0;
+  await page.route("https://api.frankfurter.dev/**", (route) => {
+    if (new URL(route.request().url()).searchParams.has("from"))
+      return route.fulfill({ json: [] });
+    latestRequests++;
+    return route.fulfill({
+      json: [{ date: "2026-10-09", base: "USD", quote: "GBP", rate }],
+    });
+  });
+  await preview(page);
+  const card = page.getByRole("complementary", {
+    name: "Mid-market exchange rate",
+  });
+  await expect(card).toContainText("1 USD = 0.81 GBP");
+  rate = 0.82;
+  await card
+    .getByRole("button", { name: "Refresh exchange rate", exact: true })
+    .click();
+  await expect(card).toContainText("1 USD = 0.82 GBP");
+  expect(latestRequests).toBe(2);
 });

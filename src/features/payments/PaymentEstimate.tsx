@@ -1,3 +1,4 @@
+import UniversityLabel from "../../components/UniversityLabel";
 import { routeProviderName } from "../../../shared/payment-routes";
 import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
 import { studyCurrency } from "../../../shared/currency";
@@ -5,11 +6,13 @@ import { useEffect, useState } from "react";
 import {
   ArrowRight,
   GraduationCap,
-  Landmark,
   ReceiptText,
   WalletCards,
 } from "lucide-react";
-import { tuitionQuote, type DecisionRoute } from "../../../convex/tuitionDecision";
+import {
+  tuitionQuote,
+  type DecisionRoute,
+} from "../../../convex/tuitionDecision";
 import InfoHelp from "../../components/InfoHelp";
 
 type Proposal = {
@@ -98,10 +101,13 @@ export default function PaymentEstimate({
           </span>
         </div>
         <div>
-          <Landmark size={18} />
           <span>
             <small>Recipient</small>
-            <strong>{proposal?.recipient ?? recipient ?? "Not set"}</strong>
+            <strong>
+              <UniversityLabel
+                name={proposal?.recipient ?? recipient ?? "Not set"}
+              />
+            </strong>
           </span>
         </div>
       </div>

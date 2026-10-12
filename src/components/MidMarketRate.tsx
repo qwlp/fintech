@@ -39,7 +39,11 @@ export default function MidMarketRate({
       return;
     }
     const cached = cache.get(pair);
-    if (cached && Date.now() - cached.fetchedAt < 15 * 60_000) {
+    if (
+      attempt === 0 &&
+      cached &&
+      Date.now() - cached.fetchedAt < 15 * 60_000
+    ) {
       setData({ pair, rates: cached.rates });
       return;
     }
@@ -60,7 +64,7 @@ export default function MidMarketRate({
         if (!response.ok) throw new Error("Rate unavailable");
         const payload: unknown = await response.json();
         if (!Array.isArray(payload)) throw new Error("Invalid rate data");
-        const rates = payload
+        let rates = payload
           .filter(
             (row): row is Observation =>
               row &&
@@ -72,6 +76,30 @@ export default function MidMarketRate({
               row.rate > 0,
           )
           .sort((a, b) => a.date.localeCompare(b.date));
+        if (!rates.length) {
+          // A date window may contain no observations (holidays or clock skew).
+          url.searchParams.delete("from");
+          url.searchParams.delete("to");
+          const latestResponse = await fetch(url, {
+            signal: controller.signal,
+          });
+          if (!latestResponse.ok) throw new Error("Rate unavailable");
+          const latestPayload: unknown = await latestResponse.json();
+          if (Array.isArray(latestPayload)) {
+            rates = latestPayload
+              .filter(
+                (row): row is Observation =>
+                  row &&
+                  row.base === source &&
+                  row.quote === target &&
+                  typeof row.date === "string" &&
+                  /^\d{4}-\d{2}-\d{2}$/.test(row.date) &&
+                  Number.isFinite(row.rate) &&
+                  row.rate > 0,
+              )
+              .sort((a, b) => a.date.localeCompare(b.date));
+          }
+        }
         if (!rates.length) throw new Error("No rates available");
         if (active) {
           cache.set(pair, { fetchedAt: Date.now(), rates });
@@ -131,15 +159,6 @@ export default function MidMarketRate({
             <span>Daily reference · {latest.date}</span>
           </small>
         )}
-        {failed && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setAttempt((value) => value + 1)}
-          >
-            <RefreshCw size={13} /> Retry
-          </Button>
-        )}
       </div>
       {rates.length > 1 && (
         <svg
@@ -158,17 +177,35 @@ export default function MidMarketRate({
           />
         </svg>
       )}
-      {deployment.fxSourceUrl && (
-        <a
-          className="mid-market-rate-source"
-          href={deployment.fxSourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`${deployment.fxSourceLabel} (opens in a new tab)`}
-        >
-          <ExternalLink size={14} />
-        </a>
-      )}
+      <div className="mid-market-rate-actions">
+        {(failed || (latest && source !== target)) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={
+              failed ? "Retry exchange rate" : "Refresh exchange rate"
+            }
+            onClick={() => {
+              setData(null);
+              setAttempt((value) => value + 1);
+            }}
+          >
+            <RefreshCw size={13} aria-hidden="true" />{" "}
+            {failed ? "Retry" : "Refresh rate"}
+          </Button>
+        )}
+        {deployment.fxSourceUrl && (
+          <a
+            className="mid-market-rate-source"
+            href={deployment.fxSourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${deployment.fxSourceLabel} (opens in a new tab)`}
+          >
+            <ExternalLink size={14} />
+          </a>
+        )}
+      </div>
     </aside>
   );
 }

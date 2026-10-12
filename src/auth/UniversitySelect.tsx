@@ -1,3 +1,4 @@
+import UniversityLabel from "../components/UniversityLabel";
 import { useId, useState } from "react";
 import { Popover } from "radix-ui";
 import { Check, ChevronDown, Search } from "lucide-react";
@@ -51,7 +52,11 @@ export default function UniversitySelect({
             disabled={disabled || !country}
           >
             <span className={!value ? "is-placeholder" : ""}>
-              {getUniversity(country, value) || "Search for your university"}
+              {getUniversity(country, value) ? (
+                <UniversityLabel name={getUniversity(country, value)!} />
+              ) : (
+                "Search for your university"
+              )}
             </span>
             <ChevronDown size={19} />
           </button>
@@ -118,7 +123,7 @@ export default function UniversitySelect({
                   aria-selected={value === name}
                   onClick={() => choose(name)}
                 >
-                  <span>{name}</span>
+                  <UniversityLabel name={name} />
                   {value === name && <Check size={16} />}
                 </button>
               ))}

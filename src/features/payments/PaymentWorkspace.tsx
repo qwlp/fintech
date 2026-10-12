@@ -1,3 +1,5 @@
+import "../../styles/payment-focused.css";
+import UniversityLabel from "../../components/UniversityLabel";
 import { convertMoney, formatCurrency } from "../../../shared/currency";
 import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
 import { countries, getCountry, getUniversity } from "../../../shared/study";
@@ -13,8 +15,14 @@ import {
   ArrowRight,
   ArrowLeft,
   Search,
+  Send,
 } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "../../components/ui/tabs";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -133,7 +141,7 @@ export default function PaymentWorkspace({
     if (locked) setReviewing(true);
   }, [locked]);
   return (
-    <section className="payment-workspace">
+    <section className="payment-workspace payment-focused">
       <div className="payment-workspace-heading">
         <div className="payment-workspace-title">
           <span className="tuition-heading-icon">
@@ -174,8 +182,14 @@ export default function PaymentWorkspace({
             <div className="payment-comparison-search">
               <div className="payment-comparison-recipient">
                 <span>
-                  <Landmark size={16} aria-hidden="true" />
-                  {recipient || "Choose your university"}
+                  {recipient ? (
+                    <UniversityLabel name={recipient} />
+                  ) : (
+                    <>
+                      <Landmark size={16} aria-hidden="true" />
+                      Choose your university
+                    </>
+                  )}
                 </span>
                 <Button
                   variant="ghost"
@@ -249,7 +263,10 @@ export default function PaymentWorkspace({
                 }}
               >
                 <div className="payment-comparison-country">
-                  <span id="pay-from-label">Pay from</span>
+                  <span id="pay-from-label">
+                    <Send size={13} aria-hidden="true" />
+                    Pay from
+                  </span>
                   <Select
                     value={payFrom}
                     disabled={locked || busy}
@@ -268,7 +285,10 @@ export default function PaymentWorkspace({
                   </Select>
                 </div>
                 <div className="payment-comparison-country">
-                  <span id="pay-to-label">Pay to</span>
+                  <span id="pay-to-label">
+                    <Landmark size={13} aria-hidden="true" />
+                    Pay to
+                  </span>
                   <Select
                     value={payTo}
                     disabled={locked || busy}
@@ -287,7 +307,10 @@ export default function PaymentWorkspace({
                   </Select>
                 </div>
                 <label className="payment-comparison-amount">
-                  <span>University receives</span>
+                  <span>
+                    <GraduationCap size={13} aria-hidden="true" />
+                    University receives
+                  </span>
                   <div>
                     <Input
                       money

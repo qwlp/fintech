@@ -1,0 +1,47 @@
+{
+  "tsinghua": {
+    "website": "https://tsinghua.edu.cn",
+    "iconSource": "https://www.tsinghua.edu.cn/favicon.ico",
+    "file": "tsinghua.ico"
+  },
+  "zhejiang": {
+    "website": "https://zju.edu.cn",
+    "iconSource": "https://www.google.com/s2/favicons?domain=www.zju.edu.cn&sz=128",
+    "file": "zhejiang.png"
+  },
+  "edinburgh": {
+    "website": "https://ed.ac.uk",
+    "iconSource": "https://www.ed.ac.uk/themes/upstream/wpp_theme/images/favicon.ico",
+    "file": "edinburgh.ico"
+  },
+  "usc": {
+    "website": "https://usc.edu",
+    "iconSource": "https://www.usc.edu/wp-content/themes/usc-communications-2023/favicon/apple-touch-icon.png",
+    "file": "usc.png"
+  },
+  "ucla": {
+    "website": "https://ucla.edu",
+    "iconSource": "https://www.ucla.edu/img/apple-touch-icon.png",
+    "file": "ucla.png"
+  },
+  "manchester": {
+    "website": "https://manchester.ac.uk",
+    "iconSource": "https://assets.manchester.ac.uk/corporate/images/design/logo-university-of-manchester.png",
+    "file": "manchester.png"
+  },
+  "peking": {
+    "website": "https://pku.edu.cn",
+    "iconSource": "https://www.google.com/s2/favicons?domain=pku.edu.cn&sz=128",
+    "file": "peking.png"
+  },
+  "kcl": {
+    "website": "https://kcl.ac.uk",
+    "iconSource": "https://www.kcl.ac.uk/SiteElements/2017/images/kcl-logo.svg",
+    "file": "kcl.svg"
+  },
+  "columbia": {
+    "website": "https://columbia.edu",
+    "iconSource": "https://www.google.com/s2/favicons?domain=columbia.edu&sz=128",
+    "file": "columbia.png"
+  }
+}

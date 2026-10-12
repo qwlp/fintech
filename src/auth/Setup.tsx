@@ -19,10 +19,12 @@ import FundingConfirmation from "../features/payments/FundingConfirmation";
 import UniversitySelect from "./UniversitySelect";
 import { convertMoney, studyCurrency } from "../../shared/currency";
 import {
+  destinationCountries,
   getCountry,
   getUniversity,
   needsStudySelectionUpdate,
 } from "../../shared/study";
+import DestinationCountries from "./DestinationCountries";
 import SetupCountrySelect from "./SetupCountrySelect";
 import { DatePicker } from "../components/ui/date-picker";
 import { Button } from "../components/ui/button";
@@ -67,6 +69,9 @@ export default function Setup({
     : startDate && !Number.isNaN(startDate.getTime())
       ? `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`
       : "";
+  const [destinations, setDestinations] = useState(
+    destinationCountries(account),
+  );
   const [values, setValues] = useState({
     name: account.name,
     countryFrom: getCountry(account.countryFrom)?.name ?? "",
@@ -160,7 +165,11 @@ export default function Setup({
     if (busy) return;
     setBusy(true);
     try {
-      await save({ ...values, fundingAmount: Number(values.fundingAmount) });
+      await save({
+        ...values,
+        countriesTo: destinations,
+        fundingAmount: Number(values.fundingAmount),
+      });
       setConfirmingFunding(false);
       setSaved(true);
     } catch {
@@ -290,10 +299,14 @@ export default function Setup({
                         disabled={busy}
                       />
                       {!sponsor && (
-                        <SetupCountrySelect
-                          label="Study country"
-                          value={values.countryTo}
-                          onChange={(value) => update("countryTo", value)}
+                        <DestinationCountries
+                          value={destinations}
+                          primary={values.countryTo}
+                          onChange={(selected, primary) => {
+                            setDestinations(selected);
+                            setError("");
+                            update("countryTo", primary);
+                          }}
                           disabled={busy}
                         />
                       )}
@@ -308,8 +321,9 @@ export default function Setup({
                         disabled={busy}
                       />
                       <p className="setup-directory-note">
-                        Study currency: {getCountry(values.countryTo)?.currency}
-                        . Your budgets and payments use this currency.
+                        Primary destination: {values.countryTo}. Study currency:{" "}
+                        {getCountry(values.countryTo)?.currency}. Your budgets
+                        and payments use this currency.
                       </p>
                       {field(
                         "course",
