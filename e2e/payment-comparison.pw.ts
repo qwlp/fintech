@@ -28,6 +28,13 @@ for (const width of [390, 1440])
         "none",
       );
       await expect(page.locator(".tuition-route")).toHaveCount(3);
+      await expect(page.locator(".payment-comparison-heading")).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: /^(Choose |Selected$)/ }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Review payment", exact: true }),
+      ).toHaveCount(0);
       await expect(
         page
           .locator(".tuition-route-title")
@@ -72,7 +79,7 @@ for (const width of [390, 1440])
       await expect(amount).toHaveValue("2,500.50");
       await expect(
         page.getByRole("button", { name: "Review payment", exact: true }),
-      ).toBeDisabled();
+      ).toHaveCount(0);
       await page.getByRole("button", { name: "Compare", exact: true }).click();
       await expect(page.getByRole("status")).toContainText(
         "Payment options updated",
@@ -199,7 +206,7 @@ for (const width of [390, 1440]) {
     ).toHaveAttribute("aria-valuenow", "23000");
     await expect(
       page.getByRole("button", { name: "Review payment", exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
     await page.getByRole("combobox", { name: "Pay to", exact: true }).click();
     await page.getByRole("option", { name: /United Kingdom/ }).click();
     await expect(currency).toContainText("GBP");
@@ -221,7 +228,7 @@ for (const width of [390, 1440]) {
     ).toContainText("CNY");
     await expect(
       page.getByRole("button", { name: "Review payment", exact: true }),
-    ).toBeEnabled();
+    ).toHaveCount(0);
     await page
       .locator(".payment-comparison-bar")
       .screenshot({ path: `/tmp/receiving-currency-${width}.png` });

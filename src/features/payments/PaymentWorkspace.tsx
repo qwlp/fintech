@@ -13,7 +13,6 @@ import {
   ArrowLeftRight,
   Pencil,
   ShieldCheck,
-  ArrowRight,
   ArrowLeft,
   Search,
   Send,
@@ -501,23 +500,6 @@ export default function PaymentWorkspace({
                       amount: Number(comparisonAmount) || 0,
                     })
                   : plan}
-              </div>
-              <div className="payment-review-actions">
-                <Button
-                  className="payment-review-next"
-                  disabled={
-                    busy ||
-                    (amount !== undefined &&
-                      (Number(comparisonAmount) !==
-                        convertMoney(amount, savedCurrency, payTo) ||
-                        payFrom !==
-                          (banking?.sourceCurrency ?? sourceCurrency) ||
-                        payTo !== savedCurrency))
-                  }
-                  onClick={() => setReviewing(true)}
-                >
-                  Review payment <ArrowRight size={16} />
-                </Button>
               </div>
             </>
           ) : (

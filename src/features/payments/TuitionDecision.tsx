@@ -11,15 +11,11 @@ import InfoHelp from "../../components/InfoHelp";
 import MidMarketRate from "../../components/MidMarketRate";
 import { useEffect, useId, useMemo, useState } from "react";
 import {
-  ArrowRight,
-  Check,
   Coins,
   FileText,
   ReceiptText,
   Wallet,
   Zap,
-  SlidersHorizontal,
-  RefreshCw,
   Clock3,
   CircleAlert,
   Landmark,
@@ -345,34 +341,6 @@ export default function TuitionDecision(props: Props) {
               </strong>
             </div>
           )}
-          <div className="payment-comparison-heading">
-            <h2>
-              <SlidersHorizontal size={16} aria-hidden="true" />
-              Compare payment options
-            </h2>
-            <div className="payment-quote-tools">
-              <span>Totals include fees · Estimated delivery</span>{" "}
-              <InfoHelp term="Provider quote" />
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Refresh sandbox quotes"
-                disabled={busy || locked}
-                onClick={() =>
-                  void run(
-                    () =>
-                      props.onRefresh
-                        ? props.onRefresh()
-                        : mutation("refreshSandboxQuotes", {}),
-                    "Quotes refreshed.",
-                  )
-                }
-              >
-                <RefreshCw size={14} />
-                Refresh quotes
-              </Button>
-            </div>
-          </div>
           <div className="tuition-route-list">
             {decision.routes.map((route) => (
               <article
@@ -527,38 +495,6 @@ export default function TuitionDecision(props: Props) {
                       {sourceMoney(route.totalUSD, route.sourceCurrency)}
                     </strong>
                   </div>
-                  <Button
-                    variant="outline"
-                    aria-label={
-                      props.selectedRoute === route.routeKey
-                        ? "Selected"
-                        : `Choose ${route.provider}`
-                    }
-                    size="sm"
-                    disabled={
-                      busy ||
-                      locked ||
-                      dirty ||
-                      !route.eligible ||
-                      props.selectedRoute === route.routeKey ||
-                      !props.onSelect
-                    }
-                    onClick={() =>
-                      void run(async () => {
-                        if (!(await props.onSelect?.(route.routeKey)))
-                          throw new Error("Could not select route");
-                      }, "Route selected.")
-                    }
-                  >
-                    {props.selectedRoute === route.routeKey
-                      ? "Selected"
-                      : "Choose option"}
-                    {props.selectedRoute === route.routeKey ? (
-                      <Check size={15} aria-hidden="true" />
-                    ) : (
-                      <ArrowRight size={15} aria-hidden="true" />
-                    )}
-                  </Button>
                 </div>
                 {!route.eligible && (
                   <div className="tuition-route-blocker">
