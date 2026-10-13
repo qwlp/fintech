@@ -24,7 +24,7 @@ export default function MobileNavigation({
             ["Move Planner", Route, "Planner"],
             ["AI Agent", Bot, "Agent"],
             ["Payments", CreditCard, "Payments"],
-            ["Profile", UserRound, "More"],
+            ["Profile", UserRound, "Profile"],
           ] as const
         ).map(([target, Icon, label]) => {
           const active =

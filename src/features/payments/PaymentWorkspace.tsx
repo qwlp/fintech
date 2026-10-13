@@ -216,7 +216,7 @@ export default function PaymentWorkspace({
                   }}
                 >
                   <Pencil size={14} />
-                  Edit details
+                  <span className="payment-edit-label">Edit details</span>
                 </Button>
               </div>
               <form
@@ -283,7 +283,20 @@ export default function PaymentWorkspace({
                     onValueChange={setPayFrom}
                   >
                     <SelectTrigger aria-labelledby="pay-from-label">
-                      <SelectValue />
+                      <SelectValue>
+                        {
+                          countries.find((item) => item.currency === payFrom)
+                            ?.flag
+                        }{" "}
+                        <span className="payment-country-name">
+                          {
+                            countries.find((item) => item.currency === payFrom)
+                              ?.name
+                          }{" "}
+                          ·{" "}
+                        </span>
+                        {payFrom}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="ui-select-content">
                       {countries.map((item) => (
@@ -305,7 +318,20 @@ export default function PaymentWorkspace({
                     onValueChange={changeTargetCurrency}
                   >
                     <SelectTrigger aria-labelledby="pay-to-label">
-                      <SelectValue />
+                      <SelectValue>
+                        {
+                          countries.find((item) => item.currency === payTo)
+                            ?.flag
+                        }{" "}
+                        <span className="payment-country-name">
+                          {
+                            countries.find((item) => item.currency === payTo)
+                              ?.name
+                          }{" "}
+                          ·{" "}
+                        </span>
+                        {payTo}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="ui-select-content">
                       {countries.map((item) => (

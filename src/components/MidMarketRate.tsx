@@ -163,6 +163,13 @@ export default function MidMarketRate({
       {rates.length > 1 && (
         <svg
           className="mid-market-rate-chart"
+          data-direction={
+            change !== null && change > 0
+              ? "up"
+              : change !== null && change < 0
+                ? "down"
+                : "flat"
+          }
           viewBox="0 0 104 44"
           role="img"
           aria-label={`${source} to ${target} rate trend from ${rates[0].date} to ${latest!.date}`}

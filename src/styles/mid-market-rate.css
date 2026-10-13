@@ -47,6 +47,12 @@
   flex-shrink: 0;
   color: var(--color-accent);
 }
+.mid-market-rate-chart[data-direction="up"] {
+  color: #16a34a;
+}
+.mid-market-rate-chart[data-direction="down"] {
+  color: #dc2626;
+}
 .mid-market-rate-source {
   display: inline-flex;
   align-items: center;

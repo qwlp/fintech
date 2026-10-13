@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Clock3,
   GraduationCap,
-  Route,
   WalletCards,
 } from "lucide-react";
 import BudgetDonut, { planChartColors } from "../../components/BudgetDonut";
@@ -325,12 +324,6 @@ export function OverviewDashboard({
           )}
         </section>
       </div>
-      <nav className="dashboard-shortcuts" aria-label="Dashboard actions">
-        <button onClick={() => go("Exchange")}>
-          <Route size={17} />
-          Compare transfer routes
-        </button>
-      </nav>
     </div>
   );
 }

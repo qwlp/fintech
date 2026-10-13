@@ -605,3 +605,120 @@
     background: var(--color-primary-soft);
   }
 }
+
+/* Keep the mobile comparison form compact and easy to scan. */
+@media (max-width: 600px) {
+  :root[data-theme]
+    .app-clean
+    .payment-workspace.payment-focused.payment-focused.payment-focused {
+    .payment-workspace-tabs {
+      min-height: 56px;
+      padding: 4px;
+    }
+    .payment-workspace-tabs [role="tab"] {
+      flex-direction: row;
+      gap: 6px;
+      min-height: 44px;
+      font-size: 13px;
+    }
+    .payment-comparison-search {
+      margin: 12px 0 16px;
+    }
+    .payment-comparison-recipient {
+      align-items: center;
+      padding: 0 0 10px;
+      gap: 8px;
+    }
+    .payment-comparison-recipient > span {
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .payment-comparison-recipient > .ui-button {
+      width: 40px;
+      min-height: 40px;
+      padding: 0;
+      border: 1px solid var(--color-line);
+      border-radius: 10px;
+      background: var(--color-surface);
+    }
+    .payment-edit-label,
+    .payment-country-name {
+      display: none;
+    }
+    .payment-comparison-bar {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      padding: 14px;
+      gap: 14px 12px;
+      border-radius: 14px;
+    }
+    .payment-comparison-country {
+      padding: 0;
+      border: 0;
+      gap: 6px;
+    }
+    .payment-comparison-country > span,
+    .payment-comparison-amount > span {
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 12px;
+      gap: 6px;
+    }
+    .payment-comparison-country [role="combobox"] {
+      min-height: 44px;
+      padding: 8px 10px;
+      border: 1px solid var(--color-line);
+      border-radius: 10px;
+      background: var(--color-surface-soft);
+      font-size: 15px;
+    }
+    .payment-comparison-country [role="combobox"] > span {
+      white-space: nowrap;
+    }
+    .payment-comparison-amount {
+      gap: 6px;
+    }
+    .payment-comparison-amount .money-input-control > input,
+    .payment-receive-currency {
+      height: 48px;
+    }
+    .payment-comparison-submit.ui-button {
+      min-height: 46px;
+      border-radius: 10px;
+    }
+    .payment-plan-summary {
+      padding: 12px;
+      font-size: 13px;
+    }
+    .tuition-recommendation {
+      margin: 10px 0 14px;
+      padding: 10px 0;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .tuition-route {
+      padding: 14px;
+      gap: 14px 10px;
+    }
+    .tuition-route-title {
+      grid-template-columns: 40px minmax(0, 1fr);
+      gap: 5px 8px;
+    }
+    .tuition-route-title .payment-option-score {
+      flex-basis: 40px;
+      width: 40px;
+      height: 40px;
+    }
+    .tuition-route-title .payment-option-score > strong {
+      width: 34px;
+      height: 34px;
+      font-size: 14px;
+    }
+    .tuition-route-title > strong {
+      font-size: 13px;
+    }
+    .payment-comparison-total > strong {
+      font-size: 20px;
+    }
+  }
+}
