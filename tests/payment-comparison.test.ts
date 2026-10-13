@@ -149,3 +149,13 @@ describe("payment currencies and scores", () => {
     ).rejects.toThrow();
   });
 });
+
+it("keeps an unchanged currency pair's exact quoted rate", () => {
+  const route = {
+    fxRate: 1.324073,
+    fee: 8.5,
+    sourceCurrency: "GBP",
+    targetCurrency: "USD",
+  };
+  expect(comparisonRoute(route, "GBP", "USD")).toBe(route);
+});

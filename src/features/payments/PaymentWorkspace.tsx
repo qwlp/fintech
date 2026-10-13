@@ -241,7 +241,7 @@ export default function PaymentWorkspace({
                         amount: nextAmount,
                       });
                     else if (convexClient && accountId)
-                      await convexClient.mutation(api.paymentPreferences.save, {
+                      await convexClient.action(api.paymentRates.compare, {
                         sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
                         targetCurrency: payTo as "USD" | "GBP" | "CNY",
                         amount: nextAmount,
@@ -441,14 +441,11 @@ export default function PaymentWorkspace({
                       else {
                         if (!convexClient || !accountId)
                           throw new Error("Sign in to save payment details.");
-                        await convexClient.mutation(
-                          api.paymentPreferences.save,
-                          {
-                            sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
-                            targetCurrency: payTo as "USD" | "GBP" | "CNY",
-                            ...details,
-                          },
-                        );
+                        await convexClient.action(api.paymentRates.compare, {
+                          sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
+                          targetCurrency: payTo as "USD" | "GBP" | "CNY",
+                          ...details,
+                        });
                       }
                       setEditing(false);
                       setMessage("Saved. Confirm the updated recipient below.");

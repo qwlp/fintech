@@ -1,4 +1,5 @@
 import { deployment } from "../lib/deployment";
+import { formatExchangeRate } from "../../shared/payment-comparison";
 import { useEffect, useState } from "react";
 import {
   ArrowDownRight,
@@ -9,15 +10,32 @@ import {
 import { Button } from "./ui/button";
 import "../styles/mid-market-rate.css";
 
-type Observation = { date: string; base: string; quote: string; rate: number };
+export type Observation = {
+  date: string;
+  base: string;
+  quote: string;
+  rate: number;
+};
 const cache = new Map<string, { fetchedAt: number; rates: Observation[] }>();
 
 export default function MidMarketRate({
   source,
   target,
+  observations,
+  onRefresh,
+  refreshDisabled = false,
+  reference = true,
+  sourceUrl = deployment.fxSourceUrl,
+  sourceLabel = deployment.fxSourceLabel,
 }: {
   source: string;
   target: string;
+  observations?: Observation[];
+  onRefresh?: () => void;
+  refreshDisabled?: boolean;
+  reference?: boolean;
+  sourceUrl?: string;
+  sourceLabel?: string;
 }) {
   const [data, setData] = useState<{
     pair: string;
@@ -27,6 +45,7 @@ export default function MidMarketRate({
   const [attempt, setAttempt] = useState(0);
   const pair = `${source}/${target}`;
   useEffect(() => {
+    if (observations !== undefined) return;
     setFailed(false);
     const controller = new AbortController();
     let active = true;
@@ -116,9 +135,16 @@ export default function MidMarketRate({
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [source, target, pair, attempt]);
+  }, [source, target, pair, attempt, observations]);
 
-  const rates = data?.pair === pair && !failed ? data.rates : [];
+  const rates =
+    observations !== undefined
+      ? observations.filter(
+          (row) => row.base === source && row.quote === target,
+        )
+      : data?.pair === pair && !failed
+        ? data.rates
+        : [];
   const latest = rates.at(-1);
   const previous = rates.at(-2);
   const change =
@@ -135,10 +161,12 @@ export default function MidMarketRate({
   return (
     <aside className="mid-market-rate" aria-label="Mid-market exchange rate">
       <div className="mid-market-rate-copy">
-        <span className="mid-market-rate-label">Mid-market exchange rate</span>
+        <span className="mid-market-rate-label">
+          {reference ? "Mid-market exchange rate" : "Comparison exchange rate"}
+        </span>
         <strong aria-live="polite">
           {latest
-            ? `1 ${source} = ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(latest.rate)} ${target}`
+            ? `1 ${source} = ${formatExchangeRate(latest.rate)} ${target}`
             : failed
               ? "Rate unavailable"
               : `Loading ${source} → ${target}…`}
@@ -156,7 +184,9 @@ export default function MidMarketRate({
                 {change.toFixed(2)}% vs. {previous!.date}
               </span>
             )}
-            <span>Daily reference · {latest.date}</span>
+            <span>
+              {reference ? "Daily reference" : "Quote snapshot"} · {latest.date}
+            </span>
           </small>
         )}
       </div>
@@ -189,10 +219,15 @@ export default function MidMarketRate({
           <Button
             variant="ghost"
             size="sm"
+            disabled={refreshDisabled}
             aria-label={
               failed ? "Retry exchange rate" : "Refresh exchange rate"
             }
             onClick={() => {
+              if (onRefresh) {
+                onRefresh();
+                return;
+              }
               setData(null);
               setAttempt((value) => value + 1);
             }}
@@ -201,13 +236,13 @@ export default function MidMarketRate({
             {failed ? "Retry" : "Refresh rate"}
           </Button>
         )}
-        {deployment.fxSourceUrl && (
+        {reference && sourceUrl && (
           <a
             className="mid-market-rate-source"
-            href={deployment.fxSourceUrl}
+            href={sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`${deployment.fxSourceLabel} (opens in a new tab)`}
+            aria-label={`${sourceLabel} (opens in a new tab)`}
           >
             <ExternalLink size={14} />
           </a>

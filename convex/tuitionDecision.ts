@@ -70,17 +70,28 @@ export function tuitionQuote(
 ) {
   const amountMinor = Math.round(amountGBP * 100);
   const feeMinor = Math.round(route.fee * 100);
-  const sourceMinor = Math.ceil(amountMinor / route.fxRate);
-  const totalMinor = sourceMinor + feeMinor;
   if (
     ![amountGBP, route.fxRate, route.fee].every(Number.isFinite) ||
     amountMinor <= 0 ||
     route.fxRate <= 0 ||
     route.fee < 0 ||
-    ![amountMinor, feeMinor, sourceMinor, totalMinor].every(
-      Number.isSafeInteger,
-    )
+    ![amountMinor, feeMinor].every(Number.isSafeInteger)
   )
+    throw new Error("Invalid payment quote");
+  // Divide using the quoted decimal rate exactly, then round up once to a
+  // source-currency penny. Binary floating point can turn an exact penny into
+  // an extra charge (e.g. 0.33 / 0.3 should be 1.10, not 1.11).
+  const [coefficient, exponent = "0"] = String(route.fxRate).split("e");
+  const decimalPlaces =
+    (coefficient.split(".")[1]?.length ?? 0) - Number(exponent);
+  const digits = BigInt(coefficient.replace(".", ""));
+  const numerator =
+    digits * (decimalPlaces < 0 ? 10n ** BigInt(-decimalPlaces) : 1n);
+  const denominator = decimalPlaces > 0 ? 10n ** BigInt(decimalPlaces) : 1n;
+  const scaledAmount = BigInt(amountMinor) * denominator;
+  const sourceMinor = Number((scaledAmount + numerator - 1n) / numerator);
+  const totalMinor = sourceMinor + feeMinor;
+  if (![sourceMinor, totalMinor].every(Number.isSafeInteger))
     throw new Error("Invalid payment quote");
   return { amountMinor, sourceMinor, feeMinor, totalMinor };
 }

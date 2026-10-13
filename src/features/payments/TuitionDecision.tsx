@@ -5,11 +5,17 @@ import {
 } from "../../../shared/payment-routes";
 import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
 import { formatCurrency } from "../../../shared/currency";
-import { paymentOptionScore } from "../../../shared/payment-comparison";
+import {
+  paymentOptionScore,
+  formatExchangeRate,
+} from "../../../shared/payment-comparison";
 import { Dialog } from "radix-ui";
 import InfoHelp from "../../components/InfoHelp";
-import MidMarketRate from "../../components/MidMarketRate";
-import { useEffect, useId, useMemo, useState } from "react";
+import MidMarketRate, {
+  type Observation,
+} from "../../components/MidMarketRate";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { api } from "../../../convex/_generated/api";
 import {
   Coins,
   FileText,
@@ -44,6 +50,10 @@ type Props = {
     paymentAmount?: number;
     tuitionDeadline?: string;
     bufferBusinessDays?: number;
+    marketRates?: Observation[];
+    marketRateFetchedAt?: number;
+    marketRateSource?: string;
+    marketRateSourceUrl?: string;
   };
   reserveGBP: number;
   wallets: { currency: string; amount: number; gbpValue: number }[];
@@ -61,6 +71,10 @@ const sourceMoney = (value: number | null, currency = "USD") =>
         style: "currency",
         currency,
       }).format(value);
+const visibleBlockers = (route: { blockers: string[] }) =>
+  route.blockers.filter(
+    (blocker) => !blocker.startsWith("Insufficient available "),
+  );
 export default function TuitionDecision(props: Props) {
   const currency = useWorkspaceCurrency();
   const fieldId = useId();
@@ -75,6 +89,34 @@ export default function TuitionDecision(props: Props) {
   const [notice, setNotice] = useState("");
   const [detailRoute, setDetailRoute] = useState<string | null>(null);
   const locked = paymentStatus !== "not_started";
+  const sourceCurrency = props.routes[0]?.sourceCurrency ?? "USD";
+  const marketRates = (banking.marketRates ?? []).filter(
+    (row) => row.base === sourceCurrency && row.quote === currency,
+  );
+  const refreshedPair = useRef("");
+  useEffect(() => {
+    const pair = `${props.accountId}:${sourceCurrency}/${currency}`;
+    if (
+      !props.accountId ||
+      !convexClient ||
+      locked ||
+      (marketRates.length &&
+        Date.now() - (banking.marketRateFetchedAt ?? 0) < 600000) ||
+      refreshedPair.current === pair
+    )
+      return;
+    refreshedPair.current = pair;
+    void convexClient.action(api.paymentRates.refresh, {}).catch(() => {
+      setError("Could not refresh comparison rates. Try Refresh rate.");
+    });
+  }, [
+    props.accountId,
+    sourceCurrency,
+    currency,
+    locked,
+    marketRates.length,
+    banking.marketRateFetchedAt,
+  ]);
   useEffect(() => {
     setDeadline(banking.tuitionDeadline ?? "");
     setBuffer(String(banking.bufferBusinessDays ?? 1));
@@ -481,7 +523,8 @@ export default function TuitionDecision(props: Props) {
                     Fee {sourceMoney(route.feeUSD, route.sourceCurrency)}
                   </strong>
                   <span>
-                    1 {route.sourceCurrency} = {route.rateGBPPerUSD.toFixed(4)}{" "}
+                    1 {route.sourceCurrency} ={" "}
+                    {formatExchangeRate(route.rateGBPPerUSD)}{" "}
                     {route.targetCurrency}
                   </span>
                 </div>
@@ -496,9 +539,9 @@ export default function TuitionDecision(props: Props) {
                     </strong>
                   </div>
                 </div>
-                {!route.eligible && (
+                {!route.eligible && visibleBlockers(route).length > 0 && (
                   <div className="tuition-route-blocker">
-                    {route.blockers[0] === "Set a tuition deadline" ? (
+                    {visibleBlockers(route)[0] === "Set a tuition deadline" ? (
                       <button
                         type="button"
                         className="payment-deadline-action"
@@ -524,7 +567,7 @@ export default function TuitionDecision(props: Props) {
                         <CalendarDays size={16} aria-hidden="true" />
                       </button>
                     ) : (
-                      route.blockers[0]
+                      visibleBlockers(route)[0]
                     )}
                   </div>
                 )}
@@ -609,7 +652,7 @@ export default function TuitionDecision(props: Props) {
                       </div>
                       {!route.eligible && (
                         <ul className="tuition-blockers">
-                          {route.blockers.map((blocker) => (
+                          {visibleBlockers(route).map((blocker) => (
                             <li key={blocker}>{blocker}</li>
                           ))}
                         </ul>
@@ -648,6 +691,34 @@ export default function TuitionDecision(props: Props) {
               <MidMarketRate
                 source={props.routes[0]?.sourceCurrency ?? "USD"}
                 target={currency}
+                observations={
+                  marketRates.length
+                    ? marketRates
+                    : props.routes[0]
+                      ? [
+                          {
+                            base: sourceCurrency,
+                            quote: currency,
+                            rate: props.routes[0].fxRate,
+                            date: new Date(props.routes[0].quotedAt ?? now)
+                              .toISOString()
+                              .slice(0, 10),
+                          },
+                        ]
+                      : []
+                }
+                reference={marketRates.length > 0}
+                sourceUrl={banking.marketRateSourceUrl}
+                sourceLabel={banking.marketRateSource}
+                refreshDisabled={locked || busy}
+                onRefresh={() =>
+                  void run(async () => {
+                    if (props.onRefresh) await props.onRefresh();
+                    else if (convexClient && props.accountId)
+                      await convexClient.action(api.paymentRates.refresh, {});
+                    else throw new Error("Sign in to refresh rates");
+                  }, "Exchange rate and comparison quotes updated.")
+                }
               />
             </div>
           </div>

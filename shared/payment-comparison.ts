@@ -1,4 +1,5 @@
 import { convertMoney, currencyRate } from "./currency";
+export const formatExchangeRate = (rate: number) => String(rate);
 export function comparisonRoute<
   T extends {
     fxRate: number;
@@ -9,6 +10,7 @@ export function comparisonRoute<
 >(route: T, source: string, target: string): T {
   const oldSource = route.sourceCurrency ?? "USD";
   const oldTarget = route.targetCurrency ?? "GBP";
+  if (source === oldSource && target === oldTarget) return route;
   const spread = route.fxRate / currencyRate(oldSource, oldTarget);
   return {
     ...route,

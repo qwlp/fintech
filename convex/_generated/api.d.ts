@@ -16,6 +16,7 @@ import type * as openrouter from "../openrouter.js";
 import type * as ownership from "../ownership.js";
 import type * as paymentEngine from "../paymentEngine.js";
 import type * as paymentPreferences from "../paymentPreferences.js";
+import type * as paymentRates from "../paymentRates.js";
 import type * as sponsorLinks from "../sponsorLinks.js";
 import type * as tuitionDecision from "../tuitionDecision.js";
 import type * as workspaceCurrency from "../workspaceCurrency.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   ownership: typeof ownership;
   paymentEngine: typeof paymentEngine;
   paymentPreferences: typeof paymentPreferences;
+  paymentRates: typeof paymentRates;
   sponsorLinks: typeof sponsorLinks;
   tuitionDecision: typeof tuitionDecision;
   workspaceCurrency: typeof workspaceCurrency;

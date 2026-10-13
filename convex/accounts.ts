@@ -1736,6 +1736,12 @@ export const refreshSandboxQuotes = mutation({
       .take(100);
     const banking = rows.find((row) => row.key === "banking")?.value;
     const target = banking?.currency ?? studyCurrency(account.countryTo);
+    const referenceRate = (source: string) => {
+      const latest = banking?.marketRates?.at(-1);
+      return latest?.base === source && latest?.quote === target && Number.isFinite(latest.rate) && latest.rate > 0
+        ? latest.rate
+        : null;
+    };
     // Existing sandboxes gain the missing category when quotes are refreshed.
     if (
       routes.length &&
@@ -1747,7 +1753,7 @@ export const refreshSandboxQuotes = mutation({
       const fxRate =
         sourceCurrency === target
           ? 1
-          : (sandboxRouteGBPPerUSD["sandbox-platform"] /
+          : referenceRate(sourceCurrency) ?? (sandboxRouteGBPPerUSD["sandbox-platform"] /
               currencyRate("USD", "GBP")) *
             currencyRate(sourceCurrency, target);
       await ctx.db.insert("paymentRoutes", {
@@ -1779,7 +1785,7 @@ export const refreshSandboxQuotes = mutation({
         fxRate:
           (route.sourceCurrency ?? "USD") === target
             ? 1
-            : (sandboxRouteGBPPerUSD[
+            : referenceRate(route.sourceCurrency ?? "USD") ?? (sandboxRouteGBPPerUSD[
                 routeProviderName(route.provider) === "Education Platforms"
                   ? "sandbox-platform"
                   : route.key
@@ -1802,7 +1808,7 @@ export const refreshSandboxQuotes = mutation({
       accountId,
       type: "SANDBOX_QUOTES_REFRESHED",
       detail:
-        "Reissued illustrative fixture quotes for 10 minutes; no provider request or live rate",
+        "Reissued sandbox quotes for 10 minutes using the saved daily reference when available; no provider request",
       actor: account.name,
       timestamp: Date.now(),
     });
