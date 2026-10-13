@@ -5,6 +5,7 @@
   width: 100%;
   min-width: 0;
   max-width: 1400px;
+  container: move-planner / inline-size;
   margin: 0 auto;
   color: var(--color-ink);
   --planner-border: color-mix(
@@ -167,6 +168,7 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  overflow-wrap: anywhere;
   text-align: left;
 }
 #move-planner .planner-categories button small {
@@ -204,6 +206,7 @@
   display: flex;
   justify-content: space-between;
   align-items: start;
+  flex-wrap: wrap;
   gap: 24px;
   margin-bottom: 20px;
   border-bottom: 1px solid var(--planner-border);
@@ -234,6 +237,8 @@
   align-items: flex-end;
   gap: 6px;
   flex-shrink: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 #move-planner .planner-category-total small {
   color: var(--color-muted);
@@ -517,7 +522,7 @@
   height: 300px;
   min-width: 0;
 }
-@media (max-width: 1100px) {
+@container move-planner (max-width: 1100px) {
   #move-planner .move-plan-settings {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -537,7 +542,7 @@
     text-align: right;
   }
 }
-@media (min-width: 768px) and (max-width: 1100px) {
+@container move-planner (min-width: 768px) and (max-width: 1100px) {
   #move-planner .move-alternatives article {
     grid-template-columns: minmax(0, 1fr) 160px;
     gap: 12px 20px;
@@ -549,10 +554,7 @@
     text-align: center;
   }
 }
-@media (max-width: 767px) {
-  #move-planner {
-    gap: 16px;
-  }
+@container move-planner (max-width: 767px) {
   #move-planner .move-board-header {
     flex-wrap: wrap;
   }
@@ -848,7 +850,7 @@
   .planner-option-selected {
   display: none;
 }
-@media (max-width: 767px) {
+@container move-planner (max-width: 767px) {
   #move-planner .planner-editor-heading,
   #move-planner .planner-estimates-heading {
     flex-direction: row;
@@ -884,5 +886,26 @@
 @media (max-width: 800px) {
   .app-clean #move-planner .planner-save-bar {
     bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Estimate rows must also fit the detail panel beside the category navigation. */
+#move-planner .planner-category-detail:not(:empty) {
+  container: planner-detail / inline-size;
+}
+@container planner-detail (max-width: 640px) {
+  #move-planner .move-alternatives article {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  #move-planner .planner-option-copy {
+    grid-row: auto;
+  }
+  #move-planner .planner-option-price {
+    text-align: left;
+  }
+  #move-planner .move-fields .move-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
   }
 }
