@@ -9,9 +9,15 @@ import {
   WalletCards,
 } from "lucide-react";
 import BudgetDonut, { planChartColors } from "../../components/BudgetDonut";
-import { useWorkspaceCurrency, useWorkspaceMoney } from "../../components/WorkspaceCurrency";
+import {
+  useWorkspaceCurrency,
+  useWorkspaceMoney,
+} from "../../components/WorkspaceCurrency";
 import { calculateMove } from "../../../shared/move-planner";
-import { funding as fallbackFunding, costs as fallbackCosts } from "../../lib/data";
+import {
+  funding as fallbackFunding,
+  costs as fallbackCosts,
+} from "../../lib/data";
 import {
   fundingGap,
   fundingCoverage,
@@ -53,7 +59,9 @@ export function OverviewDashboard({
     : null;
   const monthlyEssentials = savedMove
     ? savedMove.monthly +
-      (move.excludedCosts?.includes("rent") ? 0 : (move.budgetAmounts?.rent ?? 0))
+      (move.excludedCosts?.includes("rent")
+        ? 0
+        : (move.budgetAmounts?.rent ?? 0))
     : planCosts
         .filter(
           (item) =>
@@ -64,7 +72,9 @@ export function OverviewDashboard({
   const liquidSavings = confirmed
     .filter((item) => item.type.toLowerCase() === "savings")
     .reduce((sum, item) => sum + item.amount, 0);
-  const tuition = planCosts.find((item) => item.name.toLowerCase().includes("tuition"));
+  const tuition = planCosts.find((item) =>
+    item.name.toLowerCase().includes("tuition"),
+  );
   const tuitionPaid = paid || tuition?.paid;
   const greeting =
     new Date().getHours() < 12
@@ -96,21 +106,21 @@ export function OverviewDashboard({
           data-tour="readiness"
           aria-labelledby="funding-heading"
         >
-          <h3 id="funding-heading">Study plan funding</h3>
+          <h3 id="funding-heading">Funding</h3>
           <div className="funding-amount">
             <strong>{formatMoney(fundedTotal)}</strong>
-            <span>{hasBudget ? `of ${formatMoney(planTotal)}` : "confirmed funding"}</span>
+            <span>{hasBudget ? `of ${formatMoney(planTotal)}` : "saved"}</span>
           </div>
-          <div className="funding-progress-label">
-            <span>{hasBudget ? `${Math.round(coverage)}% funded` : "Budget not set"}</span>
-            <span>
-              {!hasBudget
-                ? "Set your budget to calculate funding progress"
-                : gap > 0
+          {hasBudget && (
+            <div className="funding-progress-label">
+              <span>{Math.round(coverage)}% funded</span>
+              <span>
+                {gap > 0
                   ? `${formatMoney(gap)} left to fund`
                   : "Funding goal reached"}
-            </span>
-          </div>
+              </span>
+            </div>
+          )}
           {hasBudget && (
             <div
               className="funding-progress"
@@ -125,30 +135,38 @@ export function OverviewDashboard({
           )}
           {!hasBudget && (
             <div className="budget-setup">
-              <p>
-                Your funding is saved. Add tuition, housing and living costs in the Move Planner
-                to see your target and any funding gap.
-              </p>
-              <button className="dashboard-primary" onClick={() => go("Move Planner")}>
+              <p>Add costs to see your funding gap.</p>
+              <button
+                className="dashboard-primary"
+                onClick={() => go("Move Planner")}
+              >
                 Set your budget <ArrowRight size={16} />
               </button>
             </div>
           )}
-          <dl className="plan-facts">
-            <div>
-              <dt><Clock3 size={15} /> Savings runway</dt>
-              <dd>
-                {monthlyEssentials > 0 && liquidSavings > 0
-                  ? runway(liquidSavings, monthlyEssentials).toFixed(1)
-                  : "—"}
-                <span> months</span>
-              </dd>
-            </div>
-            <div>
-              <dt><WalletCards size={15} /> Monthly essentials</dt>
-              <dd>{monthlyEssentials > 0 ? formatMoney(monthlyEssentials) : "—"}</dd>
-            </div>
-          </dl>
+          {hasBudget && (
+            <dl className="plan-facts">
+              <div>
+                <dt>
+                  <Clock3 size={15} /> Savings runway
+                </dt>
+                <dd>
+                  {monthlyEssentials > 0 && liquidSavings > 0
+                    ? runway(liquidSavings, monthlyEssentials).toFixed(1)
+                    : "—"}
+                  <span> months</span>
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <WalletCards size={15} /> Monthly essentials
+                </dt>
+                <dd>
+                  {monthlyEssentials > 0 ? formatMoney(monthlyEssentials) : "—"}
+                </dd>
+              </div>
+            </dl>
+          )}
         </section>
         {tuition && (
           <section
@@ -162,10 +180,17 @@ export function OverviewDashboard({
             </h3>
             <strong>{formatMoney(tuition.amount)}</strong>
             <span className="payment-schedule">
-              {tuitionPaid ? <CheckCircle2 size={15} /> : <CalendarDays size={15} />}
+              {tuitionPaid ? (
+                <CheckCircle2 size={15} />
+              ) : (
+                <CalendarDays size={15} />
+              )}
               {tuitionPaid ? "Receipt available" : tuition.due}
             </span>
-            <button className="dashboard-primary" onClick={() => go("Payments")}>
+            <button
+              className="dashboard-primary"
+              onClick={() => go("Payments")}
+            >
               {tuitionPaid ? "View receipt" : "Review payment"}
               <ArrowRight size={16} />
             </button>
@@ -181,54 +206,71 @@ export function OverviewDashboard({
               {hasBudget ? "Edit plan" : "Create plan"} <ArrowRight size={15} />
             </button>
           </div>
-          <div className="budget-breakdown">
-            <figure
-              className="spending-chart"
-              aria-label={`Spending breakdown. Total budget ${formatMoney(planTotal)}.`}
-            >
-              <div className="spending-donut">
-                {planTotal > 0 ? (
+          {hasBudget ? (
+            <div className="budget-breakdown">
+              <figure
+                className="spending-chart"
+                aria-label={`Spending breakdown. Total budget ${formatMoney(planTotal)}.`}
+              >
+                <div className="spending-donut">
                   <BudgetDonut currency={currency} costs={planCosts} />
-                ) : (
-                  <div className="empty-donut" />
-                )}
-                <div className="donut-total">
-                  <span>Total budget</span>
-                  <strong>{hasBudget ? formatMoney(planTotal) : "—"}</strong>
-                  <span>{hasBudget ? `${move?.months ?? 12}-month plan` : "Budget not set"}</span>
-                </div>
-              </div>
-              {!hasBudget && <figcaption>Add costs in the Move Planner.</figcaption>}
-            </figure>
-            <div className="budget-table" role="table" aria-label="Planned spending by category">
-              <div className="budget-table-head" role="row">
-                <span role="columnheader">Category</span>
-                <span role="columnheader">Share</span>
-                <span role="columnheader">Budget</span>
-              </div>
-              {planCosts.map((item, index) => {
-                const share = planTotal > 0 ? (item.amount / planTotal) * 100 : 0;
-                const isPaid = item.paid || (paid && item === tuition);
-                return (
-                  <div className="budget-table-row" role="row" key={item.name}>
-                    <span className="budget-category" role="cell">
-                      <span
-                        className="chart-legend-dot"
-                        style={{ background: planChartColors[index % planChartColors.length] }}
-                        aria-hidden="true"
-                      />
-                      <span>{item.name}</span>
-                      {isPaid && <Check size={14} aria-label="Paid" className="budget-paid" />}
-                    </span>
-                    <span className="budget-distribution" role="cell">
-                      <span>{Math.round(share)}%</span>
-                    </span>
-                    <strong role="cell">{formatMoney(item.amount)}</strong>
+                  <div className="donut-total">
+                    <span>Total budget</span>
+                    <strong>{formatMoney(planTotal)}</strong>
+                    <span>{`${move?.months ?? 12}-month plan`}</span>
                   </div>
-                );
-              })}
+                </div>
+              </figure>
+              <div
+                className="budget-table"
+                role="table"
+                aria-label="Planned spending by category"
+              >
+                <div className="budget-table-head" role="row">
+                  <span role="columnheader">Category</span>
+                  <span role="columnheader">Share</span>
+                  <span role="columnheader">Budget</span>
+                </div>
+                {planCosts.map((item, index) => {
+                  const share =
+                    planTotal > 0 ? (item.amount / planTotal) * 100 : 0;
+                  const isPaid = item.paid || (paid && item === tuition);
+                  return (
+                    <div
+                      className="budget-table-row"
+                      role="row"
+                      key={item.name}
+                    >
+                      <span className="budget-category" role="cell">
+                        <span
+                          className="chart-legend-dot"
+                          style={{
+                            background:
+                              planChartColors[index % planChartColors.length],
+                          }}
+                          aria-hidden="true"
+                        />
+                        <span>{item.name}</span>
+                        {isPaid && (
+                          <Check
+                            size={14}
+                            aria-label="Paid"
+                            className="budget-paid"
+                          />
+                        )}
+                      </span>
+                      <span className="budget-distribution" role="cell">
+                        <span>{Math.round(share)}%</span>
+                      </span>
+                      <strong role="cell">{formatMoney(item.amount)}</strong>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="funding-empty">No costs added yet.</p>
+          )}
         </section>
         <section className="visual-funding" aria-labelledby="sources-heading">
           <div className="visual-card-head">
@@ -260,13 +302,15 @@ export function OverviewDashboard({
                   <strong>{formatMoney(item.amount)}</strong>
                 </div>
                 <span className="source-availability">
-                  {item.status === "confirmed" ? item.available : "Not yet confirmed"}
+                  {item.status === "confirmed"
+                    ? item.available
+                    : "Not yet confirmed"}
                 </span>
               </div>
             ))}
           </div>
           {planFunding.length === 0 && (
-            <p className="funding-empty">Add a funding source to start your plan.</p>
+            <p className="funding-empty">No funding sources yet.</p>
           )}
           {gap > 0 && (
             <div className="funding-gap">
