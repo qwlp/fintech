@@ -27,6 +27,9 @@ for (const width of [320, 390, 1440]) {
     await expect(page.getByRole("tab", { name: "Receipts" })).toHaveCount(0);
     await expect(page.getByRole("tab", { name: "Calculator" })).toHaveCount(0);
     await page.getByRole("button", { name: "Edit tuition details" }).click();
+    await expect(
+      page.getByRole("dialog", { name: "Edit tuition details", exact: true }),
+    ).toBeVisible();
     await expect(page.locator(".brief-edit-form")).toBeVisible();
     await page
       .getByRole("combobox", { name: "University / recipient" })

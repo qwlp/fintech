@@ -73,6 +73,7 @@ export default function TuitionDecision(props: Props) {
   const [buffer, setBuffer] = useState(String(banking.bufferBusinessDays ?? 1));
   const [reserve, setReserve] = useState(String(reserveGBP));
   const [now, setNow] = useState(Date.now());
+  const [planOpen, setPlanOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -182,97 +183,141 @@ export default function TuitionDecision(props: Props) {
   };
   return (
     <section className="tuition-decision" aria-label="Payment options">
-      <details
-        className="payment-plan-settings"
-        open={!banking.tuitionDeadline || dirty}
+      <Dialog.Root
+        open={planOpen}
+        onOpenChange={(open) => {
+          if (busy) return;
+          setPlanOpen(open);
+          setError("");
+          setDeadline(banking.tuitionDeadline ?? "");
+          setBuffer(String(banking.bufferBusinessDays ?? 1));
+          setReserve(String(reserveGBP));
+        }}
       >
-        <summary className="payment-plan-summary">
-          <span>
-            <CalendarDays size={17} /> Payment plan
-          </span>
-          <span>
-            {banking.tuitionDeadline || "Set deadline"}
-            <ChevronDown size={16} />
-          </span>
-        </summary>
-        <form
-          className="tuition-plan-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const plan = {
-              deadline,
-              bufferBusinessDays: Number(buffer),
-              protectedReserveGBP: Number(reserve),
-            };
-            void run(
-              () =>
-                props.onSave
-                  ? props.onSave(plan)
-                  : mutation("updateTuitionPlan", plan),
-              "Tuition plan saved.",
-            );
-          }}
-        >
-          <label>
-            Deadline · UTC
-            <DatePicker
-              label="Tuition deadline"
-              compact
-              value={deadline}
-              disabled={locked || busy}
-              onChange={setDeadline}
-            />
-          </label>
-          <div className="tuition-plan-option-fields">
-            <div className="tuition-plan-field">
-              <span className="tuition-plan-field-heading">
-                <label htmlFor={`${fieldId}-buffer`}>
-                  Extra processing days · business days
-                </label>
-                <InfoHelp term="Extra processing days" />
-              </span>
-              <Input
-                id={`${fieldId}-buffer`}
-                aria-label="Safety buffer in business days"
-                type="number"
-                min={0}
-                max={5}
-                step={1}
-                required
-                value={buffer}
-                disabled={locked || busy}
-                onChange={(e) => setBuffer(e.target.value)}
-              />
-            </div>
-            <div className="tuition-plan-field">
-              <span className="tuition-plan-field-heading">
-                <label htmlFor={`${fieldId}-reserve`}>
-                  Living costs to keep · {currency}
-                </label>
-                <InfoHelp term="Living costs to keep" />
-              </span>
-              <Input
-                id={`${fieldId}-reserve`}
-                aria-label={`Protected living funds in ${currency}`}
-                money
-                min={0}
-                max={1000000}
-                required
-                value={reserve}
-                disabled={locked || busy}
-                onChange={(e) => setReserve(e.target.value)}
-              />
-            </div>
-          </div>
-          <Button
-            type="submit"
-            disabled={locked || busy || !dirty || !deadline}
+        <Dialog.Trigger asChild>
+          <button
+            type="button"
+            className="payment-plan-settings payment-plan-summary"
           >
-            Save plan
-          </Button>
-        </form>
-      </details>
-      {dirty && (
+            <span>
+              <CalendarDays size={17} /> Payment plan
+            </span>
+            <span>
+              {banking.tuitionDeadline || "Set deadline"}
+              <ChevronDown size={16} />
+            </span>
+          </button>
+        </Dialog.Trigger>
+        <Dialog.Portal>
+          <Dialog.Overlay className="brief-overlay" />
+          <Dialog.Content
+            className="brief-dialog payment-settings-dialog"
+            onEscapeKeyDown={(event) => {
+              if (busy) event.preventDefault();
+            }}
+            onPointerDownOutside={(event) => {
+              if (busy) event.preventDefault();
+            }}
+          >
+            <Dialog.Title>Payment plan</Dialog.Title>
+            <Dialog.Description>
+              Set your deadline, processing buffer and living funds to keep.
+            </Dialog.Description>
+            <form
+              className="tuition-plan-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const plan = {
+                  deadline,
+                  bufferBusinessDays: Number(buffer),
+                  protectedReserveGBP: Number(reserve),
+                };
+                void run(async () => {
+                  if (props.onSave) await props.onSave(plan);
+                  else await mutation("updateTuitionPlan", plan);
+                  setPlanOpen(false);
+                }, "Tuition plan saved.");
+              }}
+            >
+              <label>
+                Deadline · UTC
+                <DatePicker
+                  label="Tuition deadline"
+                  compact
+                  value={deadline}
+                  disabled={locked || busy}
+                  onChange={setDeadline}
+                />
+              </label>
+              <div className="tuition-plan-option-fields">
+                <div className="tuition-plan-field">
+                  <span className="tuition-plan-field-heading">
+                    <label htmlFor={`${fieldId}-buffer`}>
+                      Extra processing days · business days
+                    </label>
+                    <InfoHelp term="Extra processing days" />
+                  </span>
+                  <Input
+                    id={`${fieldId}-buffer`}
+                    aria-label="Safety buffer in business days"
+                    type="number"
+                    min={0}
+                    max={5}
+                    step={1}
+                    required
+                    value={buffer}
+                    disabled={locked || busy}
+                    onChange={(e) => setBuffer(e.target.value)}
+                  />
+                </div>
+                <div className="tuition-plan-field">
+                  <span className="tuition-plan-field-heading">
+                    <label htmlFor={`${fieldId}-reserve`}>
+                      Living costs to keep · {currency}
+                    </label>
+                    <InfoHelp term="Living costs to keep" />
+                  </span>
+                  <Input
+                    id={`${fieldId}-reserve`}
+                    aria-label={`Protected living funds in ${currency}`}
+                    money
+                    min={0}
+                    max={1000000}
+                    required
+                    value={reserve}
+                    disabled={locked || busy}
+                    onChange={(e) => setReserve(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="brief-actions">
+                <Button
+                  type="submit"
+                  disabled={locked || busy || !dirty || !deadline}
+                >
+                  {busy ? "Saving…" : "Save plan"}
+                </Button>
+                <Dialog.Close asChild>
+                  <Button type="button" variant="outline" disabled={busy}>
+                    Cancel
+                  </Button>
+                </Dialog.Close>
+              </div>
+            </form>
+            {error && (
+              <p className="tuition-error" role="alert">
+                {error}
+              </p>
+            )}
+            {locked && (
+              <p className="tuition-plan-note">
+                Reset the existing payment proposal before editing your plan.
+              </p>
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      {dirty && planOpen && (
         <p className="tuition-plan-note">
           Save your changes to update the comparison and the AI’s
           recommendation.
@@ -672,7 +717,7 @@ export default function TuitionDecision(props: Props) {
           </div>
         </>
       )}
-      {(error || assessment.error) && (
+      {((error && !planOpen) || assessment.error) && (
         <p className="tuition-error" role="alert">
           {error || assessment.error}
         </p>

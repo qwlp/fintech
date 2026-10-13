@@ -7,6 +7,7 @@ export default defineSchema({
   accounts: defineTable({
     userId: v.optional(v.id("users")),
     ownerAccountId: v.optional(v.id("accounts")),
+    activeCountryAccountId: v.optional(v.id("accounts")),
     moveType: v.optional(v.string()),
     email: v.string(),
     name: v.string(),

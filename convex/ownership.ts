@@ -8,11 +8,21 @@ export async function requireAccount(
 ) {
   const userId = await getAuthUserId(ctx);
   if (!userId) throw new Error("Sign in to continue");
+  if (accountId) {
+    const account = await ctx.db.get(accountId);
+    if (!account || account.userId !== userId)
+      throw new Error("Account access denied");
+    return account;
+  }
   const account = await ctx.db
     .query("accounts")
     .withIndex("by_user", (q) => q.eq("userId", userId))
-    .unique();
-  if (!account || (accountId && account._id !== accountId))
+    .first();
+  if (!account)
     throw new Error("Account access denied");
+  if (account.activeCountryAccountId) {
+    const active = await ctx.db.get(account.activeCountryAccountId);
+    if (active?.userId === userId) return active;
+  }
   return account;
 }

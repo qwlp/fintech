@@ -18,6 +18,9 @@ for (const width of [1440, 390])
         "Fintech Provider",
       );
       await page.locator(".payment-plan-summary").click();
+      await expect(
+        page.getByRole("dialog", { name: "Payment plan", exact: true }),
+      ).toBeVisible();
       await page
         .getByRole("spinbutton", {
           name: "Protected living funds in GBP",
@@ -30,6 +33,9 @@ for (const width of [1440, 390])
       await page
         .getByRole("button", { name: "Save plan", exact: true })
         .click();
+      await expect(
+        page.getByRole("dialog", { name: "Payment plan", exact: true }),
+      ).toHaveCount(0);
       await expect(page.getByRole("status")).toContainText(
         "Tuition plan saved",
       );

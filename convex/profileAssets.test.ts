@@ -35,6 +35,8 @@ async function fixture() {
       selectedRoute: "",
       sponsorRequestSent: false,
     });
+    // Existing deployments can retain the selected country account reference.
+    await ctx.db.patch(accountId, { activeCountryAccountId: accountId });
     return { accountId, userId, otherId };
   });
   return {
@@ -45,6 +47,21 @@ async function fixture() {
   };
 }
 describe("linked account removal", () => {
+  it("loads multiple owned accounts and respects the active account without allowing impersonation", async () => {
+    const { t, owner, other, accountId } = await fixture();
+    const secondId = await t.run(async (ctx) => {
+      const original = (await ctx.db.get(accountId))!;
+      const { _id, _creationTime, ...fields } = original;
+      return ctx.db.insert("accounts", { ...fields, ownerAccountId: accountId, activeCountryAccountId: undefined });
+    });
+    expect((await owner.query(api.accounts.bootstrap, {})).account._id).toBe(accountId);
+    await t.run((ctx) => ctx.db.patch(accountId, { activeCountryAccountId: secondId }));
+    expect((await owner.query(api.accounts.bootstrap, {})).account._id).toBe(secondId);
+    await owner.mutation(api.accounts.addCountryAccount, { accountId: secondId, country: "China", label: "Savings" });
+    await expect(other.mutation(api.accounts.addCountryAccount, { accountId: secondId, country: "China", label: "Savings" })).rejects.toThrow("Account access denied");
+    await t.run((ctx) => ctx.db.delete(secondId));
+    expect((await owner.query(api.accounts.bootstrap, {})).account._id).toBe(accountId);
+  });
   it("removes exactly the selected account and preserves other profile settings", async () => {
     const { owner, accountId } = await fixture();
     await owner.mutation(api.accounts.addCountryAccount, {
@@ -73,6 +90,7 @@ describe("linked account removal", () => {
     expect(result.config.profile.countryAccounts).toHaveLength(1);
     expect(result.config.profile.countryAccounts[0].label).toBe("Savings");
     expect(result.account.countryTo).toBe("United Kingdom");
+    expect(result.account.activeCountryAccountId).toBe(accountId);
     expect(result.auditEvents[0].type).toBe("LINKED_ACCOUNT_REMOVED");
   });
   it("supports legacy duplicates and rejects stale positions and other users", async () => {

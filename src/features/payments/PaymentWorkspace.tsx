@@ -1,10 +1,11 @@
+import { Dialog } from "radix-ui";
 import "../../styles/payment-focused.css";
 import UniversityLabel from "../../components/UniversityLabel";
 import { convertMoney, formatCurrency } from "../../../shared/currency";
 import { useWorkspaceCurrency } from "../../components/WorkspaceCurrency";
 import { countries, getCountry, getUniversity } from "../../../shared/study";
 import UniversitySelect from "../../auth/UniversitySelect";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Landmark,
   GraduationCap,
@@ -109,6 +110,7 @@ export default function PaymentWorkspace({
     "";
   const [view, setView] = useState(initialView);
   const [reviewing, setReviewing] = useState(paymentStatus !== "not_started");
+  const editButtonRef = useRef<HTMLButtonElement>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
     amount: String(amount ?? ""),
@@ -201,6 +203,7 @@ export default function PaymentWorkspace({
                 </span>
                 <Button
                   variant="ghost"
+                  ref={editButtonRef}
                   aria-label="Edit tuition details"
                   disabled={locked || busy}
                   onClick={() => {
@@ -364,104 +367,136 @@ export default function PaymentWorkspace({
               </form>
             </div>
           )}
-          {editing && (
-            <form
-              className="brief-edit-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setBusy(true);
-                setMessage("");
-                try {
-                  const details = {
-                    amount: Number(draft.amount),
-                    recipient: draft.recipient.trim(),
-                    last4: draft.last4,
-                  };
-                  if (
-                    !Number.isFinite(details.amount) ||
-                    details.amount <= 0 ||
-                    !getUniversity(country, details.recipient) ||
-                    !/^\d{4}$/.test(details.last4)
-                  )
-                    throw new Error(
-                      "Enter a positive amount, select a listed university and enter four account digits.",
-                    );
-                  if (onEdit) await onEdit(details);
-                  else {
-                    if (!convexClient || !accountId)
-                      throw new Error("Sign in to save payment details.");
-                    await convexClient.mutation(api.paymentPreferences.save, {
-                      sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
-                      targetCurrency: payTo as "USD" | "GBP" | "CNY",
-                      ...details,
-                    });
-                  }
-                  setEditing(false);
-                  setMessage("Saved. Confirm the updated recipient below.");
-                } catch (error) {
-                  setMessage(
-                    error instanceof Error
-                      ? error.message
-                      : "Could not save. Try again.",
-                  );
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              <label>
-                Tuition amount · {currency}
-                <Input
-                  required
-                  money
-                  min="0.01"
-                  max={convertMoney(1000000, "GBP", currency)}
-
-                  value={draft.amount}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setDraft({ ...draft, amount: e.target.value })
-                  }
-                />
-              </label>
-              <UniversitySelect
-                label="University / recipient"
-                allowClear={false}
-                country={country}
-                value={draft.recipient}
-                disabled={busy}
-                onChange={(value) => setDraft({ ...draft, recipient: value })}
-              />
-              <label>
-                Recipient account last four digits
-                <Input
-                  required
-                  pattern="[0-9]{4}"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={draft.last4}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setDraft({ ...draft, last4: e.target.value })
-                  }
-                />
-              </label>
-              <div className="brief-actions">
-                <Button disabled={busy}>
-                  {busy ? "Saving…" : "Save details"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => setEditing(false)}
+          <Dialog.Root
+            open={editing}
+            onOpenChange={(open) => {
+              if (!busy) setEditing(open);
+            }}
+          >
+            <Dialog.Portal>
+              <Dialog.Overlay className="brief-overlay" />
+              <Dialog.Content
+                onCloseAutoFocus={(event) => {
+                  event.preventDefault();
+                  editButtonRef.current?.focus();
+                }}
+                className="brief-dialog payment-settings-dialog"
+                onEscapeKeyDown={(event) => {
+                  if (busy) event.preventDefault();
+                }}
+                onPointerDownOutside={(event) => {
+                  if (busy) event.preventDefault();
+                }}
+              >
+                <Dialog.Title>Edit tuition details</Dialog.Title>
+                <Dialog.Description>
+                  Update the tuition amount and recipient account details.
+                </Dialog.Description>
+                <form
+                  className="brief-edit-form"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setBusy(true);
+                    setMessage("");
+                    try {
+                      const details = {
+                        amount: Number(draft.amount),
+                        recipient: draft.recipient.trim(),
+                        last4: draft.last4,
+                      };
+                      if (
+                        !Number.isFinite(details.amount) ||
+                        details.amount <= 0 ||
+                        !getUniversity(country, details.recipient) ||
+                        !/^\d{4}$/.test(details.last4)
+                      )
+                        throw new Error(
+                          "Enter a positive amount, select a listed university and enter four account digits.",
+                        );
+                      if (onEdit) await onEdit(details);
+                      else {
+                        if (!convexClient || !accountId)
+                          throw new Error("Sign in to save payment details.");
+                        await convexClient.mutation(
+                          api.paymentPreferences.save,
+                          {
+                            sourceCurrency: payFrom as "USD" | "GBP" | "CNY",
+                            targetCurrency: payTo as "USD" | "GBP" | "CNY",
+                            ...details,
+                          },
+                        );
+                      }
+                      setEditing(false);
+                      setMessage("Saved. Confirm the updated recipient below.");
+                    } catch (error) {
+                      setMessage(
+                        error instanceof Error
+                          ? error.message
+                          : "Could not save. Try again.",
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
                 >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          )}
-          {message && <p role="status">{message}</p>}
+                  <label>
+                    Tuition amount · {currency}
+                    <Input
+                      required
+                      money
+                      min="0.01"
+                      max={convertMoney(1000000, "GBP", currency)}
+
+                      value={draft.amount}
+                      disabled={busy}
+                      onChange={(e) =>
+                        setDraft({ ...draft, amount: e.target.value })
+                      }
+                    />
+                  </label>
+                  <UniversitySelect
+                    label="University / recipient"
+                    allowClear={false}
+                    country={country}
+                    value={draft.recipient}
+                    disabled={busy}
+                    onChange={(value) =>
+                      setDraft({ ...draft, recipient: value })
+                    }
+                  />
+                  <label>
+                    Recipient account last four digits
+                    <Input
+                      required
+                      pattern="[0-9]{4}"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={draft.last4}
+                      disabled={busy}
+                      onChange={(e) =>
+                        setDraft({ ...draft, last4: e.target.value })
+                      }
+                    />
+                  </label>
+                  <div className="brief-actions">
+                    <Button disabled={busy}>
+                      {busy ? "Saving…" : "Save details"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => setEditing(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+                {message && <p role="alert">{message}</p>}
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+          {message && !editing && <p role="status">{message}</p>}
           {!reviewing && !locked ? (
             <>
               <div
