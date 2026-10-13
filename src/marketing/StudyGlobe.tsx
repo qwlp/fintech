@@ -247,8 +247,8 @@ export default function StudyGlobe({
       role="img"
       aria-label={
         passportOnly
-          ? "3D MoveWise booklet"
-          : "3D MoveWise booklet beside a globe with study routes"
+          ? "3D MoveWire booklet"
+          : "3D MoveWire booklet beside a globe with study routes"
       }
     >
       <div className="globe-fallback" aria-hidden="true">

@@ -12,7 +12,7 @@ for (const width of [1440, 390]) {
     );
     await page.goto("/destination-profile-preview");
     await page
-      .getByRole("button", { name: "Edit profile", exact: true })
+      .getByRole("button", { name: "Edit study details", exact: true })
       .click();
     await page
       .getByRole("button", { name: "Destination countries", exact: true })
@@ -26,7 +26,7 @@ for (const width of [1440, 390]) {
       "United States",
     );
     await page
-      .getByRole("button", { name: "Edit profile", exact: true })
+      .getByRole("button", { name: "Edit study details", exact: true })
       .click();
     await page
       .getByRole("button", { name: "Destination countries", exact: true })
@@ -35,6 +35,13 @@ for (const width of [1440, 390]) {
       .getByRole("option", { name: "United States", exact: true })
       .click();
     await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Universities · optional" }).click();
+    await page
+      .getByRole("checkbox", { name: "University of Edinburgh" })
+      .check();
+    await page.getByRole("checkbox", { name: "UCLA", exact: true }).check();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(page.locator(".university-shortlist-items li")).toHaveCount(3);
     await page
       .getByRole("button", { name: "Save profile", exact: true })
       .click();
@@ -46,21 +53,21 @@ for (const width of [1440, 390]) {
       await page.evaluate(() => (window as any).savedProfile.destinations),
     ).toEqual(["United Kingdom", "United States"]);
     await page
-      .getByRole("button", { name: "Edit profile", exact: true })
+      .getByRole("button", { name: "Edit study details", exact: true })
       .click();
     await page
       .getByRole("button", { name: "Make United States primary", exact: true })
       .click();
     await expect(
-      page.getByRole("combobox", { name: "University · optional" }),
-    ).not.toContainText("University of Manchester");
+      page.getByRole("button", { name: "Universities · optional" }),
+    ).toContainText("3 universities selected");
     await page
       .getByRole("button", { name: "Save profile", exact: true })
       .click();
     await expect(page.getByRole("alertdialog")).toContainText("USD");
     await page.getByRole("button", { name: "Yes, confirm amount" }).click();
     await expect(
-      page.getByRole("button", { name: "Edit profile", exact: true }),
+      page.getByRole("button", { name: "Edit study details", exact: true }),
     ).toBeVisible();
     expect(
       await page.evaluate(() => (window as any).savedProfile.profile.study),

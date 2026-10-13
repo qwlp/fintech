@@ -50,7 +50,7 @@ export default function AgentTour({ accountId }: { accountId?: string }) {
                 <X size={18} />
               </button>
             </Dialog.Close>
-            <Dialog.Title>Meet your MoveWise agent</Dialog.Title>
+            <Dialog.Title>Meet your MoveWire agent</Dialog.Title>
             <Dialog.Description>
               Get help understanding your move and preparing a payment.
             </Dialog.Description>

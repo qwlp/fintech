@@ -97,7 +97,6 @@ export async function paymentTransition(
       throw new Error("Payment details unavailable");
     if (
       !banking?.recipient ||
-      !banking?.recipientAccountLast4 ||
       banking.recipientVerified !== true
     )
       throw new Error("Verify the sandbox university recipient first");
@@ -149,7 +148,7 @@ export async function paymentTransition(
     const id = await ctx.db.insert("paymentProposals", {
       accountId,
       recipient: banking.recipient,
-      recipientLast4: banking.recipientAccountLast4,
+      recipientLast4: banking.recipientAccountLast4 ?? "",
       routeKey: route.key,
       provider: routeProviderName(route.provider),
       fxRate: route.fxRate,
@@ -174,7 +173,7 @@ export async function paymentTransition(
       accountId,
       type: "PAYMENT_PREPARED",
       detail: `Proposal ${id}: ${currency} ${(amountMinor / 100).toFixed(2)} to ${banking.recipient}; ${sourceCurrency} ${((sourceMinor + feeMinor) / 100).toFixed(2)} total. Sandbox quote expires in 10 minutes.`,
-      actor: "MoveWise",
+      actor: "MoveWire",
       timestamp: now,
     });
     return ctx.db.get(id);

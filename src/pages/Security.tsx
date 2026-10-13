@@ -36,7 +36,7 @@ export function Security({
     ].join("\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    link.download = "movewise-audit.csv";
+    link.download = "movewire-audit.csv";
     link.click();
     URL.revokeObjectURL(link.href);
   };

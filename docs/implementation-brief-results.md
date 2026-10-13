@@ -1,6 +1,6 @@
-# MoveWise implementation brief results
+# MoveWire implementation brief results
 
-The implementation preserves the React/Vite, Radix, Convex and existing MoveWise theme. Bun was used for builds, formatting and tests.
+The implementation preserves the React/Vite, Radix, Convex and existing MoveWire theme. Bun was used for builds, formatting and tests.
 
 ## Changes and data flow
 

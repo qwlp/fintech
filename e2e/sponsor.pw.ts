@@ -72,7 +72,7 @@ for (const width of [1440, 390]) {
     const requestDownload = page.waitForEvent("download");
     await dialog.getByRole("button", { name: "Download request" }).click();
     expect((await requestDownload).suggestedFilename()).toBe(
-      "movewise-funding-request.txt",
+      "movewire-funding-request.txt",
     );
     await page.keyboard.press("Escape");
     await expect(dialog).not.toBeVisible();
@@ -90,7 +90,7 @@ for (const width of [1440, 390]) {
     const exportDownload = page.waitForEvent("download");
     await page.getByRole("button", { name: "Export CSV" }).click();
     expect((await exportDownload).suggestedFilename()).toBe(
-      "movewise-funding-requests.csv",
+      "movewire-funding-requests.csv",
     );
     await nav.getByRole("button", { name: "Activity", exact: true }).click();
     await expect(page.locator(".sd-stats")).toContainText("US$300.00");

@@ -141,7 +141,7 @@ async function record(
     accountId,
     type: "AGENT_EDIT",
     detail: `${name}: requested changes saved`,
-    actor: "MoveWise",
+    actor: "MoveWire",
     timestamp: Date.now(),
   });
   return result;
@@ -394,10 +394,6 @@ export async function runWorkspaceTool(
       recipient: args.recipient ?? banking.recipient,
       last4: args.last4 ?? banking.recipientAccountLast4,
     };
-    if (!patch.last4)
-      throw new Error(
-        "Provide the recipient account last four digits to save payment details",
-      );
     if (!patch.recipient)
       throw new Error("Choose your university to save payment details");
     if (!(patch.amount > 0))

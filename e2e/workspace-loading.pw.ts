@@ -30,7 +30,7 @@ for (const fail of [false, true]) {
     await page.goto("/loading-preview");
     await expect(page.locator(".app-shell")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Loading MoveWise…" }),
+      page.getByRole("heading", { name: "Loading MoveWire…" }),
     ).toHaveCount(0);
     await expect(page.locator(".app-shell")).toContainText("£2,000");
     await expect(page.locator(".app-shell")).not.toContainText("CA$2,000");

@@ -53,7 +53,7 @@ const baseWorkspaceTools = {
   },
   update_tuition_details: {
     description:
-      "Save requested tuition amount, listed university recipient or account last four digits. Partial update preserves omitted fields. Amount is in study currency. Clears recipient confirmation; cannot edit an active proposal.",
+      "Save requested tuition amount or listed university recipient. Account digits are optional. Partial update preserves omitted fields. Amount is in study currency. Clears recipient confirmation; cannot edit an active proposal.",
     parameters: object({
       amount: number(0.01),
       recipient: choice(Object.values(universities).flat()),

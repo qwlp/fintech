@@ -166,6 +166,6 @@ export const initialAudit: AuditEvent[] = [
     type: "RECIPIENT_VERIFIED",
     detail: "University account matched verified directory",
     timestamp: "29 Sep 2026, 09:31",
-    actor: "MoveWise",
+    actor: "MoveWire",
   },
 ];

@@ -69,13 +69,14 @@ for (const width of [1440, 390]) {
     await expect(
       page.getByRole("heading", { name: "A little about your studies." }),
     ).toBeVisible();
-    await page.getByRole("combobox", { name: "University · optional" }).click();
+    await page.getByRole("button", { name: "Universities · optional" }).click();
     await page
       .getByRole("textbox", { name: "Search universities" })
       .fill("manchester");
     await page
-      .getByRole("option", { name: "University of Manchester" })
-      .click();
+      .getByRole("checkbox", { name: "University of Manchester" })
+      .check();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
     await page.getByRole("button", { name: "Start date: Choose date" }).click();
     await expect(page.locator(".ui-calendar")).toBeVisible();
     await expect(page.locator(".ui-popover")).toHaveCSS("opacity", "1");
@@ -96,8 +97,8 @@ for (const width of [1440, 390]) {
     ).toContainText("China");
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(
-      page.getByRole("combobox", { name: "University · optional" }),
-    ).toContainText("University of Manchester");
+      page.getByRole("button", { name: "Universities · optional" }),
+    ).toContainText("1 university selected");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Confirmed funding (GBP)").fill("12000");
     await page.getByLabel("Sponsor support").selectOption("Yes");
@@ -184,17 +185,15 @@ test("country search, destination reset and rejection of unlisted universities",
   await expect(
     page.getByText("Study currency: USD.", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("combobox", { name: "University · optional" }).click();
+  await page.getByRole("button", { name: "Universities · optional" }).click();
   await page
     .getByRole("textbox", { name: "Search universities" })
     .fill("columbia");
-  await page
-    .getByRole("textbox", { name: "Search universities" })
-    .press("ArrowDown");
-  await page.keyboard.press("Enter");
+  await page.getByRole("checkbox", { name: "Columbia University" }).check();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(
-    page.getByRole("combobox", { name: "University · optional" }),
-  ).toContainText("Columbia University");
+    page.getByRole("button", { name: "Universities · optional" }),
+  ).toContainText("1 university selected");
   await page.getByRole("button", { name: "Back" }).click();
   await page
     .getByRole("button", { name: "Destination countries", exact: true })
@@ -206,28 +205,28 @@ test("country search, destination reset and rejection of unlisted universities",
     .click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(
-    page.getByRole("combobox", { name: "University · optional" }),
-  ).toContainText("Search for your university");
-  await page.getByRole("combobox", { name: "University · optional" }).click();
+    page.getByRole("button", { name: "Universities · optional" }),
+  ).toContainText("1 university selected");
+  await page.getByRole("button", { name: "Universities · optional" }).click();
   await page
     .getByRole("textbox", { name: "Search universities" })
     .fill("My German University");
-  await expect(page.getByRole("option")).toHaveCount(0);
-  await expect(
-    page.getByText("No matching universities in the approved list."),
-  ).toBeVisible();
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
+  await expect(page.getByText("No matching universities.")).toBeVisible();
   await page
     .getByRole("textbox", { name: "Search universities" })
     .fill("tsinghua");
   await page
-    .getByRole("option", { name: "Tsinghua University", exact: true })
-    .click();
+    .getByRole("checkbox", { name: "Tsinghua University", exact: true })
+    .check();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Finish setup" }).click();
   await page.getByRole("button", { name: "Yes, confirm amount" }).click();
   expect(await page.evaluate(() => (window as any).savedSetup)).toMatchObject({
     countryTo: "China",
     university: "Tsinghua University",
+    universityChoices: ["Columbia University", "Tsinghua University"],
   });
 });
 

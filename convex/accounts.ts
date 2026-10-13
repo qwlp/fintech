@@ -23,6 +23,8 @@ import {
   validateStudySelection,
   destinationCountries,
   validateDestinations,
+  validateUniversityChoices,
+  universitySelections,
 } from "../shared/study";
 
 import { requireAccount } from "./ownership";
@@ -282,7 +284,7 @@ export const seedDemo = internalMutation({
       [
         "RECIPIENT_VERIFIED",
         "University account matched verified directory",
-        "MoveWise",
+        "MoveWire",
         1000,
       ],
     ] as const)
@@ -503,6 +505,7 @@ export const completeSetup = mutation({
     countryTo: v.string(),
     countriesTo: v.optional(v.array(v.string())),
     university: v.string(),
+    universityChoices: v.optional(v.array(v.string())),
     course: v.string(),
     courseStart: v.string(),
     fundingAmount: v.number(),
@@ -515,6 +518,8 @@ export const completeSetup = mutation({
       args.countryTo,
       args.countriesTo ?? destinationCountries({ ...account, countryTo: args.countryTo }),
     );
+    const universityChoices = validateUniversityChoices(countriesTo,
+      args.universityChoices ?? [...new Set([args.university, ...universitySelections(account)].filter(Boolean))].filter(name => countriesTo.some(country => getUniversity(country, name))));
     validateStudySelection(
       args.countryFrom,
       args.countryTo,
@@ -556,7 +561,8 @@ export const completeSetup = mutation({
       countryFrom: getCountry(args.countryFrom)!.name,
       countryTo: getCountry(args.countryTo)?.name ?? "",
       countriesTo,
-      university: getUniversity(args.countryTo, args.university) ?? "",
+      university: args.universityChoices ? universityChoices.find(name => getUniversity(args.countryTo, name)) ?? "" : getUniversity(args.countryTo, args.university) ?? "",
+      universityChoices,
       course: args.course.trim(),
       setupComplete: true,
     });
@@ -579,6 +585,7 @@ export const updateProfile = mutation({
     countryTo: v.string(),
     countriesTo: v.optional(v.array(v.string())),
     university: v.string(),
+    universityChoices: v.optional(v.array(v.string())),
     course: v.string(),
     courseStart: v.string(),
     financialStatus: v.string(),
@@ -592,6 +599,8 @@ export const updateProfile = mutation({
       args.countryTo,
       args.countriesTo ?? destinationCountries({ ...owner, countryTo: args.countryTo }),
     );
+    const universityChoices = validateUniversityChoices(countriesTo,
+      args.universityChoices ?? [...new Set([args.university, ...universitySelections(owner)].filter(Boolean))].filter(name => countriesTo.some(country => getUniversity(country, name))));
     validateStudySelection(
       args.countryFrom,
       args.countryTo,
@@ -611,7 +620,7 @@ export const updateProfile = mutation({
       throw new Error("Invalid confirmed funding amount");
     account.countryFrom = getCountry(account.countryFrom)!.name;
     account.countryTo = getCountry(account.countryTo)?.name ?? "";
-    account.university =
+    account.university = args.universityChoices ? universityChoices.find(name => getUniversity(account.countryTo, name)) ?? "" :
       getUniversity(account.countryTo, account.university) ?? "";
     const initials = account.name
       .split(/\s+/)
@@ -620,7 +629,7 @@ export const updateProfile = mutation({
       .map((part) => part[0]?.toUpperCase())
       .join("");
     await syncWorkspaceCurrency(ctx, owner, account.countryTo);
-    await ctx.db.patch(accountId, { ...account, countriesTo, initials });
+    await ctx.db.patch(accountId, { ...account, countriesTo, universityChoices, initials });
     const row = (
       await ctx.db
         .query("appConfig")
@@ -899,7 +908,8 @@ export const transitionPayment = mutation({
 });
 
 export const verifySandboxRecipient = mutation({
-  args: { accountId: v.id("accounts"), last4: v.string() },
+  args: { accountId: v.id("accounts"), last4: v.optional(v.string()) },
+  returns: v.null(),
   handler: async (ctx, { accountId, last4 }) => {
     const account = await requireAccount(ctx, accountId);
     if (account.role !== "Student" || account.paymentStatus !== "not_started")
@@ -909,7 +919,9 @@ export const verifySandboxRecipient = mutation({
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
       .collect();
     const row = config.find((r) => r.key === "banking");
-    if (!row || last4 !== row.value.recipientAccountLast4)
+    if (!row || !getUniversity(account.countryTo, row.value.recipient ?? ""))
+      throw new Error("Choose a listed university in your study country");
+    if (last4 !== undefined && last4 !== row.value.recipientAccountLast4)
       throw new Error("Recipient account digits do not match");
     await ctx.db.patch(row._id, {
       value: { ...row.value, recipientVerified: true },
@@ -918,10 +930,11 @@ export const verifySandboxRecipient = mutation({
       accountId,
       type: "RECIPIENT_VERIFIED",
       detail:
-        "Owner checked the sandbox recipient account suffix; this is not real bank verification",
+        "Owner confirmed the sandbox university recipient; this is not real bank verification",
       actor: account.name,
       timestamp: Date.now(),
     });
+    return null;
   },
 });
 
@@ -976,6 +989,7 @@ export const chatContext = internalQuery({
         studyCountry: account.countryTo ?? "",
         destinationCountries: destinationCountries(account),
         university: account.university ?? "",
+        universityChoices: universitySelections(account),
         course: account.course ?? "",
         courseStart:
           typeof profile?.courseStart === "string" ? profile.courseStart : "",
@@ -1365,7 +1379,7 @@ export const runAgentTool = internalMutation({
       accountId,
       type: "AGENT_TOOL",
       detail: `${name}: deterministic calculation completed; no funds moved`,
-      actor: "MoveWise",
+      actor: "MoveWire",
       timestamp: Date.now(),
     });
     return result;
@@ -1717,8 +1731,9 @@ export const updatePaymentDetails = mutation({
     accountId: v.id("accounts"),
     amount: v.number(),
     recipient: v.string(),
-    last4: v.string(),
+    last4: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, { accountId, amount, recipient, last4 }) => {
     const account = await requireAccount(ctx, accountId);
     if (account.role !== "Student") throw new Error("Student account required");
@@ -1731,7 +1746,7 @@ export const updatePaymentDetails = mutation({
       Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001 ||
       !recipient.trim() ||
       recipient.trim().length > 160 ||
-      !/^\d{4}$/.test(last4)
+      (last4 !== undefined && last4 !== "" && !/^\d{4}$/.test(last4))
     )
       throw new Error("Invalid payment details");
     if (!getUniversity(account.countryTo, recipient))
@@ -1748,7 +1763,7 @@ export const updatePaymentDetails = mutation({
         currency: studyCurrency(account.countryTo),
         paymentAmount: Math.round(amount * 100) / 100,
         recipient: getUniversity(account.countryTo, recipient)!,
-        recipientAccountLast4: last4,
+        recipientAccountLast4: last4 ?? banking.value.recipientAccountLast4 ?? "",
         recipientVerified: false,
       },
     });
@@ -1760,6 +1775,7 @@ export const updatePaymentDetails = mutation({
       actor: account.name,
       timestamp: Date.now(),
     });
+    return null;
   },
 });
 

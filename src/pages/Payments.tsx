@@ -79,7 +79,6 @@ export function Payments({
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
-  const [recipientDigits, setRecipientDigits] = useState("");
 
   const runAction = async (action: () => Promise<boolean>) => {
     if (busy) return;
@@ -293,25 +292,13 @@ export function Payments({
                             convexApi.verifySandboxRecipient,
                             {
                               accountId: accountId as any,
-                              last4: recipientDigits,
                             },
                           );
                           return true;
                         });
                       }}
                     >
-                      <label>
-                        Confirm recipient account last four digits
-                        <Input
-                          required
-                          pattern="[0-9]{4}"
-                          inputMode="numeric"
-                          maxLength={4}
-                          value={recipientDigits}
-                          disabled={busy}
-                          onChange={(e) => setRecipientDigits(e.target.value)}
-                        />
-                      </label>
+                      <p>Confirm this is the university you want to pay.</p>
                       <Button disabled={busy}>Confirm sandbox recipient</Button>
                     </form>
                   )}
@@ -320,12 +307,6 @@ export function Payments({
                     <strong>
                       <UniversityLabel name={recipient} />
                     </strong>
-                    <small>
-                      ••••{" "}
-                      {activeProposal?.recipientLast4 ??
-                        config?.recipientAccountLast4 ??
-                        "1842"}
-                    </small>
                   </div>
                   <ShieldCheck
                     size={20}

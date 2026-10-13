@@ -39,6 +39,19 @@ for (const width of [320, 390, 1440]) {
       "Peking University",
       "Zhejiang University",
     ]);
+    await expect
+      .poll(() =>
+        page.getByRole("textbox", { name: "Search universities" }).evaluate(
+          (input) => {
+            const rect = input.getBoundingClientRect();
+            return document.elementFromPoint(
+              rect.left + rect.width / 2,
+              rect.top + rect.height / 2,
+            ) === input;
+          },
+        ),
+      )
+      .toBe(true);
     await page
       .getByRole("textbox", { name: "Search universities" })
       .fill("Harvard");
@@ -50,7 +63,7 @@ for (const width of [320, 390, 1440]) {
       .getByRole("option", { name: "Peking University", exact: true })
       .click();
     await page.getByRole("button", { name: "Save details" }).click();
-    await expect(page.locator(".payment-workspace-summary")).toContainText(
+    await expect(page.locator(".payment-comparison-recipient")).toContainText(
       "Peking University",
     );
     await page.getByRole("tab", { name: "Balances" }).click();

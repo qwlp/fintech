@@ -32,15 +32,13 @@ export const save = mutation({
       .take(100);
     const banking = rows.find((row) => row.key === "banking");
     if (!banking) throw new Error("Set up a demo payment first");
+    if (args.last4 && !/^\d{4}$/.test(args.last4)) throw new Error("Invalid payment details");
     const recipient =
       args.recipient == null
         ? banking.value.recipient
         : getUniversity(account.countryTo, args.recipient);
-    const last4 = args.last4 ?? banking.value.recipientAccountLast4;
-    if (!recipient || !/^\d{4}$/.test(last4 ?? ""))
-      throw new Error(
-        "Choose your university and add its account details first",
-      );
+    const last4 = args.last4 ?? banking.value.recipientAccountLast4 ?? "";
+    if (!recipient) throw new Error("Choose your university first");
     const routes = await ctx.db
       .query("paymentRoutes")
       .withIndex("by_account", (q) => q.eq("accountId", account._id))

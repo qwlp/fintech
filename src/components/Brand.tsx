@@ -6,12 +6,12 @@ export default function Brand({
   href?: string;
   className?: string;
 }) {
-  const content = <strong className="movewise-wordmark">MoveWise</strong>;
+  const content = <strong className="movewise-wordmark">MoveWire</strong>;
   return href ? (
     <a
       href={href}
       className={`passport-brand ${className}`}
-      aria-label="MoveWise"
+      aria-label="MoveWire"
     >
       {content}
     </a>

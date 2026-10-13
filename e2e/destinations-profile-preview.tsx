@@ -17,6 +17,7 @@ function Preview() {
     countryTo: "United Kingdom",
     countriesTo: ["United Kingdom"],
     university: "University of Manchester",
+    universityChoices: ["University of Manchester"],
     course: "Computing",
     avatarUrl: null as string | null,
   });
@@ -67,9 +68,13 @@ function Preview() {
           setAccount((current) => ({ ...current, avatarUrl: null }));
           return true;
         }}
-        onSave={async (profile, destinations) => {
+        onSave={async (profile, destinations, universityChoices) => {
           if ((window as any).failProfileSave) return false;
-          (window as any).savedProfile = { profile, destinations };
+          (window as any).savedProfile = {
+            profile,
+            destinations,
+            universityChoices,
+          };
           setConfig((current) => ({
             ...current,
             courseStart: profile.start,
@@ -82,6 +87,7 @@ function Preview() {
             countryTo: profile.study,
             countriesTo: destinations,
             university: profile.university,
+            universityChoices: universityChoices ?? [],
           }));
           setFunded(Number(profile.funding));
           return true;

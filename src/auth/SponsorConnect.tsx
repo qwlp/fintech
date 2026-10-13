@@ -79,7 +79,7 @@ export default function SponsorConnect({
             if (!result || cancelled) return;
             const found = readCode(result.getText());
             if (!found) {
-              setMessage("Scan a MoveWise sponsor invitation.");
+              setMessage("Scan a MoveWire sponsor invitation.");
               return;
             }
             setCode(found);

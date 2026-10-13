@@ -1,4 +1,5 @@
 import UniversityLabel from "../components/UniversityLabel";
+import "../styles/setup.css";
 import { useId, useState } from "react";
 import { Popover } from "radix-ui";
 import { Check, ChevronDown, Search } from "lucide-react";

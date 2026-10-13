@@ -390,7 +390,7 @@ export default function PaymentWorkspace({
               >
                 <Dialog.Title>Edit tuition details</Dialog.Title>
                 <Dialog.Description>
-                  Update the tuition amount and recipient account details.
+                  Update the tuition amount and university recipient.
                 </Dialog.Description>
                 <form
                   className="brief-edit-form"
@@ -407,11 +407,10 @@ export default function PaymentWorkspace({
                       if (
                         !Number.isFinite(details.amount) ||
                         details.amount <= 0 ||
-                        !getUniversity(country, details.recipient) ||
-                        !/^\d{4}$/.test(details.last4)
+                        !getUniversity(country, details.recipient)
                       )
                         throw new Error(
-                          "Enter a positive amount, select a listed university and enter four account digits.",
+                          "Enter a positive amount and select a listed university.",
                         );
                       if (onEdit) await onEdit(details);
                       else {
@@ -464,20 +463,6 @@ export default function PaymentWorkspace({
                       setDraft({ ...draft, recipient: value })
                     }
                   />
-                  <label>
-                    Recipient account last four digits
-                    <Input
-                      required
-                      pattern="[0-9]{4}"
-                      inputMode="numeric"
-                      maxLength={4}
-                      value={draft.last4}
-                      disabled={busy}
-                      onChange={(e) =>
-                        setDraft({ ...draft, last4: e.target.value })
-                      }
-                    />
-                  </label>
                   <div className="brief-actions">
                     <Button disabled={busy}>
                       {busy ? "Saving…" : "Save details"}

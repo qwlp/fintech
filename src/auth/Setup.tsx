@@ -16,9 +16,10 @@ import type { Doc } from "../../convex/_generated/dataModel";
 import { convexApi } from "../lib/convex";
 import Brand from "../components/Brand";
 import FundingConfirmation from "../features/payments/FundingConfirmation";
-import UniversitySelect from "./UniversitySelect";
+import UniversityMultiSelect from "./UniversityMultiSelect";
 import { convertMoney, studyCurrency } from "../../shared/currency";
 import {
+  universitySelections,
   destinationCountries,
   getCountry,
   getUniversity,
@@ -71,6 +72,9 @@ export default function Setup({
       : "";
   const [destinations, setDestinations] = useState(
     destinationCountries(account),
+  );
+  const [universityChoices, setUniversityChoices] = useState(
+    universitySelections(account),
   );
   const [values, setValues] = useState({
     name: account.name,
@@ -168,6 +172,7 @@ export default function Setup({
       await save({
         ...values,
         countriesTo: destinations,
+        universityChoices,
         fundingAmount: Number(values.fundingAmount),
       });
       setConfirmingFunding(false);
@@ -305,7 +310,20 @@ export default function Setup({
                           onChange={(selected, primary) => {
                             setDestinations(selected);
                             setError("");
+                            const choices = universityChoices.filter((name) =>
+                              selected.some((country) =>
+                                getUniversity(country, name),
+                              ),
+                            );
+                            setUniversityChoices(choices);
                             update("countryTo", primary);
+                            setValues((current) => ({
+                              ...current,
+                              university:
+                                choices.find((name) =>
+                                  getUniversity(primary, name),
+                                ) ?? "",
+                            }));
                           }}
                           disabled={busy}
                         />
@@ -314,10 +332,18 @@ export default function Setup({
                   )}
                   {!sponsor && step === 1 && (
                     <>
-                      <UniversitySelect
-                        country={values.countryTo}
-                        value={values.university}
-                        onChange={(value) => update("university", value)}
+                      <UniversityMultiSelect
+                        countries={destinations}
+                        value={universityChoices}
+                        onChange={(choices) => {
+                          setUniversityChoices(choices);
+                          update(
+                            "university",
+                            choices.find((name) =>
+                              getUniversity(values.countryTo, name),
+                            ) ?? "",
+                          );
+                        }}
                         disabled={busy}
                       />
                       <p className="setup-directory-note">

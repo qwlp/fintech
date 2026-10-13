@@ -1,6 +1,6 @@
-# MoveWise
+# MoveWire
 
-A Topic C cross-border finance assistant for international students. MoveWise combines a study plan, private sponsor coordination, an AI assistant with bounded tools, and a transactional tuition-payment sandbox.
+A Topic C cross-border finance assistant for international students. MoveWire combines a study plan, private sponsor coordination, an AI assistant with bounded tools, and a transactional tuition-payment sandbox.
 
 **All payments, balances, recipient checks and route quotes are simulated. No real money moves.** The AI may calculate and prepare, but only the authenticated student can approve and execute a payment.
 

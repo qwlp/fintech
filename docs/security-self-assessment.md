@@ -1,4 +1,4 @@
-# MoveWise security self-assessment
+# MoveWire security self-assessment
 
 Scope: student/sponsor account application, external AI calls and simulated USD-to-GBP tuition execution. This is a developer assessment, not an independent audit or legal compliance certification.
 

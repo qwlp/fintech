@@ -224,7 +224,7 @@ export function SponsorDashboardView({
   };
   const exportRequests = () => {
     download(
-      "movewise-funding-requests.csv",
+      "movewire-funding-requests.csv",
       [
         "Student,Purpose,Amount,Currency,Needed by,Status",
         ...requests.map(({ student: s, request: r }) =>
@@ -1094,8 +1094,8 @@ export function SponsorDashboardView({
                   className="sd-primary"
                   onClick={() =>
                     download(
-                      "movewise-funding-request.txt",
-                      `MoveWise funding request\nStudent: ${review.student.name}\nPurpose: ${review.request.purpose}\nAmount: ${money(review.request.amount, review.student.currency)}\nNeeded by: ${review.request.neededBy || "Not set"}\nStatus: ${review.request.status === "sent" ? "Open" : "Received"}\n\nArrange payment directly with the student. This document is not a payment receipt.`,
+                      "movewire-funding-request.txt",
+                      `MoveWire funding request\nStudent: ${review.student.name}\nPurpose: ${review.request.purpose}\nAmount: ${money(review.request.amount, review.student.currency)}\nNeeded by: ${review.request.neededBy || "Not set"}\nStatus: ${review.request.status === "sent" ? "Open" : "Received"}\n\nArrange payment directly with the student. This document is not a payment receipt.`,
                       "text/plain;charset=utf-8",
                     )
                   }

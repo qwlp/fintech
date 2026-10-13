@@ -56,6 +56,7 @@ describe("agent saved profile context", () => {
       studyCountry: "United States",
       destinationCountries: ["United States"],
       university: "",
+      universityChoices: [],
       course: "Computing",
       courseStart: "2027-09",
       financialStatus: "Saving for study",

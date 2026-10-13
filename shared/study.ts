@@ -91,3 +91,37 @@ export function validateDestinations(
     throw new Error("Choose a primary destination");
   return [...new Set(normalized)];
 }
+
+/** Keep existing single-university profiles compatible with a shortlist. */
+export function universitySelections(account: {
+  university: string;
+  universityChoices?: string[];
+}): string[] {
+  return [
+    ...new Set(
+      account.universityChoices ??
+        (account.university ? [account.university] : []),
+    ),
+  ];
+}
+
+export function validateUniversityChoices(
+  destinations: string[],
+  selected: string[],
+): string[] {
+  if (selected.length > 9) throw new Error("Choose at most nine universities");
+  return [
+    ...new Set(
+      selected.map((value) => {
+        const name = destinations
+          .map((country) => getUniversity(country, value))
+          .find(Boolean);
+        if (!name)
+          throw new Error(
+            "Choose listed universities in your selected destinations",
+          );
+        return name;
+      }),
+    ),
+  ];
+}

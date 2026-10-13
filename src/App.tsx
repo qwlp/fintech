@@ -296,7 +296,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       if (!(await transition("prepared"))) return false;
     } else {
       setLocalPaymentStatus("prepared");
-      addAudit("PAYMENT_PREPARED", convertMoneyText("£2,000 tuition payment prepared; no funds moved", "GBP", currency), "MoveWise");
+      addAudit("PAYMENT_PREPARED", convertMoneyText("£2,000 tuition payment prepared; no funds moved", "GBP", currency), "MoveWire");
     }
     announce("Payment prepared — approval is still required");
     return true;
@@ -374,7 +374,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
 
   const sendMessage = (text: string) => backgroundChat.send(text, activeChat);
 
-  const saveProfile = (profile: Record<string, string>, destinations: string[]) =>
+  const saveProfile = (profile: Record<string, string>, destinations: string[], universityChoices?: string[]) =>
     account
       ? mutate(convexApi.updateProfile, {
           accountId: account._id,
@@ -382,6 +382,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
           countryFrom: profile.home,
           countryTo: profile.study,
           countriesTo: destinations,
+          universityChoices,
           university: profile.university,
           course: profile.course,
           courseStart: profile.start,
@@ -449,7 +450,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
       <main className="connection-screen">
         <div className="connection-content">
           <span className="spinner" />
-          <h1>Loading MoveWise…</h1>
+          <h1>Loading MoveWire…</h1>
           <p>
             {syncState === "error"
               ? "The database could not be reached. Check the Convex deployment and retry."

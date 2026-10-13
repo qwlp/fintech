@@ -1,4 +1,4 @@
-# MoveWise technical documentation
+# MoveWire technical documentation
 
 ## Purpose
 

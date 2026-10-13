@@ -19,6 +19,7 @@ export default defineSchema({
     countryTo: v.string(),
     countriesTo: v.optional(v.array(v.string())),
     university: v.string(),
+    universityChoices: v.optional(v.array(v.string())),
     course: v.string(),
     setupComplete: v.optional(v.boolean()),
     aiConsentAt: v.optional(v.number()),

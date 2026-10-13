@@ -33,7 +33,7 @@ import LinkAccount from "../auth/LinkAccount";
 import SectionHelp from "../components/SectionHelp";
 import DestinationCountries from "../auth/DestinationCountries";
 import SetupCountrySelect from "../auth/SetupCountrySelect";
-import UniversitySelect from "../auth/UniversitySelect";
+import UniversityMultiSelect from "../auth/UniversityMultiSelect";
 import {
   useWorkspaceCurrency,
   useWorkspaceMoney,
@@ -44,6 +44,7 @@ import {
   convertMoney,
 } from "../../shared/currency";
 import {
+  universitySelections,
   destinationCountries,
   getCountry,
   getUniversity,
@@ -71,6 +72,7 @@ export function Profile({
   onSave: (
     profile: Record<string, string>,
     destinations: string[],
+    universityChoices?: string[],
   ) => Promise<boolean>;
   go: (page: Page) => void;
   onAddCountry: (country: string, label: string) => Promise<boolean>;
@@ -109,6 +111,9 @@ export function Profile({
   const [destinations, setDestinations] = useState<string[]>(
     destinationCountries(account ?? { countryTo: "" }),
   );
+  const [universityChoices, setUniversityChoices] = useState<string[]>(
+    universitySelections(account ?? { university: "" }),
+  );
   const savedProfile = {
     name: account?.name ?? "",
     home: getCountry(account?.countryFrom ?? "")?.name ?? "",
@@ -123,6 +128,8 @@ export function Profile({
   };
   const [profile, setProfile] = useState(savedProfile);
   const hasChanges =
+    JSON.stringify(universityChoices) !==
+      JSON.stringify(universitySelections(account ?? { university: "" })) ||
     JSON.stringify(profile) !== JSON.stringify(savedProfile) ||
     JSON.stringify([...destinations].sort()) !==
       JSON.stringify(destinationCountries(account ?? { countryTo: "" }).sort());
@@ -160,6 +167,7 @@ export function Profile({
   useEffect(() => {
     if (!account || editing) return;
     setDestinations(destinationCountries(account));
+    setUniversityChoices(universitySelections(account));
     setProfile({
       name: account.name,
       home: getCountry(account.countryFrom)?.name ?? "",
@@ -187,7 +195,7 @@ export function Profile({
     if (saving) return;
     setSaving(true);
     try {
-      const saved = await onSave(profile, destinations);
+      const saved = await onSave(profile, destinations, universityChoices);
       setConfirmingFunding(false);
       if (!saved) {
         setError("Couldn’t save your changes. Please try again.");
@@ -387,7 +395,7 @@ export function Profile({
                 ["name", "Full name"],
                 ["home", "Home country"],
                 ["study", "Country of study"],
-                ["university", "University"],
+                ["university", "Universities"],
                 ["course", "Programme"],
                 ["start", "Course start"],
               ] as const
@@ -421,7 +429,20 @@ export function Profile({
                         disabled={saving}
                         onChange={(selected, primary) => {
                           setDestinations(selected);
+                          const choices = universityChoices.filter((name) =>
+                            selected.some((country) =>
+                              getUniversity(country, name),
+                            ),
+                          );
+                          setUniversityChoices(choices);
                           update("study", primary);
+                          setProfile((current) => ({
+                            ...current,
+                            university:
+                              choices.find((name) =>
+                                getUniversity(primary, name),
+                              ) ?? "",
+                          }));
                         }}
                       />
                     ) : editingStudy && key === "home" ? (
@@ -432,10 +453,18 @@ export function Profile({
                         disabled={saving}
                       />
                     ) : editingStudy && key === "university" ? (
-                      <UniversitySelect
-                        country={profile.study}
-                        value={profile.university}
-                        onChange={(value) => update("university", value)}
+                      <UniversityMultiSelect
+                        countries={destinations}
+                        value={universityChoices}
+                        onChange={(choices) => {
+                          setUniversityChoices(choices);
+                          update(
+                            "university",
+                            choices.find((name) =>
+                              getUniversity(profile.study, name),
+                            ) ?? "",
+                          );
+                        }}
                         disabled={saving}
                       />
                     ) : editingStudy && key === "start" ? (
@@ -458,12 +487,16 @@ export function Profile({
                         onChange={(e) => update(key, e.target.value)}
                       />
                     ) : (
-                      <strong className="profile-value">
-                        {key === "university" && profile[key] ? (
-                          <UniversityLabel name={profile[key]} />
-                        ) : (
-                          profile[key] || "—"
-                        )}
+                      <strong
+                        className={`profile-value ${key === "university" ? "university-shortlist-values" : ""}`}
+                      >
+                        {key === "university"
+                          ? universityChoices.length
+                            ? universityChoices.map((name) => (
+                                <UniversityLabel key={name} name={name} />
+                              ))
+                            : "—"
+                          : profile[key] || "—"}
                       </strong>
                     )}
                   </div>

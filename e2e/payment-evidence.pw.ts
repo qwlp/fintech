@@ -46,7 +46,7 @@ for (const width of [1440, 390]) {
       .getByRole("button", { name: "Download payment history" })
       .click();
     expect((await download).suggestedFilename()).toBe(
-      "movewise-sandbox-evidence.json",
+      "movewire-sandbox-evidence.json",
     );
     expect(
       await page.evaluate(

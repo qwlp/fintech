@@ -62,7 +62,7 @@ export function AuthScreen({ configured = true }: { configured?: boolean }) {
     <main className="auth-shell">
       <section className="auth-panel">
         <Landmark size={32} />
-        <h1>Connect MoveWise</h1>
+        <h1>Connect MoveWire</h1>
         <p>
           Configure VITE_CONVEX_URL and run the Convex backend to enable secure
           accounts.
@@ -227,7 +227,7 @@ function AuthForm({
           </Button>
         </form>
         <p className="auth-switch">
-          {register ? "Already have an account?" : "New to MoveWise?"}{" "}
+          {register ? "Already have an account?" : "New to MoveWire?"}{" "}
           <button
             disabled={busy}
             onClick={() => {

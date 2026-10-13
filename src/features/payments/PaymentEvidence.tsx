@@ -85,7 +85,6 @@ export default function PaymentEvidence({
       if (verify)
         await convexClient.mutation(convexApi.verifySandboxRecipient, {
           accountId: accountId as any,
-          last4: banking?.recipientAccountLast4 ?? "",
         });
       else
         await convexClient.mutation(convexApi.initializePaymentSandbox, {
@@ -106,7 +105,7 @@ export default function PaymentEvidence({
       [
         JSON.stringify(
           {
-            application: "MoveWise",
+            application: "MoveWire",
             sandbox: true,
             exportedAt: new Date().toISOString(),
             proposals,
@@ -123,7 +122,7 @@ export default function PaymentEvidence({
     const url = URL.createObjectURL(blob),
       link = document.createElement("a");
     link.href = url;
-    link.download = "movewise-sandbox-evidence.json";
+    link.download = "movewire-sandbox-evidence.json";
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -175,11 +174,7 @@ export default function PaymentEvidence({
             </div>
             <Button
               aria-label="Confirm university account"
-              disabled={
-                pending ||
-                !accountId ||
-                !/^\d{4}$/.test(banking.recipientAccountLast4 ?? "")
-              }
+              disabled={pending || !accountId || !banking.recipient}
               onClick={() => void run(true)}
             >
               <Check size={15} aria-hidden="true" />
@@ -238,10 +233,7 @@ export default function PaymentEvidence({
             <div className="payment-evidence-content" role="status">
               <div className="evidence-payment-title">
                 <strong>{current.recipient}</strong>
-                <span>
-                  {routeProviderName(current.provider)} · ••••{" "}
-                  {current.recipientLast4}
-                </span>
+                <span>{routeProviderName(current.provider)}</span>
               </div>
               <dl className="evidence-payment-facts">
                 <div>

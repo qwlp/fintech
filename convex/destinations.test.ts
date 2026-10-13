@@ -179,3 +179,104 @@ describe("multiple destination countries", () => {
     ).toBeUndefined();
   });
 });
+
+describe("university shortlists", () => {
+  it("saves multiple universities across destinations and changes the active university with the primary destination", async () => {
+    const { owner, details, accountId } = await fixture();
+    const choices = [
+      "University of Manchester",
+      "University of Edinburgh",
+      "UCLA",
+    ];
+    await owner.mutation(api.accounts.completeSetup, {
+      ...details,
+      countriesTo: ["UK", "US"],
+      universityChoices: choices,
+    });
+    let result = await owner.query(api.accounts.bootstrap, {});
+    expect(result.account.universityChoices).toEqual(choices);
+    expect(result.account.university).toBe("University of Manchester");
+    await owner.mutation(api.accounts.updateProfile, {
+      ...details,
+      accountId,
+      financialStatus: "Planning",
+      countryTo: "US",
+      countriesTo: ["UK", "US"],
+      universityChoices: choices,
+    });
+    result = await owner.query(api.accounts.bootstrap, {});
+    expect(result.account.university).toBe("UCLA");
+    expect(result.account.universityChoices).toEqual(choices);
+    await owner.mutation(api.accounts.updateProfile, {
+      ...details,
+      accountId,
+      financialStatus: "Planning",
+      universityChoices: [],
+    });
+    result = await owner.query(api.accounts.bootstrap, {});
+    expect(result.account.universityChoices).toEqual([]);
+    expect(result.account.university).toBe("");
+  });
+  it("rejects universities outside selected destinations and unauthenticated writes", async () => {
+    const { owner, details, t } = await fixture();
+    await expect(
+      owner.mutation(api.accounts.completeSetup, {
+        ...details,
+        universityChoices: ["UCLA"],
+      }),
+    ).rejects.toThrow("selected destinations");
+    await expect(
+      owner.mutation(api.accounts.completeSetup, {
+        ...details,
+        universityChoices: ["Harvard"],
+      }),
+    ).rejects.toThrow("listed universities");
+    await expect(
+      t.mutation(api.accounts.completeSetup, {
+        ...details,
+        universityChoices: ["University of Manchester"],
+      }),
+    ).rejects.toThrow();
+  });
+  it("saves and confirms a listed tuition recipient without account digits", async () => {
+    const { t, owner, accountId } = await fixture();
+    await t.run((ctx) =>
+      ctx.db.insert("appConfig", {
+        accountId,
+        key: "banking",
+        value: {
+          paymentAmount: 100,
+          recipient: "University of Manchester",
+          recipientVerified: false,
+        },
+      }),
+    );
+    await owner.mutation(api.paymentPreferences.save, {
+      sourceCurrency: "USD",
+      targetCurrency: "GBP",
+      amount: 200,
+      recipient: "University of Edinburgh",
+    });
+    await owner.mutation(api.accounts.verifySandboxRecipient, { accountId });
+    const result = await owner.query(api.accounts.bootstrap, {});
+    expect(result.config.banking.recipient).toBe("University of Edinburgh");
+    expect(result.config.banking.recipientAccountLast4).toBe("");
+    expect(result.config.banking.recipientVerified).toBe(true);
+    await expect(
+      owner.mutation(api.accounts.updatePaymentDetails, {
+        accountId,
+        amount: 200,
+        recipient: "Harvard",
+      }),
+    ).rejects.toThrow("listed university");
+    await owner.mutation(api.accounts.updatePaymentDetails, {
+      accountId,
+      amount: 200,
+      recipient: "University of Manchester",
+    });
+    expect(
+      (await owner.query(api.accounts.bootstrap, {})).config.banking
+        .recipientVerified,
+    ).toBe(false);
+  });
+});

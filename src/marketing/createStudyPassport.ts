@@ -30,7 +30,7 @@ export function createStudyPassport() {
     ctx.textAlign = "center";
     ctx.fillStyle = "#d8e5f3";
     ctx.font = "600 57px Manrope, sans-serif";
-    ctx.fillText("MoveWise", 384, 190);
+    ctx.fillText("MoveWire", 384, 190);
     ctx.strokeStyle = "#9cb1c9";
     ctx.lineWidth = 3;
     ctx.beginPath();

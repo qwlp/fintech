@@ -4,6 +4,7 @@ export type DatabaseState = {
   account: {
     _id: string;
     university: string;
+    universityChoices?: string[];
     countryFrom: string;
     countryTo: string;
     countriesTo?: string[];
