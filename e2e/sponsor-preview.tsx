@@ -56,6 +56,8 @@ function Preview() {
   );
   return (
     <SponsorDashboardView
+      accountId="tour-sponsor"
+      startTour={new URLSearchParams(location.search).has("tour")}
       name="Sokha Chan"
       students={students}
       onUpdate={async (id, amount) => {

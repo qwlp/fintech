@@ -1,3 +1,4 @@
+import { finishWorkspaceTour, hasPendingWorkspaceTour } from "./lib/workspace-tour";
 import AccountAvatar from "./components/AccountAvatar";
 import AccountMenu from "./components/AccountMenu";
 import { useEffect, useRef, useState } from "react";
@@ -70,7 +71,7 @@ const nav: { page: Page; icon: typeof UserRound }[] = [
   { page: "Security", icon: ShieldCheck },
 ];
 
-function App({ onSignOut }: { onSignOut: () => void }) {
+function App({ onSignOut, startTour = false }: { onSignOut: () => void; startTour?: boolean }) {
   const reducedMotion = useReducedMotion();
   const pageFromHash = (): Page =>
     [...nav, { page: "Wallet" as Page }, { page: "Exchange" as Page }].find(
@@ -133,7 +134,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
     return "light";
   });
   const [tourOpen, setTourOpen] = useState(
-    () => new URLSearchParams(location.search).get("tour") === "on",
+    () => startTour || new URLSearchParams(location.search).get("tour") === "on",
   );
   const [variation, setVariation] = useState<Variation>(() => {
     const requested = Number(new URLSearchParams(location.search).get("v"));
@@ -185,6 +186,9 @@ function App({ onSignOut }: { onSignOut: () => void }) {
   }, []);
 
   const account = database?.account;
+  useEffect(() => {
+    if (account && hasPendingWorkspaceTour(account._id)) setTourOpen(true);
+  }, [account?._id]);
   useEffect(() => {
     if (!convexClient || !account || account.role !== "Student") return;
     void convexClient
@@ -238,7 +242,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
   };
 
   const closeTour = () => {
-    localStorage.setItem("financial-passport-tour", "done");
+    if (account) finishWorkspaceTour(account._id);
     setTourOpen(false);
   };
 
@@ -596,7 +600,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               {(page !== "AI Agent" || showChatHistory) &&
                 !["Payments", "Wallet", "Exchange", "Profile", "Security"].includes(page) && (
                   <div className="page-help-tools">
-                    <SectionHelp key={page} section={page} />
+                    <SectionHelp key={page} section={page} onTour={() => setTourOpen(true)} />
                   </div>
                 )}
               {page === "Dashboard" && (
@@ -669,10 +673,11 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                 ) : (
                   <Assistant
                     key={activeChat ?? "legacy"}
-                    tour={<AgentTour accountId={account?._id} />}
+                    tour={<AgentTour accountId={account?._id} autoOpen={!tourOpen} />}
                     messages={(database?.messages ?? []).filter(
                       (message) => message.chatId === activeChat,
                     )}
+                    tourActive={tourOpen}
                     aiEnabled={!!account?.aiConsentAt}
                     onConsent={async (enabled: boolean) =>
                       account
@@ -705,7 +710,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   travelCountry={account?.countryTo}
                   help={
                     <div className="page-help-tools">
-                      <SectionHelp key={page} section={page} />
+                      <SectionHelp key={page} section={page} onTour={() => setTourOpen(true)} />
                     </div>
                   }
                   initialView={
@@ -831,7 +836,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
           </div>
         </main>
         <MobileNavigation page={page} go={go} />
-        {tourOpen && (
+        {tourOpen && account && (
           <Tour
             page={page}
             variation={variation}

@@ -1,3 +1,9 @@
+import { Tour, type TourStep } from "../components/Tour";
+import {
+  finishWorkspaceTour,
+  hasPendingWorkspaceTour,
+} from "../lib/workspace-tour";
+import "../styles/tour.css";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Dialog } from "radix-ui";
@@ -11,6 +17,7 @@ import {
   Check,
   ChevronRight,
   CircleDollarSign,
+  CircleHelp,
   Clock3,
   GraduationCap,
   Inbox,
@@ -43,6 +50,8 @@ import "../styles/motion.css";
 type Student = FunctionReturnType<typeof api.sponsorLinks.dashboard>[number];
 type View = "Overview" | "Students" | "Requests" | "Activity" | "Connections";
 type Props = {
+  accountId?: string;
+  startTour?: boolean;
   name: string;
   onSignOut: () => void;
   onSetup: () => void;
@@ -120,6 +129,8 @@ const csv = (value: string | number) =>
     .replaceAll('"', '""')}"`;
 
 export function SponsorDashboardView({
+  accountId,
+  startTour = false,
   name,
   students,
   onUpdate,
@@ -170,6 +181,55 @@ export function SponsorDashboardView({
     };
   }, [accountMenu]);
   const [view, setView] = useState<View>("Overview");
+  const [tourOpen, setTourOpen] = useState(
+    () => startTour || (!!accountId && hasPendingWorkspaceTour(accountId)),
+  );
+  const tourViews: View[] = [
+    "Overview",
+    "Connections",
+    "Students",
+    "Requests",
+    "Activity",
+  ];
+  const tourSteps: TourStep[] = [
+    {
+      page: "Sponsors",
+      target: ".sd-page-heading",
+      title: "Your support at a glance",
+      body: "See your students, commitments and open funding requests.",
+    },
+    {
+      page: "Sponsors",
+      target: ".sd-connections",
+      title: "Connect with a student",
+      body: "Enter their invite code or scan their QR code.",
+    },
+    {
+      page: "Sponsors",
+      target: ".sd-page-heading",
+      title: "Follow their progress",
+      body: "Review each student’s plan and update your support commitment.",
+      tip: "Students choose which details to share.",
+    },
+    {
+      page: "Sponsors",
+      target: ".sd-page-heading",
+      title: "Review funding requests",
+      body: "Check the amount, purpose and due date before arranging support.",
+      tip: "Students confirm receipt. This app does not send real funds.",
+    },
+    {
+      page: "Sponsors",
+      target: ".sd-page-heading",
+      title: "Keep track of support",
+      body: "Review activity and download records for your own files.",
+      tip: "Replay from the help button or your account menu.",
+    },
+  ];
+  const closeTour = () => {
+    if (accountId) finishWorkspaceTour(accountId);
+    setTourOpen(false);
+  };
   const [selected, setSelected] = useState<Id<"sponsors"> | null>(null);
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState("");
@@ -298,6 +358,19 @@ export function SponsorDashboardView({
   );
   return (
     <div className="sponsor-shell">
+      {tourOpen && (
+        <Tour
+          page="Sponsors"
+          variation={1}
+          go={() => {}}
+          chooseVariation={() => {}}
+          close={closeTour}
+          steps={tourSteps}
+          onStep={(index) => setView(tourViews[index])}
+          onFinish={() => setView("Students")}
+          finishLabel="View students"
+        />
+      )}
       <a className="sd-skip" href="#sponsor-content">
         Skip to content
       </a>
@@ -332,6 +405,13 @@ export function SponsorDashboardView({
         </nav>
         <div className="sd-sidebar-bottom">
           <div className="sd-sidebar-tools">
+            <button
+              onClick={() => setTourOpen(true)}
+              aria-label="Take a tour"
+              title="Take a tour"
+            >
+              <CircleHelp size={18} />
+            </button>
             <button
               onClick={toggleTheme}
               aria-label={theme === "dark" ? "Light mode" : "Dark mode"}
@@ -382,6 +462,14 @@ export function SponsorDashboardView({
                 <button onClick={toggleTheme}>
                   {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
                   {theme === "dark" ? "Light mode" : "Dark mode"}
+                </button>
+                <button
+                  onClick={() => {
+                    setAccountMenu(false);
+                    setTourOpen(true);
+                  }}
+                >
+                  Take a tour
                 </button>
                 <button onClick={onSetup}>
                   <Settings2 size={16} />

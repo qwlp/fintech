@@ -201,3 +201,13 @@
     font-size: 12px;
   }
 }
+
+.section-help-tour {
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--color-primary-soft);
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 13px;
+}

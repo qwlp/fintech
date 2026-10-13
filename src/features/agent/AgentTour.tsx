@@ -1,17 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog } from "radix-ui";
 import { Button } from "../../components/ui/button";
 import { Bot, CircleHelp, X } from "lucide-react";
 import "../../styles/agent-tour.css";
-export default function AgentTour({ accountId }: { accountId?: string }) {
+export default function AgentTour({
+  accountId,
+  autoOpen = true,
+}: {
+  accountId?: string;
+  autoOpen?: boolean;
+}) {
   const key = `movewise-agent-tour:${accountId ?? "session"}`;
   const [open, setOpen] = useState(() => {
+    if (!autoOpen) return false;
     try {
       return localStorage.getItem(key) !== "done";
     } catch {
       return true;
     }
   });
+  useEffect(() => {
+    if (!autoOpen) setOpen(false);
+  }, [autoOpen]);
   const dismiss = () => {
     try {
       localStorage.setItem(key, "done");

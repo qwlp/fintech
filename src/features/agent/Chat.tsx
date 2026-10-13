@@ -60,6 +60,7 @@ export function Assistant({
   onNew,
   onHistory,
   aiEnabled = true,
+  tourActive = false,
   backgroundPending,
   backgroundBusy = false,
   backgroundError,
@@ -68,6 +69,7 @@ export function Assistant({
 }: {
   tour?: ReactNode;
   aiEnabled?: boolean;
+  tourActive?: boolean;
   backgroundPending?: string;
   backgroundBusy?: boolean;
   backgroundError?: string;
@@ -82,7 +84,7 @@ export function Assistant({
   const pending = backgroundPending ?? localPending;
   const sending = backgroundBusy || !!pending;
   const [error, setError] = useState("");
-  const [privacyOpen, setPrivacyOpen] = useState(!aiEnabled);
+  const [privacyOpen, setPrivacyOpen] = useState(!aiEnabled && !tourActive);
   const [consentPending, setConsentPending] = useState(false);
   const [consentError, setConsentError] = useState("");
   const busy = useRef(false);
@@ -180,7 +182,8 @@ export function Assistant({
               <Dialog.Title>AI privacy</Dialog.Title>
               <Dialog.Description>
                 Your messages, recent conversation and minimized financial
-                summaries are sent to the AI service configured by this deployment’s operator.
+                summaries are sent to the AI service configured by this
+                deployment’s operator.
               </Dialog.Description>
               <p className="assistant-privacy-status">
                 {aiEnabled ? "AI processing enabled" : "AI processing disabled"}

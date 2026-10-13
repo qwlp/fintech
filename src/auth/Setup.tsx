@@ -46,9 +46,10 @@ export default function Setup({
     fundingCurrency?: string;
     countryAccounts?: { country: string; label: string }[];
   };
-  onDone: () => void;
+  onDone: (firstSetup?: boolean) => void;
   onSignOut: () => void;
 }) {
+  const firstSetup = useRef(account.setupComplete === false);
   const sponsor = account.role === "Sponsor";
   const canClose = account.setupComplete && !needsStudySelectionUpdate(account);
   const steps = sponsor
@@ -203,7 +204,7 @@ export default function Setup({
       />
       <header className="setup-header">
         <Brand />
-        <button onClick={canClose ? onDone : onSignOut}>
+        <button onClick={canClose ? () => onDone() : onSignOut}>
           {canClose ? (
             <>
               <X size={16} aria-hidden="true" /> Close
@@ -288,7 +289,7 @@ export default function Setup({
                     ][step]}
             </p>
             {saved ? (
-              <Button className="setup-next" onClick={onDone}>
+              <Button className="setup-next" onClick={() => onDone(firstSetup.current)}>
                 Open workspace <ArrowRight size={17} />
               </Button>
             ) : (

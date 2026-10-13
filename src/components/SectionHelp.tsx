@@ -26,9 +26,11 @@ const descriptions: Record<string, string> = {
 export default function SectionHelp({
   section,
   showLabel = false,
+  onTour,
 }: {
   section: string;
   showLabel?: boolean;
+  onTour?: () => void;
 }) {
   return (
     <Popover.Root>
@@ -53,6 +55,17 @@ export default function SectionHelp({
         >
           <strong>{section}</strong>
           <p>{descriptions[section]}</p>
+          {onTour && (
+            <Popover.Close asChild>
+              <button
+                type="button"
+                className="section-help-tour"
+                onClick={onTour}
+              >
+                Take a tour
+              </button>
+            </Popover.Close>
+          )}
           <Popover.Close asChild>
             <button
               type="button"

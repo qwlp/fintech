@@ -1,3 +1,4 @@
+import { queueWorkspaceTour } from "../lib/workspace-tour";
 import SponsorDashboard from "./SponsorDashboard";
 import { needsStudySelectionUpdate } from "../../shared/study";
 import Brand from "../components/Brand";
@@ -313,6 +314,7 @@ function WorkspaceRecovery({ children }: { children: ReactNode }) {
   );
 }
 function AccountWorkspace() {
+  const [startTour, setStartTour] = useState(false);
   const hash = usePageHash();
   const accountData = useQuery(convexApi.bootstrap, {});
   const { signOut } = useAuthActions();
@@ -344,7 +346,11 @@ function AccountWorkspace() {
       <Setup
         account={accountData.account}
         config={accountData.config.profile}
-        onDone={() => {
+        onDone={(firstSetup) => {
+          setStartTour(!!firstSetup);
+          if (firstSetup) {
+            queueWorkspaceTour(accountData.account._id);
+          }
           location.hash = "workspace";
         }}
         onSignOut={logout}
@@ -353,6 +359,8 @@ function AccountWorkspace() {
   if (accountData.account.role === "Sponsor")
     return (
       <SponsorDashboard
+        accountId={accountData.account._id}
+        startTour={startTour}
         name={accountData.account.name}
         onSignOut={logout}
         onSetup={() => {
@@ -375,7 +383,7 @@ function AccountWorkspace() {
           </main>
         }
       >
-        <App onSignOut={logout} />
+        <App onSignOut={logout} startTour={startTour} />
       </Suspense>
     </>
   );

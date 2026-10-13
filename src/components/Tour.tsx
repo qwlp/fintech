@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence } from "motion/react";
+import { createPortal } from "react-dom";
 import {
+  ArrowLeft,
   ArrowRight,
   Bot,
   Check,
@@ -14,11 +15,93 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import type { Page } from "../types/database";
 
 type Variation = 1 | 2 | 3 | 4 | 5;
+export type TourStep = {
+  page: Page;
+  target: string;
+  title: string;
+  body: string;
+  tip?: string;
+};
+const defaultSteps: TourStep[] = [
+  {
+    page: "Dashboard",
+    target: ".funding-overview",
+    title: "Your move at a glance",
+    body: "Track your budget, funding gap and upcoming tuition.",
+  },
+  {
+    page: "Move Planner",
+    target: ".move-plan-settings",
+    title: "Build your budget",
+    body: "Pick university estimates, then adjust travel and living costs.",
+  },
+  {
+    page: "Move Planner",
+    target: ".planner-save-bar",
+    title: "Keep your plan",
+    body: "Save your budget to update your dashboard and funding gap.",
+  },
+  {
+    page: "Profile",
+    target: "#profile-workspace .profile-hero",
+    title: "Keep details current",
+    body: "Edit your studies, funding and country accounts here.",
+  },
+  {
+    page: "Payments",
+    target: ".payment-comparison-bar",
+    title: "Compare tuition costs",
+    body: "Defaults are ready. Change currencies or amount, then compare.",
+    tip: "Quotes include fees. Payments are simulated.",
+  },
+  {
+    page: "Wallet",
+    target: ".balance-accounts",
+    title: "See your balances",
+    body: "View each currency account and its value in your study currency.",
+  },
+  {
+    page: "Exchange",
+    target: ".fx-converter-panel",
+    title: "Check exchange costs",
+    body: "Estimate conversions and set rate alerts before transferring.",
+  },
+  {
+    page: "Sponsors",
+    target: ".sponsor-reference-page",
+    title: "Plan support together",
+    body: "Track sponsor support and choose what each sponsor can see.",
+  },
+  {
+    page: "AI Agent",
+    target: ".assistant-welcome, .assistant-composer",
+    title: "Ask about your plan",
+    body: "Try “How much can I spend each month?”",
+    tip: "AI privacy controls access. You approve any proposed changes.",
+  },
+  {
+    page: "Security",
+    target: ".security-safeguards, .security-workspace",
+    title: "You stay in control",
+    body: "Manage payment limits, approvals and account activity.",
+    tip: "Replay anytime from Home’s help menu.",
+  },
+];
+const icons = {
+  Dashboard: LayoutDashboard,
+  Profile: UserRound,
+  "Move Planner": Route,
+  "AI Agent": Bot,
+  Payments: CreditCard,
+  Exchange: CircleDollarSign,
+  Sponsors: UsersRound,
+  Wallet: WalletCards,
+  Security: ShieldCheck,
+};
 
 export function Tour({
   page,
@@ -26,257 +109,248 @@ export function Tour({
   go,
   chooseVariation,
   close,
+  steps = defaultSteps,
+  onStep,
+  onFinish,
+  finishLabel = "Start planning",
 }: {
   page: Page;
   variation: Variation;
-  go: (p: Page) => void;
+  go: (page: Page) => void;
   chooseVariation: (value: Variation) => void;
   close: () => void;
+  steps?: TourStep[];
+  onStep?: (index: number) => void;
+  onFinish?: () => void;
+  finishLabel?: string;
 }) {
-  const steps = [
-    {
-      page: "Dashboard" as Page,
-      target: '[data-tour="readiness"]',
-      title: "Your funding",
-      body: "See your balance and funding gap.",
-    },
-    {
-      page: "Dashboard" as Page,
-      target: '[data-tour="next-action"]',
-      title: "Next up",
-      body: "Your next deadline, at a glance.",
-    },
-    {
-      page: "Move Planner" as Page,
-      target: ".move-board",
-      title: "Plan your move",
-      body: "Compare travel and living costs.",
-    },
-    {
-      page: "AI Agent" as Page,
-      target: ".agent-layout",
-      title: "Ask your agent",
-      body: "Ask a question about your plan.",
-    },
-    {
-      page: "Payments" as Page,
-      target: ".pay-options",
-      title: "Compare providers",
-      body: "Choose a route, then approve the total.",
-    },
-    {
-      page: "Security" as Page,
-      target: ".security-grid",
-      title: "Stay in control",
-      body: "Manage limits and review activity.",
-    },
-  ];
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const card = useRef<HTMLDivElement>(null);
+  const title = useRef<HTMLHeadingElement>(null);
   const startingPage = useRef(page);
   const startingVariation = useRef(variation);
+  const originalFocus = useRef(document.activeElement);
   const current = steps[step];
+  const Icon = icons[current.page];
 
   useEffect(() => {
-    if (page !== "Dashboard") go("Dashboard");
-    if (variation !== 1) chooseVariation(1);
-  }, []);
-
-  const TourIcon = {
-    Dashboard: LayoutDashboard,
-    Profile: UserRound,
-    "Move Planner": Route,
-    "AI Agent": Bot,
-    Payments: CreditCard,
-    Exchange: CircleDollarSign,
-    Sponsors: UsersRound,
-    Wallet: WalletCards,
-    Security: ShieldCheck,
-  }[current.page];
+    onStep?.(step);
+    if (page !== current.page) go(current.page);
+    if (current.page === "Dashboard" && variation !== 1) chooseVariation(1);
+  }, [step]);
 
   useEffect(() => {
+    title.current?.focus({ preventScroll: true });
+    if (page !== current.page) {
+      setRect(null);
+      return;
+    }
+    let found: Element | null = null;
+    let frame = 0;
+    const resize = new ResizeObserver(() => schedule());
     const update = () => {
-      if (!current.target) return setRect(null);
       const element = document.querySelector(current.target);
       if (!element) return setRect(null);
-      setRect(element.getBoundingClientRect());
+      if (element !== found) {
+        found = element;
+        element.scrollIntoView({ behavior: "instant", block: "center" });
+        resize.observe(element);
+      }
+      const next = element.getBoundingClientRect();
+      setRect((previous) =>
+        previous &&
+        previous.x === next.x &&
+        previous.y === next.y &&
+        previous.width === next.width &&
+        previous.height === next.height
+          ? previous
+          : next,
+      );
     };
-    const timer = window.setTimeout(() => {
-      const element = current.target
-        ? document.querySelector(current.target)
-        : null;
-      element?.scrollIntoView({
-        behavior: "auto",
-        block: window.innerWidth <= 760 ? "start" : "center",
-      });
-      if (element && window.innerWidth <= 760) window.scrollBy(0, -88);
-      requestAnimationFrame(update);
-    }, 60);
-    window.addEventListener("scroll", update, { passive: true, capture: true });
-    window.addEventListener("resize", update);
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.getElementById("root") ?? document.body, {
+      childList: true,
+      subtree: true,
+    });
+    window.addEventListener("scroll", schedule, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("resize", schedule);
+    schedule();
     return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      resize.disconnect();
+      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
     };
-  }, [step, page, variation, current.target]);
+  }, [step, page, current.target]);
 
   const move = (next: number) => {
     if (next < 0 || next >= steps.length) return;
     setRect(null);
-    const item = steps[next];
-    const desiredVariation = item.page === "Dashboard" ? 1 : variation;
-    if (item.page === "Dashboard" && variation !== desiredVariation)
-      chooseVariation(desiredVariation);
-    if (item.page !== page) go(item.page);
     setStep(next);
   };
-
-  const exitTour = (restore: boolean) => {
-    if (restore) {
-      if (startingVariation.current !== variation)
-        chooseVariation(startingVariation.current);
-      if (startingPage.current !== page) go(startingPage.current);
-    }
+  const exit = (finish: boolean) => {
     close();
+    if (startingVariation.current !== variation)
+      chooseVariation(startingVariation.current);
+    if (finish && onFinish) onFinish();
+    else go(finish ? "Move Planner" : startingPage.current);
+    requestAnimationFrame(() => {
+      if (
+        originalFocus.current instanceof HTMLElement &&
+        originalFocus.current.isConnected
+      )
+        originalFocus.current.focus({ preventScroll: true });
+    });
   };
-
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") exitTour(false);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        exit(false);
+        return;
+      }
       if (
         event.target instanceof HTMLElement &&
-        (event.target.matches("input, textarea, select") ||
+        (event.target.matches("input, textarea, select, [role=combobox]") ||
           event.target.isContentEditable)
       )
         return;
-      if (event.key === "ArrowRight")
-        step === steps.length - 1 ? exitTour(false) : move(step + 1);
-      if (event.key === "ArrowLeft" && step > 0) move(step - 1);
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        step === steps.length - 1 ? exit(true) : move(step + 1);
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        move(step - 1);
+      }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   });
 
-  const tourCardStyle = (() => {
-    if (!rect || window.innerWidth <= 760) return undefined;
-    const gap = 20;
-    const width = Math.min(320, window.innerWidth - gap * 2);
-    const height = 190;
+  const cardStyle = (() => {
+    if (!rect) return undefined;
+    const gap = 16;
+    const mobile = innerWidth <= 800;
+    const width = mobile ? innerWidth - 32 : 360;
+    const height = card.current?.offsetHeight ?? 240;
+    const bottom = innerHeight - height - (mobile ? 100 : gap);
     const candidates = [
       { left: gap, top: gap },
-      { left: window.innerWidth - width - gap, top: gap },
-      { left: gap, top: window.innerHeight - height - gap },
-      {
-        left: window.innerWidth - width - gap,
-        top: window.innerHeight - height - gap,
-      },
+      { left: innerWidth - width - gap, top: gap },
+      { left: gap, top: Math.max(gap, bottom) },
+      { left: innerWidth - width - gap, top: Math.max(gap, bottom) },
     ];
-    const overlap = (candidate: { left: number; top: number }) => {
-      const overlapWidth = Math.max(
+    const overlap = (pos: { left: number; top: number }) =>
+      Math.max(
         0,
-        Math.min(candidate.left + width, rect.right + 12) -
-          Math.max(candidate.left, rect.left - 12),
-      );
-      const overlapHeight = Math.max(
+        Math.min(pos.left + width, rect.right + 8) -
+          Math.max(pos.left, rect.left - 8),
+      ) *
+      Math.max(
         0,
-        Math.min(candidate.top + height, rect.bottom + 12) -
-          Math.max(candidate.top, rect.top - 12),
+        Math.min(pos.top + height, rect.bottom + 8) -
+          Math.max(pos.top, rect.top - 8),
       );
-      const cardCenterX = candidate.left + width / 2;
-      const cardCenterY = candidate.top + height / 2;
-      const distance = Math.hypot(
-        cardCenterX - (rect.left + rect.width / 2),
-        cardCenterY - (rect.top + rect.height / 2),
-      );
-      return overlapWidth * overlapHeight * 1000 - distance;
-    };
-    const best = candidates.sort((a, b) => overlap(a) - overlap(b))[0];
-    return {
-      left: best.left,
-      top: Math.max(gap, best.top),
-      right: "auto",
-      bottom: "auto",
-    };
+    // Prefer the bottom corner when it leaves the highlighted control visible.
+    candidates.reverse();
+    candidates.sort((a, b) => overlap(a) - overlap(b));
+    return { ...candidates[0], right: "auto", bottom: "auto", width };
   })();
+  const focusTop = rect ? Math.max(8, rect.top - 5) : 0;
+  const focusBottom = rect
+    ? Math.min(innerHeight - (innerWidth <= 800 ? 88 : 8), rect.bottom + 5)
+    : 0;
 
-  return (
+  return createPortal(
     <div className="guide-layer">
-      {rect && (
+      {rect && focusBottom > focusTop && (
         <div
           className="guide-focus"
           aria-hidden="true"
           style={{
-            left: rect.left - 4,
-            top: rect.top - 4,
-            width: rect.width + 8,
-            height: rect.height + 8,
+            left: Math.max(8, rect.left - 5),
+            top: focusTop,
+            width: Math.min(innerWidth - 16, rect.width + 10),
+            height: focusBottom - focusTop,
           }}
         />
       )}
-      <Card
+      <div
+        ref={card}
         className="guide-card"
-        style={tourCardStyle}
+        style={cardStyle}
         role="dialog"
-        aria-label="Quick tour"
+        aria-labelledby="guide-title"
         aria-describedby="guide-description"
       >
-        <div className="guide-header">
-          <span className="guide-icon">
-            <TourIcon size={18} />
+        <div
+          className="guide-progress"
+          aria-label={`Step ${step + 1} of ${steps.length}`}
+        >
+          <i style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
+        </div>
+        <div className="guide-meta">
+          <span>{step === 0 ? "Welcome to MoveWire" : current.page}</span>
+          <span>
+            {step + 1} of {steps.length}
           </span>
-          <strong>{current.title}</strong>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             aria-label="Close tour"
             title="Close tour"
-            onClick={() => exitTour(false)}
+            onClick={() => exit(false)}
           >
-            <X size={16} />
-          </Button>
+            <X size={18} />
+          </button>
+        </div>
+        <div className="guide-header">
+          <span className="guide-icon">
+            <Icon size={22} aria-hidden="true" />
+          </span>
+          <h2 ref={title} tabIndex={-1} id="guide-title">
+            {current.title}
+          </h2>
         </div>
         <p id="guide-description">{current.body}</p>
+        {current.tip && <p className="guide-tip">{current.tip}</p>}
         <div className="guide-footer">
-          <div className="guide-dots" aria-label="Tour steps">
-            {steps.map((item, i) => (
-              <button
-                key={item.title}
-                aria-label={item.title}
-                aria-current={i === step ? "step" : undefined}
-                onClick={() => move(i)}
-                title={item.title}
-              />
-            ))}
-          </div>
-          <span className="guide-count">
-            {step + 1}/{steps.length}
-          </span>
+          <button className="guide-skip" onClick={() => exit(false)}>
+            Skip tour
+          </button>
           <Button
             variant="ghost"
             size="icon"
             disabled={step === 0}
             aria-label="Previous step"
-            title="Previous step"
             onClick={() => move(step - 1)}
           >
-            <ArrowRight size={16} style={{ transform: "rotate(180deg)" }} />
+            <ArrowLeft size={17} />
           </Button>
           <Button
             size="sm"
             onClick={() =>
-              step === steps.length - 1 ? exitTour(false) : move(step + 1)
+              step === steps.length - 1 ? exit(true) : move(step + 1)
             }
           >
-            {step === steps.length - 1 ? "Done" : "Next"}
+            {step === steps.length - 1 ? finishLabel : "Next"}
             {step === steps.length - 1 ? (
-              <Check size={14} />
+              <Check size={16} />
             ) : (
-              <ArrowRight size={14} />
+              <ArrowRight size={16} />
             )}
           </Button>
         </div>
-      </Card>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

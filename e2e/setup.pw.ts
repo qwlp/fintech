@@ -22,7 +22,7 @@ async function openSetup(
       const client = new ConvexReactClient('https://setup-test.convex.cloud');
       client.mutation = async (_ref, args) => { ${fail ? "throw new Error('Unavailable');" : "window.savedSetup = args;"} };
       const account = { name: 'Dara Chan', role: '${role}', countryFrom: '', countryTo: '', university: '', course: '', setupComplete: false };
-      ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(ConvexProvider, {client}, React.createElement(Setup, {account, onDone: () => { document.body.dataset.finished = 'true'; }, onSignOut: () => {}})));
+      ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(ConvexProvider, {client}, React.createElement(Setup, {account, onDone: (firstSetup) => { document.body.dataset.finished = 'true'; document.body.dataset.firstSetup = String(firstSetup); }, onSignOut: () => {}})));
     </script></body></html>`,
     }),
   );
@@ -147,6 +147,10 @@ for (const width of [1440, 390]) {
     );
     await page.getByRole("button", { name: "Open workspace" }).click();
     await expect(page.locator("body")).toHaveAttribute("data-finished", "true");
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-first-setup",
+      "true",
+    );
   });
 }
 test("sponsor setup and save failure", async ({ page }) => {
