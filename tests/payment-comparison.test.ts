@@ -91,6 +91,12 @@ describe("payment currencies and scores", () => {
       sourceCurrency: "CNY",
       targetCurrency: "USD",
       amount: 2000,
+      recipient: "Columbia University",
+      last4: "1842",
+    });
+    await owner.mutation(api.accounts.verifySandboxRecipient, {
+      accountId,
+      last4: "1842",
     });
     await owner.mutation(api.accounts.refreshSandboxQuotes, { accountId });
     const routes = await t.run((ctx) =>
@@ -158,4 +164,40 @@ it("keeps an unchanged currency pair's exact quoted rate", () => {
     targetCurrency: "USD",
   };
   expect(comparisonRoute(route, "GBP", "USD")).toBe(route);
+});
+
+it("changes recipient country with Pay to and requires a new confirmation", async () => {
+  const { owner, accountId } = await fixture();
+  await owner.mutation(api.paymentPreferences.save, {
+    sourceCurrency: "GBP",
+    targetCurrency: "CNY",
+    amount: 356040,
+  });
+  let state = await owner.query(api.accounts.bootstrap, {});
+  expect(state.config.banking.recipient).toBe("");
+  expect(state.config.banking.recipientAccountLast4).toBe("");
+  expect(state.config.banking.recipientVerified).toBe(false);
+  await expect(
+    owner.mutation(api.paymentPreferences.save, {
+      sourceCurrency: "GBP",
+      targetCurrency: "CNY",
+      amount: 356040,
+      recipient: "UCLA",
+    }),
+  ).rejects.toThrow("Pay to country");
+  await owner.mutation(api.paymentPreferences.save, {
+    sourceCurrency: "GBP",
+    targetCurrency: "CNY",
+    amount: 356040,
+    recipient: "Tsinghua University",
+    last4: "4321",
+  });
+  await owner.mutation(api.accounts.verifySandboxRecipient, {
+    accountId,
+    last4: "4321",
+  });
+  state = await owner.query(api.accounts.bootstrap, {});
+  expect(state.config.banking.recipient).toBe("Tsinghua University");
+  expect(state.config.banking.recipientVerified).toBe(true);
+  expect(state.account.countryTo).toBe("UK");
 });

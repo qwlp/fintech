@@ -84,3 +84,65 @@ describe("agent saved profile context", () => {
     ).rejects.toThrow("Account access denied");
   });
 });
+
+it("persists the university shortlist through setup and Profile updates", async () => {
+  const t = convexTest(schema, modules);
+  const { userId, accountId } = await t.run(async (ctx) => {
+    const userId = await ctx.db.insert("users", {
+      email: "shortlist@example.com",
+    });
+    const accountId = await ctx.db.insert("accounts", {
+      userId,
+      email: "shortlist@example.com",
+      name: "Dara",
+      initials: "D",
+      role: "Student",
+      planName: "Study",
+      countryFrom: "United States",
+      countryTo: "China",
+      university: "",
+      course: "",
+      paymentStatus: "not_started",
+      selectedRoute: "",
+      sponsorRequestSent: false,
+    });
+    return { userId, accountId };
+  });
+  const owner = t.withIdentity({ subject: `${userId}|session` });
+  const values = {
+    name: "Dara Chan",
+    countryFrom: "United States",
+    countryTo: "China",
+    countriesTo: ["China", "United Kingdom"],
+    university: "Tsinghua University",
+    universityChoices: ["Tsinghua University", "University of Manchester"],
+    course: "Law",
+    courseStart: "2026-09-21",
+    fundingAmount: 201480,
+    sponsorSupport: "Yes",
+  };
+  await owner.mutation(api.accounts.completeSetup, values);
+  let state = await owner.query(api.accounts.bootstrap, {});
+  expect(state.account.universityChoices).toEqual(values.universityChoices);
+  expect(state.account.setupComplete).toBe(true);
+  await owner.mutation(api.accounts.updateProfile, {
+    ...values,
+    accountId,
+    financialStatus: "Partially funded",
+    course: "Master of Finance · SEM",
+  });
+  state = await owner.query(api.accounts.bootstrap, {});
+  expect(state.account.universityChoices).toEqual(values.universityChoices);
+  expect(state.account.course).toBe("Master of Finance · SEM");
+  await expect(
+    t.mutation(api.accounts.completeSetup, values),
+  ).rejects.toThrow();
+  await expect(
+    owner.mutation(api.accounts.updateProfile, {
+      ...values,
+      accountId,
+      financialStatus: "",
+      universityChoices: ["UCLA"],
+    }),
+  ).rejects.toThrow("selected destinations");
+});

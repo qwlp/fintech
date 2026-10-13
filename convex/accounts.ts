@@ -21,6 +21,7 @@ import {
 } from "../shared/currency";
 import {
   getCountry,
+  countries,
   getUniversity,
   universities,
   validateStudySelection,
@@ -1002,8 +1003,9 @@ export const verifySandboxRecipient = mutation({
       .withIndex("by_account", (q) => q.eq("accountId", accountId))
       .collect();
     const row = config.find((r) => r.key === "banking");
-    if (!row || !getUniversity(account.countryTo, row.value.recipient ?? ""))
-      throw new Error("Choose a listed university in your study country");
+    const recipientCountry = countries.find((country) => country.currency === (row?.value.currency ?? studyCurrency(account.countryTo)))?.name ?? account.countryTo;
+    if (!row || !getUniversity(recipientCountry, row.value.recipient ?? ""))
+      throw new Error("Choose a listed university in the Pay to country");
     if (last4 !== undefined && last4 !== row.value.recipientAccountLast4)
       throw new Error("Recipient account digits do not match");
     await ctx.db.patch(row._id, {

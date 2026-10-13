@@ -7,7 +7,7 @@ import { v } from "convex/values";
 import { requireAccount } from "./ownership";
 import { comparisonRoute } from "../shared/payment-comparison";
 import { convertMoney, studyCurrency } from "../shared/currency";
-import { getUniversity } from "../shared/study";
+import { getUniversity, countries } from "../shared/study";
 import { applyComparisonRates, rateObservation } from "./paymentRates";
 const currency = v.union(v.literal("USD"), v.literal("GBP"), v.literal("CNY"));
 const preferenceArgs = {
@@ -44,12 +44,21 @@ async function persistPreferences(ctx: MutationCtx, args: Preferences) {
   if (!banking) throw new Error("Set up a demo payment first");
   if (args.last4 && !/^\d{4}$/.test(args.last4))
     throw new Error("Invalid payment details");
+  const recipientCountry = countries.find(
+    (country) => country.currency === args.targetCurrency,
+  )!.name;
   const recipient =
-    args.recipient == null
-      ? banking.value.recipient
-      : getUniversity(account.countryTo, args.recipient);
-  const last4 = args.last4 ?? banking.value.recipientAccountLast4 ?? "";
-  if (!recipient) throw new Error("Choose your university first");
+    getUniversity(
+      recipientCountry,
+      args.recipient ?? banking.value.recipient ?? "",
+    ) ?? "";
+  if (args.recipient !== undefined && !recipient)
+    throw new Error("Choose a listed university in the Pay to country");
+  const last4 =
+    args.last4 ??
+    (recipient === banking.value.recipient
+      ? (banking.value.recipientAccountLast4 ?? "")
+      : "");
   const routes = await ctx.db
     .query("paymentRoutes")
     .withIndex("by_account", (q) => q.eq("accountId", account._id))

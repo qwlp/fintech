@@ -103,10 +103,8 @@ export default function PaymentWorkspace({
   }, [defaultSource]);
   const currency = payTo;
   const savedCurrency = banking?.currency ?? workspaceCurrency;
-  const country =
-    getCountry(travelCountry ?? "")?.name ??
-    countries.find((item) => item.currency === workspaceCurrency)?.name ??
-    "";
+  const country = countries.find((item) => item.currency === payTo)?.name ?? "";
+  const selectedRecipient = getUniversity(country, recipient ?? "") ?? "";
   const [view, setView] = useState(initialView);
   const [reviewing, setReviewing] = useState(paymentStatus !== "not_started");
   const editButtonRef = useRef<HTMLButtonElement>(null);
@@ -191,8 +189,8 @@ export default function PaymentWorkspace({
             <div className="payment-comparison-search">
               <div className="payment-comparison-recipient">
                 <span>
-                  {recipient ? (
-                    <UniversityLabel name={recipient} />
+                  {selectedRecipient ? (
+                    <UniversityLabel name={selectedRecipient} />
                   ) : (
                     <>
                       <Landmark size={16} aria-hidden="true" />
@@ -207,9 +205,11 @@ export default function PaymentWorkspace({
                   disabled={locked || busy}
                   onClick={() => {
                     setDraft({
-                      amount: String(amount),
-                      recipient: recipient ?? "",
-                      last4: banking?.recipientAccountLast4 ?? "",
+                      amount: comparisonAmount,
+                      recipient: selectedRecipient,
+                      last4: selectedRecipient
+                        ? (banking?.recipientAccountLast4 ?? "")
+                        : "",
                     });
                     setEditing(true);
                     setMessage("");
@@ -253,7 +253,7 @@ export default function PaymentWorkspace({
                     )
                       await onEdit({
                         amount: nextAmount,
-                        recipient: recipient ?? "",
+                        recipient: selectedRecipient,
                         last4: banking?.recipientAccountLast4 ?? "",
                       });
                     else
