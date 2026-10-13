@@ -1,4 +1,6 @@
 import UniversityLabel from "../../components/UniversityLabel";
+import CourseSelect from "../../components/CourseSelect";
+import { getCourse, courseTuition } from "../../../shared/courses";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
@@ -193,6 +195,7 @@ export default function MovePlanner({
   go,
   studyCountry,
   university,
+  course,
   annualTuition = 0,
   config,
   accountId,
@@ -200,6 +203,7 @@ export default function MovePlanner({
   go: (page: "AI Agent" | "Dashboard") => void;
   studyCountry?: string;
   university?: string;
+  course?: string;
   annualTuition?: number;
   config?: any;
   accountId?: string;
@@ -278,6 +282,9 @@ export default function MovePlanner({
       university: initialUniversity,
       ...config?.plannerSettings,
     };
+    if (!config?.plannerSettings && university && course) {
+      next.courseId = getCourse(university, course)?.id;
+    }
     setSettings(next);
     setMonths(config?.months ?? 12);
     setDate(
@@ -293,12 +300,16 @@ export default function MovePlanner({
       apply(next.university, next);
       const migrated = migrateMoveAmounts(config, currency, convertMoney);
       if (Object.keys(migrated).length) {
-        setAmounts((a) => ({ ...a, ...migrated }));
+        setAmounts((a) => ({
+          ...a,
+          ...migrated,
+          ...(next.courseId ? { tuition: annualTuition } : {}),
+        }));
         if (migrated.monthlyLiving !== undefined)
           setSettings((s) => ({ ...s, livingMode: "monthly" }));
       }
     }
-  }, [config, initialUniversity, annualTuition, currency]);
+  }, [config, initialUniversity, annualTuition, currency, university, course]);
   const total = calculateMove(amounts, months, settings, excluded);
   const signature = (
     planMonths: number,
@@ -315,6 +326,7 @@ export default function MovePlanner({
         (key) => planSettings[key as keyof MoveSettings],
       ),
       [...planExcluded].sort(),
+      planSettings.courseId ?? "",
     ]);
   const hasUnsavedChanges =
     !config?.plannerSettings ||
@@ -465,6 +477,12 @@ export default function MovePlanner({
           (value) => {
             const next = { ...defaultMoveSettings, university: Number(value) };
             setSettings(next);
+            if (settings.university !== next.university) {
+              update(
+                "tuition",
+                next.university === initialUniversity ? annualTuition : 0,
+              );
+            }
             if (next.university < 0) setAmounts({ tuition: annualTuition });
             else apply(next.university, next);
             setExcluded([]);
@@ -513,6 +531,29 @@ export default function MovePlanner({
           />
         </label>
       </section>
+      {profile && (
+        <section className="move-plan-course" aria-label="Course and tuition">
+          <CourseSelect
+            university={profile.name}
+            value={settings.courseId ?? ""}
+            allowManual={false}
+            onChange={(value) => {
+              const selected = getCourse(profile.name, value);
+              setSettings((current) => ({
+                ...current,
+                courseId: selected?.id,
+              }));
+              update(
+                "tuition",
+                selected ? (courseTuition(selected, currency) ?? 0) : 0,
+              );
+              setExcluded((current) =>
+                current.filter((key) => key !== "tuition"),
+              );
+            }}
+          />
+        </section>
+      )}
       <section
         className={`planner-category-layout ${category ? "has-category" : ""}`}
       >

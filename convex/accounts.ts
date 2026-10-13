@@ -1,4 +1,7 @@
 import { calculateMove, validateMoveSettings } from "../shared/move-planner";
+import { getCourse, courseTuition } from "../shared/courses";
+import type { MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { routeProviderName } from "../shared/payment-routes";
 import { isWorkspaceTool } from "../shared/agent-tools";
 import { runWorkspaceTool, resolveFundingChange } from "./agentTools";
@@ -39,6 +42,84 @@ import {
 } from "./tuitionDecision";
 
 const DEMO_EMAIL = "dara@financialpassport.demo";
+
+// Changing a course updates the planning budget, never the amount on a payment
+// proposal or invoice. Re-saving an unchanged profile preserves custom tuition.
+async function syncCourseBudget(
+  ctx: MutationCtx,
+  account: Doc<"accounts">,
+  university: string,
+  courseName: string,
+  country: string,
+) {
+  if (
+    account.role !== "Student" ||
+    (account.university === university && account.course === courseName)
+  )
+    return;
+  const course = getCourse(university, courseName);
+  if (!course && !getCourse(account.university, account.course)) return;
+  const amount = course ? courseTuition(course, studyCurrency(country)) ?? 0 : 0;
+  const costs = await ctx.db
+    .query("costs")
+    .withIndex("by_account", (q) => q.eq("accountId", account._id))
+    .take(100);
+  const tuition = costs.find((cost) => cost.key === "tuition");
+  const value = {
+    name: "Tuition",
+    amount,
+    category: "Recurring",
+    due: course?.feeYear ?? "",
+    paid: false,
+  };
+  if (tuition && amount === 0) await ctx.db.delete(tuition._id);
+  else if (tuition) await ctx.db.patch(tuition._id, value);
+  else if (amount > 0)
+    await ctx.db.insert("costs", {
+      accountId: account._id,
+      key: "tuition",
+      ...value,
+    });
+  const configs = await ctx.db
+    .query("appConfig")
+    .withIndex("by_account", (q) => q.eq("accountId", account._id))
+    .take(100);
+  const move = configs.find((row) => row.key === "move");
+  if (move) {
+    const moveValue = {
+        ...move.value,
+        budgetAmounts: {
+          ...(move.value?.budgetAmounts ?? {}),
+          tuition: amount,
+        },
+        excludedCosts: (move.value?.excludedCosts ?? []).filter(
+          (key: string) => key !== "tuition",
+        ),
+        ...(move.value?.plannerSettings
+          ? {
+              plannerSettings: {
+                ...move.value.plannerSettings,
+                university: Object.values(universities)
+                  .flat()
+                  .indexOf(university),
+                courseId: course?.id ?? "",
+              },
+            }
+          : {}),
+      };
+    await ctx.db.patch(move._id, { value: moveValue });
+    if (moveValue.plannerSettings) {
+      const contingency = calculateMove(moveValue.budgetAmounts, moveValue.months ?? 12, moveValue.plannerSettings, moveValue.excludedCosts).contingency;
+      const existing = costs.find((cost) => cost.key === "contingency");
+      if (existing) await ctx.db.patch(existing._id, { amount: contingency });
+      else if (contingency > 0) await ctx.db.insert("costs", {
+        accountId: account._id, key: "contingency", name: "Contingency", amount: contingency,
+        category: "Safety", due: moveValue.arrivalDateISO ?? "", paid: false,
+      });
+    }
+  }
+}
+
 
 export const bootstrap = query({
   args: {},
@@ -536,6 +617,7 @@ export const completeSetup = mutation({
     if (args.courseStart && !/^\d{4}-\d{2}(?:-\d{2})?$/.test(args.courseStart))
       throw new Error("Choose a start date");
     await syncWorkspaceCurrency(ctx, account, args.countryTo);
+    await syncCourseBudget(ctx, account, args.university, args.course.trim(), args.countryTo);
     const rows = await ctx.db
       .query("appConfig")
       .withIndex("by_account", (q) => q.eq("accountId", account._id))
@@ -629,6 +711,7 @@ export const updateProfile = mutation({
       .map((part) => part[0]?.toUpperCase())
       .join("");
     await syncWorkspaceCurrency(ctx, owner, account.countryTo);
+    await syncCourseBudget(ctx, owner, account.university, account.course, account.countryTo);
     await ctx.db.patch(accountId, { ...account, countriesTo, universityChoices, initials });
     const row = (
       await ctx.db
@@ -1790,6 +1873,7 @@ export const saveMovePlan = mutation({
     plannerSettings: v.optional(
       v.object({
         university: v.number(),
+        courseId: v.optional(v.string()),
         housing: v.number(),
         flightOption: v.number(),
         insuranceOption: v.number(),
@@ -1802,6 +1886,7 @@ export const saveMovePlan = mutation({
       }),
     ),
   },
+  returns: v.null(),
   handler: async (
     ctx,
     {
@@ -1909,6 +1994,7 @@ export const saveMovePlan = mutation({
       for (const cost of existing)
         if (!retained.has(cost._id)) await ctx.db.delete(cost._id);
     }
+    return null;
   },
 });
 

@@ -1,0 +1,59 @@
+.course-selection {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.course-selection-fields {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.7fr) minmax(0, 1.5fr);
+  gap: 12px;
+}
+.course-selection-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+.course-selection-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.course-selection-field [role="combobox"] {
+  min-height: 44px;
+  text-align: left;
+}
+.course-selection-field [role="combobox"] > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.course-tuition-note {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.course-tuition-note > span {
+  color: var(--color-muted);
+}
+.course-tuition-note > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  color: var(--color-accent);
+}
+.move-plan-course {
+  margin: 16px 0;
+}
+@media (max-width: 600px) {
+  .course-selection-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

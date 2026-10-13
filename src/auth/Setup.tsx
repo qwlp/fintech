@@ -1,4 +1,5 @@
 import LinkAccount from "./LinkAccount";
+import CourseSelect from "../components/CourseSelect";
 import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
@@ -98,6 +99,10 @@ export default function Setup({
     setValues((prev) => ({
       ...prev,
       [key]: value,
+      ...((key === "university" && value !== prev.university) ||
+      (key === "countryTo" && value !== prev.countryTo)
+        ? { course: "" }
+        : {}),
       ...(key === "countryTo" && value !== prev.countryTo
         ? {
             university: "",
@@ -289,7 +294,10 @@ export default function Setup({
                     ][step]}
             </p>
             {saved ? (
-              <Button className="setup-next" onClick={() => onDone(firstSetup.current)}>
+              <Button
+                className="setup-next"
+                onClick={() => onDone(firstSetup.current)}
+              >
                 Open workspace <ArrowRight size={17} />
               </Button>
             ) : (
@@ -352,11 +360,12 @@ export default function Setup({
                         {getCountry(values.countryTo)?.currency}. Your budgets
                         and payments use this currency.
                       </p>
-                      {field(
-                        "course",
-                        "Course · optional",
-                        "What will you study?",
-                      )}
+                      <CourseSelect
+                        university={values.university}
+                        value={values.course}
+                        onChange={(value) => update("course", value)}
+                        disabled={busy}
+                      />
                       <div className="setup-field">
                         <span>Start date · optional</span>
                         <DatePicker

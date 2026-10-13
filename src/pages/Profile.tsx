@@ -28,6 +28,7 @@ import { DatePicker } from "../components/ui/date-picker";
 import "../styles/profile-workflow.css";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import CourseSelect from "../components/CourseSelect";
 import FundingConfirmation from "../features/payments/FundingConfirmation";
 import LinkAccount from "../auth/LinkAccount";
 import SectionHelp from "../components/SectionHelp";
@@ -150,6 +151,10 @@ export function Profile({
     setProfile((current) => ({
       ...current,
       [key]: value,
+      ...((key === "university" && value !== current.university) ||
+      (key === "study" && value !== current.study)
+        ? { course: "" }
+        : {}),
       ...(key === "study" && value !== current.study
         ? {
             university: "",
@@ -465,6 +470,13 @@ export function Profile({
                             ) ?? "",
                           );
                         }}
+                        disabled={saving}
+                      />
+                    ) : editingStudy && key === "course" ? (
+                      <CourseSelect
+                        university={profile.university}
+                        value={profile.course}
+                        onChange={(value) => update("course", value)}
                         disabled={saving}
                       />
                     ) : editingStudy && key === "start" ? (

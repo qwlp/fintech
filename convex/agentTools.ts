@@ -433,6 +433,7 @@ export async function runWorkspaceTool(
       ...move.plannerSettings,
       ...args.plannerSettings,
     };
+    if (settings.university !== move.plannerSettings?.university) delete settings.courseId;
     validateMoveSettings(settings);
     if (
       settings.university >= 0 &&

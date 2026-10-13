@@ -651,6 +651,7 @@ function App({ onSignOut, startTour = false }: { onSignOut: () => void; startTou
                 <MovePlanner
                   studyCountry={account?.countryTo}
                   university={account?.university}
+                  course={account?.course}
                   annualTuition={
                     database?.costs?.find((cost) => cost.key === "tuition")?.amount ?? 0
                   }

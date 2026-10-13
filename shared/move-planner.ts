@@ -1,3 +1,5 @@
+import { courseUniversities, validateCourseSelection } from "./courses";
+
 export const moveFields = [
   "flight",
   "visa",
@@ -21,6 +23,7 @@ export const moveFields = [
 export type MoveField = (typeof moveFields)[number];
 export type MoveSettings = {
   university: number;
+  courseId?: string;
   housing: number;
   flightOption: number;
   insuranceOption: number;
@@ -64,6 +67,12 @@ export function validateMoveSettings(value: MoveSettings) {
     ].some((n) => !Number.isInteger(n) || n < 0 || n > 10)
   )
     throw new Error("Invalid planner settings");
+  if (value.courseId) {
+    validateCourseSelection(
+      courseUniversities[value.university] ?? "",
+      value.courseId,
+    );
+  }
 }
 export function calculateMove(
   amounts: Partial<Record<MoveField, number>>,
