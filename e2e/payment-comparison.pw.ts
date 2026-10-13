@@ -239,3 +239,51 @@ for (const width of [390, 1440]) {
     ).toBe(true);
   });
 }
+
+for (const failOnce of [false, true]) {
+  test(`fresh account opens default comparison${failOnce ? " after retry" : " automatically"}`, async ({
+    page,
+  }) => {
+    await page.route("**/default-payment-preview?*", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: `<html data-theme="light"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module">import RefreshRuntime from '/@react-refresh';RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type="module" src="/e2e/tuition-preview.tsx"></script></body></html>`,
+      }),
+    );
+    await page.route("https://api.frankfurter.dev/**", (route) =>
+      route.fulfill({ json: [] }),
+    );
+    await page.goto(
+      `/default-payment-preview?fresh=1${failOnce ? "&failOnce=1" : ""}`,
+    );
+    if (failOnce) {
+      await expect(page.getByRole("alert")).toContainText(
+        "Could not load payment options",
+      );
+      await page
+        .getByRole("button", { name: "Try again", exact: true })
+        .click();
+    }
+    await expect(page.locator(".tuition-route")).toHaveCount(3);
+    await expect(
+      page.getByRole("spinbutton", {
+        name: "Tuition amount in GBP",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-valuenow", "2000");
+    await expect(
+      page.getByRole("combobox", { name: "Pay from", exact: true }),
+    ).toContainText("United States");
+    await expect(
+      page.getByRole("combobox", { name: "Pay to", exact: true }),
+    ).toContainText("United Kingdom");
+    await expect(
+      page.getByRole("button", {
+        name: /Set up demo payment|Start.*demo payment/i,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      page.locator(".payment-comparison-total").first(),
+    ).toContainText("$2,592.38");
+  });
+}

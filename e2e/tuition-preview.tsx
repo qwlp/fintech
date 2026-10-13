@@ -6,6 +6,7 @@ import { Wallet } from "../src/pages/Wallet";
 import { ExchangeWorkspace } from "../src/pages/dashboard/ExchangeWorkspace";
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
+import PaymentDefaults from "../src/features/payments/PaymentDefaults";
 import PaymentWorkspace from "../src/features/payments/PaymentWorkspace";
 import "../src/styles/payment-simple.css";
 import "../src/styles/typography.css";
@@ -21,6 +22,10 @@ const country =
   countries.find((c) => c.currency === currency)?.name ?? "United Kingdom";
 const converted = (value: number) => convertMoney(value, "GBP", currency);
 function Preview() {
+  const [initialized, setInitialized] = useState(
+    !new URLSearchParams(location.search).has("fresh"),
+  );
+  const [setupAttempts, setSetupAttempts] = useState(0);
   const [banking, setBanking] = useState({
     paymentAmount: converted(2000),
     currency,
@@ -41,6 +46,21 @@ function Preview() {
     amount: 5000,
     gbpValue: 3870,
   });
+  if (!initialized)
+    return (
+      <PaymentDefaults
+        accountId="preview-account"
+        initialize={async () => {
+          setSetupAttempts((count) => count + 1);
+          if (
+            new URLSearchParams(location.search).has("failOnce") &&
+            setupAttempts === 0
+          )
+            throw new Error("Network unavailable");
+          setInitialized(true);
+        }}
+      />
+    );
   return (
     <WorkspaceCurrencyProvider currency={currency}>
       <div className="app-clean">

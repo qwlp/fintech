@@ -26,6 +26,7 @@ import MobileNavigation from "./components/MobileNavigation";
 import SectionHelp from "./components/SectionHelp";
 import AgentTour from "./features/agent/AgentTour";
 import MovePlanner from "./features/planner/MovePlanner";
+import PaymentDefaults from "./features/payments/PaymentDefaults";
 import PaymentWorkspace from "./features/payments/PaymentWorkspace";
 import PaymentEvidence from "./features/payments/PaymentEvidence";
 import TuitionDecision from "./features/payments/TuitionDecision";
@@ -695,6 +696,9 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   />
                 ))}
               {["Payments", "Wallet", "Exchange"].includes(page) && (
+                page === "Payments" && !database?.config?.banking ? (
+                  <PaymentDefaults accountId={account?._id} />
+                ) : (
                 <PaymentWorkspace
                   sourceCurrency={database?.paymentRoutes?.[0]?.sourceCurrency ?? "USD"}
                   homeCountry={account?.countryFrom}
@@ -794,6 +798,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                     />
                   }
                 />
+                )
               )}
               {page === "Sponsors" && (
                 <Sponsors
