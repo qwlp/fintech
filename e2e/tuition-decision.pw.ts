@@ -28,8 +28,8 @@ for (const width of [1440, 390])
         })
         .fill("1500");
       await expect(
-        page.getByRole("button", { name: "Choose Bank & Card", exact: true }),
-      ).toBeDisabled();
+        page.getByRole("button", { name: "Save plan", exact: true }),
+      ).toBeEnabled();
       await page
         .getByRole("button", { name: "Save plan", exact: true })
         .click();
@@ -40,8 +40,12 @@ for (const width of [1440, 390])
         "Tuition plan saved",
       );
       await page
-        .getByRole("button", { name: "Choose Bank & Card", exact: true })
+        .getByRole("button", { name: "Details for Bank & Card", exact: true })
         .click();
+      await page
+        .getByRole("button", { name: "Select route and review payment" })
+        .click();
+      await page.getByRole("button", { name: "Routes", exact: true }).click();
       await expect(page.locator(".tuition-route.selected")).toContainText(
         "Bank & Card",
       );
@@ -57,6 +61,9 @@ for (const width of [1440, 390])
           exact: true,
         })
         .click();
+      await expect(
+        page.getByRole("button", { name: "Select route and review payment" }),
+      ).toBeDisabled();
       await expect(page.locator(".tuition-funding-gap")).toContainText(
         "additional USD",
       );
@@ -81,7 +88,7 @@ for (const width of [1440, 390])
         .getByRole("button", { name: "Close", exact: true })
         .click();
       await page
-        .getByRole("button", { name: "Refresh sandbox quotes", exact: true })
+        .getByRole("button", { name: "Refresh exchange rate", exact: true })
         .click();
       await page
         .getByRole("button", {
@@ -104,7 +111,7 @@ for (const width of [1440, 390])
       ).toHaveCount(0);
       await expect(
         page.getByRole("button", {
-          name: "Refresh sandbox quotes",
+          name: "Refresh exchange rate",
           exact: true,
         }),
       ).toHaveCount(0);

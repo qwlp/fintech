@@ -67,7 +67,7 @@ export function Assistant({
   onConsent,
   tour,
 }: {
-  tour?: ReactNode;
+  tour?: ReactNode | ((privacyOpen: boolean) => ReactNode);
   aiEnabled?: boolean;
   tourActive?: boolean;
   backgroundPending?: string;
@@ -133,7 +133,7 @@ export function Assistant({
           </div>
         </div>
         <div className="assistant-toolbar-actions">
-          {tour}
+          {typeof tour === "function" ? tour(privacyOpen) : tour}
           {onConsent && (
             <Button
               variant="ghost"

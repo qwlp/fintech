@@ -191,4 +191,9 @@ function Preview() {
     </WorkspaceCurrencyProvider>
   );
 }
-ReactDOM.createRoot(document.getElementById("root")!).render(<Preview />);
+// Vite may reevaluate the entry when dependency optimization completes.
+const container = document.getElementById("root")! as HTMLElement & {
+  previewRoot?: ReturnType<typeof ReactDOM.createRoot>;
+};
+container.previewRoot ??= ReactDOM.createRoot(container);
+container.previewRoot.render(<Preview />);

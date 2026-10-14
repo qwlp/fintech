@@ -1,3 +1,6 @@
+import { PaymentReviewContext } from "./PaymentReviewContext";
+import { useContext } from "react";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { providerBrands } from "./provider-brands";
 import {
   paymentRouteCategory,
@@ -76,6 +79,7 @@ const visibleBlockers = (route: { blockers: string[] }) =>
     (blocker) => !blocker.startsWith("Insufficient available "),
   );
 export default function TuitionDecision(props: Props) {
+  const openReview = useContext(PaymentReviewContext);
   const currency = useWorkspaceCurrency();
   const fieldId = useId();
   const { banking, reserveGBP, paymentStatus } = props;
@@ -215,7 +219,7 @@ export default function TuitionDecision(props: Props) {
     if (!convexClient || !props.accountId)
       throw new Error("Sign in to update your plan");
     await convexClient.mutation(convexApi[name], {
-      accountId: props.accountId as any,
+      accountId: props.accountId as Id<"accounts">,
       ...args,
     } as any);
   };
@@ -677,6 +681,51 @@ export default function TuitionDecision(props: Props) {
                             new Date(route.quoteExpiresAt!).toLocaleTimeString()
                           : "Quote needs refresh"}
                       </small>
+                      {error && <p role="alert">{error}</p>}
+                      {openReview && (
+                        <Button
+                          disabled={locked || busy || dirty || !route.eligible}
+                          onClick={async () => {
+                            setBusy(true);
+                            setError("");
+                            try {
+                              if (props.onSelect) {
+                                if (!(await props.onSelect(route.routeKey)))
+                                  throw new Error(
+                                    "Could not select route. Try again.",
+                                  );
+                              } else {
+                                if (!convexClient || !props.accountId)
+                                  throw new Error(
+                                    "Sign in to select a payment route.",
+                                  );
+                                await convexClient.mutation(
+                                  convexApi.setRoute,
+                                  {
+                                    accountId:
+                                      props.accountId as Id<"accounts">,
+                                    route: route.routeKey,
+                                  },
+                                );
+                              }
+                              setDetailRoute(null);
+                              openReview();
+                            } catch (error) {
+                              setError(
+                                error instanceof Error
+                                  ? error.message
+                                  : "Could not select route. Try again.",
+                              );
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                        >
+                          {busy
+                            ? "Selecting…"
+                            : "Select route and review payment"}
+                        </Button>
+                      )}
                       <Dialog.Close asChild>
                         <Button variant="outline">Close</Button>
                       </Dialog.Close>

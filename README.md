@@ -6,7 +6,7 @@ A Topic C cross-border finance assistant for international students. MoveWire co
 
 ## Self-host locally or in China
 
-See [Local deployment](docs/local-deployment.md) for the Docker setup, runtime frontend configuration and local AI model settings. Required service URLs and the AI model are configured explicitly; there are no external service defaults.
+See [Local deployment](docs/local-deployment.md) for the Docker setup, runtime frontend configuration and local AI model settings. The backend URL and AI model are configured explicitly. Browser rate references default to Frankfurter; server payment-rate refresh uses Frankfurter with an ECB fallback. These references are not binding provider quotes.
 
 ## Run locally
 
@@ -26,15 +26,17 @@ Create a Student account, finish onboarding, and open the workspace. New account
 
 ## Demonstrate the agent
 
-1. Open **Payments → Load payment sandbox**. This loads an illustrative £2,000 tuition payment, three USD-to-GBP quotes, and a simulated US$5,000 wallet without replacing the study plan.
-2. In **Tuition decision**, save your tuition deadline, business-day buffer and protected living funds. Review the eligible recommendation and choose its route. Quotes last ten minutes; use **Refresh sandbox quotes** before preparation if needed.
-3. Confirm the example university account suffix. This is an owner check of a fixture, not real bank verification.
-4. Open **AI Agent**, review the privacy notice, and enable AI processing.
-5. Ask **“Compare my tuition payment routes and check affordability.”** The AI calls a deterministic tool and explains fees, available funds and reserve preservation.
-6. Ask **“Stress test my wallet if my home currency falls 10% against GBP.”** This changes no records.
+1. Open **Payments**; it initializes fictional balances and illustrative quotes if no payment is saved.
+2. Review the deadline, business-day buffer and protected living funds in the planning settings. Refresh expired quotes.
+3. Open a route’s **Details**, then **Select route and review payment**. Confirm the example university in review; this is not real bank verification.
+4. Open **AI Agent**, review the privacy notice and enable AI processing.
+5. Ask **“Compare my tuition payment routes and check affordability.”** Inspect the recorded calculation separately from generated prose.
+6. Ask **“Stress test my wallet if my home currency falls 10% against GBP.”** This changes no financial records.
 7. Ask **“Prepare my tuition payment.”** The agent creates a proposal; no funds move.
-8. Open **Payments → Payment demo**. Review the immutable recipient, total, rate, expiry and protected reserve; check consent and approve. Send the payment.
-9. Review the unique receipt, wallet debit and audit trail. Download execution evidence as JSON.
+8. Return to **Payments**, review the immutable terms, check consent, approve and send the sandbox payment.
+9. Open **Profile → Security & activity → Payment history** and download the receipt, wallet debit and audit evidence as JSON.
+
+To prepare manually, use **Continue** in payment review after confirming the university. Preparation, approval and sending remain distinct steps.
 
 The agent can also save requested profile, tuition, Move Planner, budget and funding changes; select existing payment routes; refresh sandbox quotes; update the departure checklist; and add rate alerts or country-account labels. For example, ask “Set my Move Planner rent to £900 per month” or “Set my tuition deadline to 2027-09-15.” It reads current values before editing and preserves fields you did not ask to change. Only China, the United Kingdom and the United States and their listed universities are supported.
 
@@ -57,7 +59,7 @@ Backend integration tests use `convex-test` with actual authentication identitie
 
 ```sh
 EXPORT_EXECUTION_EVIDENCE=1 bun run test
-RUN_FINANCE_SMOKE=1 bunx playwright test e2e/finance-agent.pw.ts
+RUN_FINANCE_SMOKE=1 RECORD_DEMO=1 bunx playwright test e2e/finance-agent.pw.ts
 # Optional live AI service call, using the configured server key:
 RUN_FINANCE_SMOKE=1 RUN_AGENT_SMOKE=1 bunx playwright test e2e/finance-agent.pw.ts
 ```
@@ -80,6 +82,8 @@ Existing sandbox accounts must save a deadline and refresh known fixture quotes 
 
 ## Competition materials
 
+Topic C submission source: [GitHub repository](https://github.com/qwlp/fintech). See the [requirements audit](docs/competition-requirements.md) for the deadline, eligibility and evidence obligations.
+
 - [Architecture and algorithms](docs/architecture.md)
 - [Security self-assessment and known risks](docs/security-self-assessment.md)
 - [Demo script](docs/demo-script.md)
@@ -89,6 +93,7 @@ Existing sandbox accounts must save a deadline and refresh known fixture quotes 
 - [Validation record](docs/validation.md)
 - [Local control evaluation](docs/evidence/local-evaluation.json)
 - [Live-model evaluation](docs/evidence/live-agent-evaluation.json)
+- [Authenticated live-AI execution](docs/evidence/development-session.json) and [demo video](docs/evidence/sandbox-demo.webm) ([provenance](docs/evidence/demo-manifest.json))
 - [Student validation protocol](docs/student-validation.md)
 
 ## Scope

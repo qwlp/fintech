@@ -20,8 +20,16 @@ export default function AgentTour({
     }
   });
   useEffect(() => {
-    if (!autoOpen) setOpen(false);
-  }, [autoOpen]);
+    if (!autoOpen) {
+      setOpen(false);
+      return;
+    }
+    try {
+      setOpen(localStorage.getItem(key) !== "done");
+    } catch {
+      setOpen(true);
+    }
+  }, [autoOpen, key]);
   const dismiss = () => {
     try {
       localStorage.setItem(key, "done");

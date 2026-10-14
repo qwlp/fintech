@@ -1,6 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
-async function preview(page: Page, currency = "GBP") {
+async function preview(page: Page, currency = "GBP", standalone = true) {
+  await page.addInitScript(() => {
+    (window as any).MOVEWISE_CONFIG = {
+      fxRatesUrl: "https://api.frankfurter.dev/v2/rates",
+      fxSourceUrl: "https://frankfurter.dev/",
+      fxSourceLabel: "Daily reference",
+    };
+  });
   await page.route(
     (url) => url.pathname === "/tuition-preview",
     (route) =>
@@ -10,7 +17,7 @@ async function preview(page: Page, currency = "GBP") {
       import RefreshRuntime from "/@react-refresh"; RefreshRuntime.injectIntoGlobalHook(window);
       window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type;
       window.__vite_plugin_react_preamble_installed__ = true;
-      </script><script type="module">import "/e2e/tuition-preview.tsx";</script></body></html>`,
+      </script><script type="module">import "/e2e/${standalone ? "mid-market-preview" : "tuition-preview"}.tsx";</script></body></html>`,
       }),
   );
   await page.goto(`/tuition-preview?currency=${currency}`);
@@ -34,7 +41,7 @@ for (const width of [320, 390, 1440]) {
           ],
         });
       });
-      await preview(page, "CNY");
+      await preview(page, "CNY", false);
       await page.evaluate(
         (value) => (document.documentElement.dataset.theme = value),
         theme,
@@ -42,10 +49,10 @@ for (const width of [320, 390, 1440]) {
       const card = page.getByRole("complementary", {
         name: "Mid-market exchange rate",
       });
-      await expect(card).toContainText("1 USD = 7.12 CNY");
-      await expect(card).toContainText("+0.28% vs. 2026-10-08");
-      await expect(card).toContainText("Daily reference · 2026-10-09");
-      await expect(card.getByRole("img")).toBeVisible();
+      await expect(card).toContainText("Comparison exchange rate");
+      await expect(card).toContainText("Quote snapshot");
+      await expect(card).toContainText("1 USD = 7.1024 CNY");
+      await expect(card.getByRole("img")).toHaveCount(0);
       await expect(page.locator(".tuition-route-title").first()).toContainText(
         "Fintech Provider",
       );

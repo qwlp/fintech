@@ -22,18 +22,24 @@ for (const country of countries) {
       }),
     );
     await page.goto(`/currency-preview?currency=${country.currency}`);
-    await expect(page.locator(".payment-workspace-summary")).toContainText(
-      `Tuition · ${country.currency}`,
+    await expect(
+      page.getByRole("spinbutton", {
+        name: `Tuition amount in ${country.currency}`,
+        exact: true,
+      }),
+    ).toHaveAttribute(
+      "aria-valuenow",
+      String(convertMoney(2000, "GBP", country.currency)),
     );
-    await expect(page.locator(".payment-workspace-summary")).toContainText(
-      new Intl.NumberFormat("en-GB", {
-        style: "currency",
-        currency: country.currency,
-      }).format(convertMoney(2000, "GBP", country.currency)),
-    );
-    await expect(page.locator(".tuition-sandbox").first()).toContainText(
-      `USD → ${country.currency}`,
-    );
+    await expect(
+      page.getByRole("combobox", { name: "Pay to", exact: true }),
+    ).toContainText(country.currency);
+    await expect(
+      page.locator(".payment-comparison-fees").first(),
+    ).toContainText(`1 USD =`);
+    await expect(
+      page.locator(".payment-comparison-fees").first(),
+    ).toContainText(country.currency);
     await page.getByRole("tab", { name: "Balances" }).click();
     await expect(page.locator(".balance-total")).toContainText(
       `Total in ${country.currency}`,

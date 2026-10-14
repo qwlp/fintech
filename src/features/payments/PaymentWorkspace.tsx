@@ -1,3 +1,4 @@
+import { PaymentReviewContext } from "./PaymentReviewContext";
 import { Dialog } from "radix-ui";
 import "../../styles/payment-focused.css";
 import UniversityLabel from "../../components/UniversityLabel";
@@ -144,6 +145,11 @@ export default function PaymentWorkspace({
   const [message, setMessage] = useState("");
   useEffect(() => setView(initialView), [initialView]);
   const locked = paymentStatus !== "not_started";
+  const comparisonPending =
+    amount !== undefined &&
+    (Number(comparisonAmount) !== convertMoney(amount, savedCurrency, payTo) ||
+      payFrom !== (banking?.sourceCurrency ?? sourceCurrency) ||
+      payTo !== savedCurrency);
   useEffect(() => {
     if (locked) setReviewing(true);
   }, [locked]);
@@ -506,23 +512,21 @@ export default function PaymentWorkspace({
           {message && !editing && <p role="status">{message}</p>}
           {!reviewing && !locked ? (
             <>
-              <div
-                className="payment-choose-view"
-                inert={
-                  amount !== undefined &&
-                  (Number(comparisonAmount) !==
-                    convertMoney(amount, savedCurrency, payTo) ||
-                    payFrom !== (banking?.sourceCurrency ?? sourceCurrency) ||
-                    payTo !== savedCurrency)
-                }
-              >
-                {typeof plan === "function"
-                  ? plan({
-                      sourceCurrency: payFrom,
-                      targetCurrency: payTo,
-                      amount: Number(comparisonAmount) || 0,
-                    })
-                  : plan}
+              {comparisonPending && (
+                <p role="status">
+                  Click Compare to update the options for this amount.
+                </p>
+              )}
+              <div className="payment-choose-view" inert={comparisonPending}>
+                <PaymentReviewContext.Provider value={() => setReviewing(true)}>
+                  {typeof plan === "function"
+                    ? plan({
+                        sourceCurrency: payFrom,
+                        targetCurrency: payTo,
+                        amount: Number(comparisonAmount) || 0,
+                      })
+                    : plan}
+                </PaymentReviewContext.Provider>
               </div>
             </>
           ) : (

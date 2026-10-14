@@ -1,0 +1,161 @@
+{
+  "application": "MoveWire",
+  "sandbox": true,
+  "exportedAt": "2026-10-14T02:46:22.290Z",
+  "proposals": [
+    {
+      "_creationTime": 1791945973732.7456,
+      "_id": "n17929qv7p0jkz8kge8a880hyd8g9kxt",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "amountMinor": 200000,
+      "approvedAt": 1791945980269,
+      "approvedBy": "ms7229eys7eqj3pre09w9tnx0h8g8s7p",
+      "bufferBusinessDays": 1,
+      "completedAt": 1791945981099,
+      "createdAt": 1791945973732,
+      "deadline": "2026-10-28",
+      "delivery": "1–2 business days",
+      "expiresAt": 1791946559058,
+      "feeMinor": 840,
+      "fxRate": 0.75496,
+      "maxBusinessDays": 2,
+      "protectedReserveMinor": 100000,
+      "provider": "Fintech Provider",
+      "recipient": "University of Manchester",
+      "recipientLast4": "1842",
+      "reference": "SBX-27b90987-02fb-4aa9-8d73-538e12ae9fb4",
+      "remainingGBPMinor": 181306,
+      "routeKey": "sandbox-standard",
+      "sourceCurrency": "USD",
+      "sourceMinor": 264915,
+      "status": "completed",
+      "targetCurrency": "GBP",
+      "totalMinor": 265755
+    }
+  ],
+  "ledger": [
+    {
+      "_creationTime": 1791945981099.2424,
+      "_id": "mx755wbzfmnz3756p8gkek35ks8g8g0m",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "afterMinor": 234245,
+      "beforeMinor": 500000,
+      "currency": "USD",
+      "debitMinor": 265755,
+      "proposalId": "n17929qv7p0jkz8kge8a880hyd8g9kxt",
+      "receivedCurrency": "GBP",
+      "receivedMinor": 200000,
+      "recipient": "University of Manchester",
+      "reference": "SBX-27b90987-02fb-4aa9-8d73-538e12ae9fb4",
+      "timestamp": 1791945981099
+    }
+  ],
+  "audit": [
+    {
+      "_creationTime": 1791945981099.243,
+      "_id": "jd74bsxqk2k4f85nxk28zfyg9h8g8394",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "Finance Sandbox Test",
+      "detail": "Proposal n17929qv7p0jkz8kge8a880hyd8g9kxt: sandbox debit and receipt committed atomically",
+      "timestamp": 1791945981099,
+      "type": "PAYMENT_EXECUTED"
+    },
+    {
+      "_creationTime": 1791945980269.4536,
+      "_id": "jd70sk69q9c3j0qkex8ck4s6gh8g9s11",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "Finance Sandbox Test",
+      "detail": "Proposal n17929qv7p0jkz8kge8a880hyd8g9kxt: owner approved the exact recipient and quote",
+      "timestamp": 1791945980269,
+      "type": "PAYMENT_APPROVED"
+    },
+    {
+      "_creationTime": 1791945973732.7458,
+      "_id": "jd779nskn76x98eev3dmfe6ffs8g8v2q",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "MoveWire",
+      "detail": "Proposal n17929qv7p0jkz8kge8a880hyd8g9kxt: GBP 2000.00 to University of Manchester; USD 2657.55 total. Sandbox quote expires in 10 minutes.",
+      "timestamp": 1791945973732,
+      "type": "PAYMENT_PREPARED"
+    },
+    {
+      "_creationTime": 1791945962025.6506,
+      "_id": "jd709en135wrtde6z56fswnfgx8g867n",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "Finance Sandbox Test",
+      "detail": "Owner enabled external AI processing of chat and minimized financial summaries",
+      "timestamp": 1791945962025,
+      "type": "AI_CONSENT"
+    },
+    {
+      "_creationTime": 1791945961054.2698,
+      "_id": "jd71tzz12y1bfc1bt8qskkqgxs8g891v",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "Finance Sandbox Test",
+      "detail": "Owner confirmed the sandbox university recipient; this is not real bank verification",
+      "timestamp": 1791945961054,
+      "type": "RECIPIENT_VERIFIED"
+    },
+    {
+      "_creationTime": 1791945959058.484,
+      "_id": "jd7b0k5r14dfk465a5x4yvwg9n8g9gd5",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "Finance Sandbox Test",
+      "detail": "Comparison uses USD/GBP daily reference 0.75496 from 2026-10-14; provider fees remain illustrative.",
+      "timestamp": 1791945959058,
+      "type": "PAYMENT_RATE_REFRESHED"
+    },
+    {
+      "_creationTime": 1791945959058.4836,
+      "_id": "jd72tqphabc20b6j1eet6shf318g9mh5",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "Finance Sandbox Test",
+      "detail": "Payment comparison updated: USD to GBP, 2,000 GBP.",
+      "timestamp": 1791945959058,
+      "type": "PAYMENT_DETAILS_UPDATED"
+    },
+    {
+      "_creationTime": 1791945958679.557,
+      "_id": "jd78qtmzvae0s86nh1e0brez698g871y",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "Finance Sandbox Test",
+      "detail": "Comparison uses USD/GBP daily reference 0.75496 from 2026-10-14; provider fees remain illustrative.",
+      "timestamp": 1791945958679,
+      "type": "PAYMENT_RATE_REFRESHED"
+    },
+    {
+      "_creationTime": 1791945958145.7915,
+      "_id": "jd76fwnfdkxbwm90k682gf7hy18g8gba",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "actor": "Finance Sandbox Test",
+      "detail": "Owner loaded illustrative tuition quotes and a simulated USD wallet; no real account connected",
+      "timestamp": 1791945958145,
+      "type": "SANDBOX_INITIALIZED"
+    }
+  ],
+  "toolExecutions": [
+    {
+      "_creationTime": 1791945973732.746,
+      "_id": "n57en2vwddmp17pxnbm02gxrv98g8n0t",
+      "accountId": "j573rbpzfqec11473qj5w1znen8g8w98",
+      "arguments": {},
+      "name": "prepare_tuition_payment",
+      "result": {
+        "nextStep": "Open Payments, review the quote, approve and send. No funds moved.",
+        "proposal": {
+          "amountGBP": 2000,
+          "expiresAt": 1791946559058,
+          "proposalId": "n17929qv7p0jkz8kge8a880hyd8g9kxt",
+          "provider": "Fintech Provider",
+          "recipient": "University of Manchester",
+          "sourceCurrency": "USD",
+          "status": "prepared",
+          "targetCurrency": "GBP",
+          "totalUSD": 2657.55
+        },
+        "sandbox": true
+      },
+      "timestamp": 1791945973732
+    }
+  ]
+}

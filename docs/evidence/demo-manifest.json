@@ -1,0 +1,32 @@
+{
+  "recordedAt": "2026-10-14T02:46:22.290Z",
+  "environment": "Authenticated fictional account on Convex development deployment optimistic-mockingbird-578; live configured AI service",
+  "command": "RUN_FINANCE_SMOKE=1 RUN_AGENT_SMOKE=1 RECORD_DEMO=1 bunx playwright test e2e/finance-agent.pw.ts",
+  "scenario": "Live AI prepares tuition; student reviews and approves; atomic sandbox debit; receipt and owner evidence export",
+  "sandbox": true,
+  "realMoneyMoved": false,
+  "taskPassed": true,
+  "receipt": "SBX-27b90987-02fb-4aa9-8d73-538e12ae9fb4",
+  "checks": [
+    "Live prepare_tuition_payment tool result recorded",
+    "Owner approval precedes completion",
+    "One ledger entry",
+    "Wallet before minus after equals proposal total and ledger debit",
+    "Recipient receives 200000 GBP minor units",
+    "Receipt matches completed proposal"
+  ],
+  "sha256": {
+    "development-session.json": "db1dbd33dacbbd979c931230b741f4407f2e02cb204e87bc54f6cf06b1a7cf8a",
+    "sandbox-demo.webm": "0056250c1ec55945f64039fac254f758c9a1f99bbb898876db82cbced2a9bd9e"
+  },
+  "limits": [
+    "One live-model trial, not a measured overall success rate",
+    "Fictional sandbox; no external-provider settlement",
+    "Browser video has no narration"
+  ],
+  "videoDurationSeconds": 35.64,
+  "videoDimensions": {
+    "width": 800,
+    "height": 500
+  }
+}

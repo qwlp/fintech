@@ -1,5 +1,6 @@
 import { convertMoney, currencyRate } from "./currency";
-export const formatExchangeRate = (rate: number) => String(rate);
+export const formatExchangeRate = (rate: number) =>
+  String(Number(rate.toPrecision(12)));
 export function comparisonRoute<
   T extends {
     fxRate: number;

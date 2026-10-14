@@ -29,7 +29,8 @@ describe("financial engine", () => {
     expect(runway(8900, 1300)).toBeCloseTo(6.846);
     expect(runway(8900, 0)).toBe(0);
     expect(convertCurrency(100, 0.8, 2)).toBe(78);
-    expect(routeEffectiveCost(routes[0])).toBe(2583);
+    expect(routeEffectiveCost(routes[0])).toBe(2605.68);
+    expect(routeEffectiveCost(routes[1])).toBe(2583);
   });
 });
 

@@ -25,7 +25,7 @@ for (const width of [390, 1440]) {
         import '/src/styles/dark-mode.css';
         const state = {
           account: { _id: 'student', role: 'Student', aiConsentAt: 1, setupComplete: true, countryFrom: 'China', countryTo: 'China', university: 'Tsinghua University', name: 'Dara', initials: 'D', planName: 'Study', paymentStatus: 'not_started', selectedRoute: '', sponsorRequestSent: false },
-          config: { profile: { fundingAmount: 19000, fundingCurrency: 'CNY', workspaceCurrency: 'CNY' } },
+          config: { profile: { fundingAmount: 19000, fundingCurrency: 'CNY', workspaceCurrency: 'CNY' }, banking: { currency: 'CNY', sourceCurrency: 'USD', paymentAmount: 2000, recipient: 'Tsinghua University', tuitionDeadline: '2030-01-01' }, security: { protectedReserveGBP: 1000 } },
           costs: [{ key: 'tuition', name: 'Tuition', category: 'Recurring', amount: 30000, due: 'Soon' }],
           funding: [], sponsors: [], wallets: [], paymentRoutes: [], auditEvents: [], messages: [], notifications: [], checklist: [], sponsorRequests: [], rateAlerts: [], paymentProposals: [], ledgerEntries: []
         };
@@ -145,11 +145,9 @@ for (const width of [390, 1440]) {
       (window as any).updateSavedFunding(19999);
       (window as any).updateSavedCosts([], undefined);
     });
-    await expect(page.locator(".funding-amount")).toHaveText(
-      "CN¥19,999confirmed funding",
-    );
-    await expect(page.locator(".funding-progress-label")).toContainText(
-      "Budget not set",
+    await expect(page.locator(".funding-amount")).toHaveText("CN¥19,999saved");
+    await expect(page.locator(".budget-setup")).toContainText(
+      "Add costs to see your funding gap.",
     );
     await expect(
       page.getByText("Funding goal reached", { exact: true }),
@@ -157,7 +155,9 @@ for (const width of [390, 1440]) {
     await expect(
       page.getByRole("progressbar", { name: "Study plan funded" }),
     ).toHaveCount(0);
-    await expect(page.locator(".donut-total")).toContainText("Budget not set");
+    await expect(page.locator(".funding-empty")).toContainText(
+      "No costs added yet.",
+    );
     await page
       .getByRole("button", { name: "Set your budget", exact: true })
       .click();

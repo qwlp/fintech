@@ -1,22 +1,22 @@
 {
   "environment": "convex-test local transactional sandbox",
   "sandbox": true,
-  "generatedAt": "2026-10-12T08:38:25.910Z",
+  "generatedAt": "2026-10-14T02:43:02.048Z",
   "test": "Owner approval, atomic debit and idempotent retry",
   "proposals": [
     {
-      "_creationTime": 1791794305908,
+      "_creationTime": 1791945782041,
       "_id": "0000000000010011paymentProposals",
       "accountId": "000000000000000000010001accounts",
       "amountMinor": 200000,
-      "approvedAt": 1791794305909,
+      "approvedAt": 1791945782044,
       "approvedBy": "000000000000000000000010000users",
       "bufferBusinessDays": 1,
-      "completedAt": 1791794305909,
-      "createdAt": 1791794305908,
-      "deadline": "2026-10-26",
+      "completedAt": 1791945782045,
+      "createdAt": 1791945782041,
+      "deadline": "2026-10-28",
       "delivery": "1–2 business days",
-      "expiresAt": 1791794905907,
+      "expiresAt": 1791946382040,
       "feeMinor": 840,
       "fxRate": 0.774,
       "maxBusinessDays": 2,
@@ -24,7 +24,7 @@
       "provider": "Fintech Provider",
       "recipient": "University of Manchester",
       "recipientLast4": "1842",
-      "reference": "SBX-88ca283a-d35c-4569-882c-1debb36c535a",
+      "reference": "SBX-7cc5f6c0-63de-4004-af65-bc52c7a5ae9e",
       "remainingGBPMinor": 186350,
       "routeKey": "sandbox-standard",
       "sourceCurrency": "USD",
@@ -36,7 +36,7 @@
   ],
   "ledger": [
     {
-      "_creationTime": 1791794305909.001,
+      "_creationTime": 1791945782045,
       "_id": "0000000000000010014ledgerEntries",
       "accountId": "000000000000000000010001accounts",
       "afterMinor": 240762,
@@ -47,54 +47,54 @@
       "receivedCurrency": "GBP",
       "receivedMinor": 200000,
       "recipient": "University of Manchester",
-      "reference": "SBX-88ca283a-d35c-4569-882c-1debb36c535a",
-      "timestamp": 1791794305909
+      "reference": "SBX-7cc5f6c0-63de-4004-af65-bc52c7a5ae9e",
+      "timestamp": 1791945782045
     }
   ],
   "audit": [
     {
-      "_creationTime": 1791794305909.003,
+      "_creationTime": 1791945782046.001,
       "_id": "000000000000000010016auditEvents",
       "accountId": "000000000000000000010001accounts",
       "actor": "Student",
       "detail": "Proposal 0000000000010011paymentProposals: sandbox debit and receipt committed atomically",
-      "timestamp": 1791794305909,
+      "timestamp": 1791945782046,
       "type": "PAYMENT_EXECUTED"
     },
     {
-      "_creationTime": 1791794305909,
+      "_creationTime": 1791945782044,
       "_id": "000000000000000010013auditEvents",
       "accountId": "000000000000000000010001accounts",
       "actor": "Student",
       "detail": "Proposal 0000000000010011paymentProposals: owner approved the exact recipient and quote",
-      "timestamp": 1791794305909,
+      "timestamp": 1791945782044,
       "type": "PAYMENT_APPROVED"
     },
     {
-      "_creationTime": 1791794305908.001,
+      "_creationTime": 1791945782042,
       "_id": "000000000000000010012auditEvents",
       "accountId": "000000000000000000010001accounts",
-      "actor": "MoveWise",
+      "actor": "MoveWire",
       "detail": "Proposal 0000000000010011paymentProposals: GBP 2000.00 to University of Manchester; USD 2592.38 total. Sandbox quote expires in 10 minutes.",
-      "timestamp": 1791794305908,
+      "timestamp": 1791945782041,
       "type": "PAYMENT_PREPARED"
     },
     {
-      "_creationTime": 1791794305907.0078,
+      "_creationTime": 1791945782040.005,
       "_id": "000000000000000010010auditEvents",
       "accountId": "000000000000000000010001accounts",
       "actor": "Student",
-      "detail": "Owner checked the sandbox recipient account suffix; this is not real bank verification",
-      "timestamp": 1791794305907,
+      "detail": "Owner confirmed the sandbox university recipient; this is not real bank verification",
+      "timestamp": 1791945782040,
       "type": "RECIPIENT_VERIFIED"
     },
     {
-      "_creationTime": 1791794305907.0068,
+      "_creationTime": 1791945782040.004,
       "_id": "000000000000000010009auditEvents",
       "accountId": "000000000000000000010001accounts",
       "actor": "Student",
       "detail": "Owner loaded illustrative tuition quotes and a simulated USD wallet; no real account connected",
-      "timestamp": 1791794305907,
+      "timestamp": 1791945782040,
       "type": "SANDBOX_INITIALIZED"
     }
   ]

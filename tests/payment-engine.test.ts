@@ -204,6 +204,8 @@ describe("sandbox payment authorization and accounting", () => {
         status: "cancelled",
       });
     });
+    // Completed receipts remain retrievable after the owner changes study currency.
+    await t.run((ctx) => ctx.db.patch(accountId, { countryTo: "China" }));
     const retry = await owner.mutation(api.accounts.transitionPayment, {
       accountId,
       next: "completed",
@@ -434,7 +436,7 @@ describe("sandbox payment authorization and accounting", () => {
     await expect(
       owner.mutation(api.accounts.setRoute, {
         accountId,
-        route: "sandbox-fast",
+        route: "sandbox-bank",
       }),
     ).rejects.toThrow("Reset");
     await t.run((ctx) =>
@@ -450,7 +452,7 @@ describe("sandbox payment authorization and accounting", () => {
     await owner.mutation(api.accounts.resetPayment, { accountId });
     await owner.mutation(api.accounts.setRoute, {
       accountId,
-      route: "sandbox-fast",
+      route: "sandbox-bank",
     });
     expect(
       (await owner.query(api.accounts.bootstrap, {})).paymentProposals[0]
@@ -622,10 +624,19 @@ describe("sandbox payment authorization and accounting", () => {
 describe("editable tuition and shared quote", () => {
   it("rejects unlisted institutions and institutions in another country", async () => {
     const { owner, accountId } = await fixture();
-    for (const recipient of ["University of Oxford", "My University", "Peking University"]) {
-      await expect(owner.mutation(api.accounts.updatePaymentDetails, {
-        accountId, amount: 2000, recipient, last4: "1842",
-      })).rejects.toThrow("listed university");
+    for (const recipient of [
+      "University of Oxford",
+      "My University",
+      "Peking University",
+    ]) {
+      await expect(
+        owner.mutation(api.accounts.updatePaymentDetails, {
+          accountId,
+          amount: 2000,
+          recipient,
+          last4: "1842",
+        }),
+      ).rejects.toThrow("listed university");
     }
   });
   it("recalculates from saved details, clears recipient verification and preserves quote through approval", async () => {

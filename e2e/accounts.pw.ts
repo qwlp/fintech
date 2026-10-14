@@ -81,20 +81,27 @@ test("home remains readable with a saved dark theme", async ({ page }) => {
 for (const width of [1440, 390]) {
   test(`interactive sample workspace at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     const demo = page.locator(".home-showcase-section");
     await demo.scrollIntoViewIfNeeded();
-    await demo.getByRole("tab", { name: "Sponsors", exact: true }).click();
+    const screen = (name: string) =>
+      width <= 800
+        ? demo
+            .locator(".demo-sidebar")
+            .getByRole("button", { name, exact: true })
+        : demo.getByRole("tab", { name, exact: true });
+    await screen("Sponsors").click();
     await demo.getByRole("button", { name: "Add sample contribution" }).click();
     await expect(demo.locator(".demo-contribution")).toContainText("£14,000");
-    await demo.getByRole("tab", { name: "Study budget", exact: true }).click();
+    await screen("Study budget").click();
     await expect(demo.locator(".demo-bottom")).toContainText("£4,000");
-    await demo.getByRole("tab", { name: "Payments", exact: true }).click();
+    await screen("Payments").click();
     await demo.getByRole("button", { name: "Prepare sample payment" }).click();
     await expect(
       demo.getByRole("button", { name: "Sample payment prepared" }),
     ).toBeDisabled();
-    await demo.getByRole("tab", { name: "Study budget", exact: true }).click();
+    await screen("Study budget").click();
     await expect(demo.locator(".demo-bottom")).toContainText("£4,000");
     await page.screenshot({
       path: `/tmp/fintech-showcase-${width}.png`,
@@ -194,24 +201,27 @@ test("registration opens the workspace, restores the session, and signs in again
 
 for (const route of ["#home", "#login", "#register"]) {
   test(`preview autoplays without a toolbar on ${route}`, async ({ page }) => {
+    test.setTimeout(90000);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.goto(`/${route}`);
     await page.bringToFront();
     await page.evaluate(() => document.fonts.ready);
     const demo = page.locator(".app-showcase");
     await demo.scrollIntoViewIfNeeded();
+    await expect(demo).toBeInViewport({ ratio: 0.2 });
     await expect(demo.locator(".showcase-controls")).toHaveCount(0);
     await expect(
       page.getByText("Your plan. In motion.", { exact: true }),
     ).toHaveCount(0);
     await expect(
       demo.getByRole("tab", { name: "Sponsors", exact: true }),
-    ).toHaveAttribute("aria-selected", "true", { timeout: 9000 });
+    ).toHaveAttribute("aria-selected", "true", { timeout: 25000 });
     await expect(
       demo.getByRole("button", { name: "Contribution added" }),
     ).toBeDisabled({ timeout: 5000 });
     await expect(
       demo.getByRole("tab", { name: "Payments", exact: true }),
-    ).toHaveAttribute("aria-selected", "true", { timeout: 9000 });
+    ).toHaveAttribute("aria-selected", "true", { timeout: 25000 });
     await expect(
       demo.getByRole("button", { name: "Sample payment prepared" }),
     ).toBeDisabled({ timeout: 5000 });

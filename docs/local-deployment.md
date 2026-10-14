@@ -1,6 +1,6 @@
 # Local deployment (including a machine in China)
 
-The app can use a self-hosted Convex backend, any OpenAI-compatible chat service with tool calling, and an optional local exchange-rate service. Vercel, managed Convex, OpenRouter and Frankfurter are not required at runtime. The payment system remains a sandbox.
+The app can use a self-hosted Convex backend, any OpenAI-compatible chat service with tool calling, and an optional local browser exchange-rate service. Vercel, managed Convex and OpenRouter are not required. Server payment-rate refresh currently contacts Frankfurter with an ECB fallback; offline refresh is not implemented. Existing sandbox quotes and deterministic calculations remain available until quote expiry. The payment system remains a sandbox.
 
 ## Prepare
 
@@ -32,10 +32,10 @@ Runtime values override `VITE_*` build variables, including empty strings. This 
 
 An optional rates endpoint uses `base`, `quotes`, `from` and `to` query parameters and returns a JSON array such as `[{
   "date": "2026-10-12", "base": "CNY", "quote": "GBP", "rate": 0.105
-}]`. Rates must be positive finite numbers. This is the Frankfurter-v2-compatible response format, but no Frankfurter URL is assumed. A cross-origin endpoint must allow your frontend origin through CORS. Leaving it unconfigured shows “Rate unavailable”; sandbox calculations continue to work.
+}]`. Rates must be positive finite numbers. This is the Frankfurter-v2-compatible response format. The browser defaults to Frankfurter when no override is supplied; use an explicit empty URL to disable browser requests. This setting does not override the backend payment-rate endpoints. A cross-origin endpoint must allow your frontend origin through CORS. Leaving it unconfigured shows “Rate unavailable”; sandbox calculations continue to work.
 
 ## Verify on the target machine
 
-Create Student and Sponsor accounts, save/reload a study plan, connect a sponsor, and check AI read/edit tools with the selected model. Disconnect external internet access and repeat. Verify that browser requests only contact your configured local services. External reference links in tuition guidance are optional links, not required services.
+Create Student and Sponsor accounts, save/reload a study plan, connect a sponsor, and check AI read/edit tools with the selected model. Disconnect external internet access and repeat. Verify browser requests use your configured local services. Expect backend daily-reference refresh to fail without external connectivity; expired payment quotes require a connected refresh or explicitly refreshed sandbox fixtures. External reference links in tuition guidance are optional links, not required services.
 
 Build and mocked tests do not establish China-network access or certify a particular model's tool behavior. The local Docker deployment and live local model must be verified on the target machine. Hosting a public service in mainland China is a separate step from running this local setup.

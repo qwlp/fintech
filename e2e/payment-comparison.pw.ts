@@ -138,7 +138,7 @@ test("currency controls default to home and travel countries and recalculate opt
   await page.getByRole("option", { name: /United States/ }).click();
   await page.getByRole("button", { name: "Compare", exact: true }).click();
   await expect(page.locator(".payment-comparison-fees").first()).toContainText(
-    "1 USD = 1.0000 USD",
+    "1 USD = 1 USD",
   );
   const recipientBox = await page
     .locator(".payment-comparison-recipient")

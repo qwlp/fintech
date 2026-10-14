@@ -3,7 +3,12 @@ import { convexTest } from "convex-test";
 import schema from "../convex/schema";
 import { api } from "../convex/_generated/api";
 import { countries, universities } from "../shared/study";
-import { convertMoney, currencyRate, walletValue } from "../shared/currency";
+import {
+  convertMoney,
+  currencyRate,
+  walletValue,
+  sandboxRouteGBPPerUSD,
+} from "../shared/currency";
 import { assessTuition, quoteFingerprint } from "../convex/tuitionDecision";
 const modules = import.meta.glob("../convex/**/*.ts");
 async function fixture(country: string) {
@@ -99,7 +104,11 @@ describe("workspace currency accounting", () => {
         sourceCurrency: "USD",
         targetCurrency: currency,
       });
-      expect(route.fxRate).toBeCloseTo(0.774 * currencyRate("GBP", currency));
+      expect(route.fxRate).toBeCloseTo(
+        currency === "USD"
+          ? 1
+          : sandboxRouteGBPPerUSD[route.key] * currencyRate("GBP", currency),
+      );
       if (currency === "USD")
         expect(state.paymentRoutes.every((r) => r.fxRate === 1)).toBe(true);
       const decision = assessTuition({
@@ -268,20 +277,41 @@ describe("workspace currency accounting", () => {
 
 it("refreshes known legacy demo routes in the study currency without refreshing unknown providers", async () => {
   const { t, owner, accountId } = await fixture("China");
-  await t.run(async ctx => {
+  await t.run(async (ctx) => {
     const routes = await ctx.db.query("paymentRoutes").collect();
-    const aliases: Record<string, string> = { "sandbox-standard": "wise", "sandbox-bank": "swift", "sandbox-fast": "card" };
-    for (const route of routes) await ctx.db.patch(route._id, { key: aliases[route.key], fxRate: 0.1, quoteExpiresAt: 0, maxBusinessDays: undefined });
-    await ctx.db.insert("paymentRoutes", { accountId, key: "unknown-provider", provider: "Unknown", fxRate: 1, fee: 0, sourceAmount: 1, delivery: "Unknown", quoteExpiresAt: 0 });
+    const aliases: Record<string, string> = {
+      "sandbox-standard": "wise",
+      "sandbox-bank": "swift",
+      "sandbox-platform": "platform",
+    };
+    for (const route of routes)
+      await ctx.db.patch(route._id, {
+        key: aliases[route.key],
+        fxRate: 0.1,
+        quoteExpiresAt: 0,
+        maxBusinessDays: undefined,
+      });
+    await ctx.db.insert("paymentRoutes", {
+      accountId,
+      key: "unknown-provider",
+      provider: "Unknown",
+      fxRate: 1,
+      fee: 0,
+      sourceAmount: 1,
+      delivery: "Unknown",
+      quoteExpiresAt: 0,
+    });
   });
   await owner.mutation(api.accounts.refreshSandboxQuotes, { accountId });
-  const routes = await t.run(ctx => ctx.db.query("paymentRoutes").collect());
-  for (const route of routes.filter(r => r.key !== "unknown-provider")) {
+  const routes = await t.run((ctx) => ctx.db.query("paymentRoutes").collect());
+  for (const route of routes.filter((r) => r.key !== "unknown-provider")) {
     expect(route.targetCurrency).toBe("CNY");
     expect(route.sourceCurrency).toBe("USD");
     expect(route.quoteExpiresAt).toBeGreaterThan(Date.now());
     expect(route.maxBusinessDays).toBeGreaterThan(0);
     expect(route.fxRate).toBeGreaterThan(7);
   }
-  expect(routes.find(r => r.key === "unknown-provider")?.quoteExpiresAt).toBe(0);
+  expect(routes.find((r) => r.key === "unknown-provider")?.quoteExpiresAt).toBe(
+    0,
+  );
 });

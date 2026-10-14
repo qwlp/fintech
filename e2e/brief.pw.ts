@@ -30,36 +30,41 @@ for (const width of [320, 390, 768, 1440, 1920]) {
     await page.getByRole("button", { name: "Save details" }).click();
     await expect(page.locator(".brief-edit-form")).toBeVisible();
     await page.getByLabel("Tuition amount · GBP").fill("1500.25");
-    await page.getByLabel("University / recipient").fill("Updated University");
-    await page.getByLabel("Recipient account last four digits").fill("9876");
+    await page
+      .getByRole("combobox", { name: "University / recipient" })
+      .click();
+    await page
+      .getByRole("option", { name: "University of Manchester", exact: true })
+      .click();
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
-    await expect(page.locator(".payment-workspace-summary")).toContainText(
-      "£2,000.00",
+    await expect(
+      page.getByLabel("Tuition amount in GBP", { exact: true }),
+    ).toHaveValue("2,000");
+    await expect(page.locator(".payment-comparison-recipient")).toContainText(
+      "King's College London",
     );
     await page.getByRole("button", { name: "Edit tuition details" }).click();
     await page.getByLabel("Tuition amount · GBP").fill("1500.25");
-    await page.getByLabel("University / recipient").fill("Updated University");
+    await page
+      .getByRole("combobox", { name: "University / recipient" })
+      .click();
+    await page
+      .getByRole("option", { name: "University of Manchester", exact: true })
+      .click();
     await page.getByRole("button", { name: "Save details" }).click();
-    await expect(page.locator(".payment-workspace-summary")).toContainText(
-      "Updated University",
+    await expect(page.locator(".payment-comparison-recipient")).toContainText(
+      "University of Manchester",
     );
-    await expect(page.locator(".payment-workspace-summary")).toContainText(
-      "£1,500.25",
-    );
-    await page.getByRole("tab", { name: "Calculator", exact: true }).click();
-    const estimate = page.getByLabel("Automatic payment estimate");
-    await expect(estimate).toContainText("£1,500.25");
-    await expect(estimate).toContainText("Updated University");
-    await expect(estimate).toContainText("Cambodia");
-    await expect(estimate).toContainText("$1,946.71");
-    await expect(estimate.locator("input")).toHaveCount(0);
-    await page.getByRole("tab", { name: "Tuition", exact: true }).click();
+    await expect(
+      page.getByLabel("Tuition amount in GBP", { exact: true }),
+    ).toHaveValue("1,500.25");
     await page
       .getByRole("button", {
-        name: "Details for Sandbox Standard",
+        name: "Details for Fintech Provider",
         exact: true,
       })
       .click();
+    await expect(page.getByRole("dialog")).toContainText("£1,500.25");
     await page
       .getByRole("button", { name: "About exchange rate" })
       .first()
@@ -74,15 +79,15 @@ for (const width of [320, 390, 768, 1440, 1920]) {
       .getByRole("button", { name: "Close", exact: true })
       .click();
     await page.getByRole("tab", { name: "Balances", exact: true }).click();
-    await expect(page.getByRole("tabpanel")).toContainText("Currency balances");
+    await expect(page.getByRole("tabpanel")).toContainText("Your balances");
     await page.getByRole("tab", { name: "Exchange", exact: true }).click();
     await expect(page.getByRole("tabpanel")).toContainText(
       "Exchange estimates",
     );
     await page.getByRole("tab", { name: "Tuition", exact: true }).click();
-    await expect(page.locator(".payment-workspace-summary")).toContainText(
-      "£1,500.25",
-    );
+    await expect(
+      page.getByLabel("Tuition amount in GBP", { exact: true }),
+    ).toHaveValue("1,500.25");
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -96,12 +101,13 @@ for (const width of [320, 390, 768, 1440, 1920]) {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await preview(page, "brief-preview", "brief-preview");
+    const back = page.getByRole("button", { name: "Back to categories" });
+    if (await back.isVisible()) await back.click();
     await page.getByRole("button", { name: /^Your costs/ }).click();
     await expect(page.locator(".move-cost-breakdown").first()).toContainText(
       "Accommodation",
     );
-    if (width < 768)
-      await page.getByRole("button", { name: "Back to categories" }).click();
+    if (await back.isVisible()) await back.click();
     await page
       .getByRole("button", { name: "Visa package", exact: true })
       .click();
@@ -111,8 +117,7 @@ for (const width of [320, 390, 768, 1440, 1920]) {
     });
     await visa.fill("200");
     await visa.blur();
-    if (width < 768)
-      await page.getByRole("button", { name: "Back to categories" }).click();
+    if (await back.isVisible()) await back.click();
     await page.getByRole("button", { name: "Flights", exact: true }).click();
     await expect(
       page.getByRole("spinbutton", { name: "One-way flight in GBP" }),
@@ -131,13 +136,21 @@ for (const width of [320, 390, 768, 1440, 1920]) {
       path: `/tmp/planner-organized-${width}.png`,
       fullPage: true,
     });
-    await page.getByRole("button", { name: "Profile", exact: true }).click();
+    await page
+      .getByRole("navigation", { name: "Preview sections" })
+      .getByRole("button", { name: "Profile", exact: true })
+      .click();
     await page.getByRole("button", { name: "Edit profile" }).click();
     await page.getByRole("combobox", { name: "Home country" }).click();
-    await page.getByRole("option", { name: "Australia", exact: true }).click();
+    await page
+      .getByRole("option", { name: "United States", exact: true })
+      .click();
     await page.getByRole("button", { name: "Save profile" }).click();
-    await expect(page.locator(".profile-hero")).toContainText("Australia");
-    await page.getByRole("button", { name: "Balances", exact: true }).click();
+    await expect(page.locator(".profile-hero")).toContainText("United States");
+    await page
+      .getByRole("navigation", { name: "Preview sections" })
+      .getByRole("button", { name: "Balances", exact: true })
+      .click();
     await expect(page.locator(".balance-rate")).toContainText("0.7740 GBP");
     await page
       .getByRole("navigation", { name: "Preview sections" })
@@ -206,40 +219,27 @@ for (const width of [390, 1440])
     const comparison = page
       .locator(".tuition-route")
       .filter({ hasText: "Express" });
-    const total = (await comparison
-      .locator(".tuition-route-summary > strong")
+    const displayedTotal = (await comparison
+      .locator(".payment-comparison-total strong")
       .textContent())!;
-    await page.getByRole("button", { name: "Choose Express" }).click();
-    await expect(page.locator(".pay-price")).not.toBeVisible();
-    await page.screenshot({
-      path: `/tmp/payment-compact-routes-${width}.png`,
-      fullPage: true,
-    });
+    const total = displayedTotal.replace(/^\$/, "US$");
+    await page.getByRole("button", { name: "Details for Express" }).click();
     await page
-      .getByRole("button", { name: "Review payment", exact: true })
+      .getByRole("button", { name: "Select route and review payment" })
       .click();
     await expect(page.locator(".pay-price")).toHaveText(total);
     await page.getByRole("button", { name: "Routes", exact: true }).click();
-    await expect(comparison).toContainText("Selected");
+    await expect(comparison).toHaveClass(/selected/);
+    await page.getByRole("button", { name: "Details for Express" }).click();
     await page
-      .getByRole("button", { name: "Review payment", exact: true })
+      .getByRole("button", { name: "Select route and review payment" })
       .click();
-    await page.screenshot({
-      path: `/tmp/payment-compact-review-${width}.png`,
-      fullPage: true,
-    });
+    await expect(page.locator(".pay-price")).toHaveText(total);
     await expect(page.locator(".pay-details")).toContainText(total);
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page
       .getByRole("button", { name: "Change provider observation" })
       .click();
-    await expect(page.locator(".pay-price")).toHaveText(total);
-    await page.getByRole("tab", { name: "Calculator", exact: true }).click();
-    await expect(page.getByLabel("Automatic payment estimate")).toContainText(
-      total,
-    );
-    await page.getByRole("tab", { name: "Receipts" }).click();
-    await page.getByRole("tab", { name: "Tuition" }).click();
     await expect(page.locator(".pay-price")).toHaveText(total);
     await page
       .getByRole("checkbox", { name: "Recipient and total are correct" })

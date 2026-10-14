@@ -1,6 +1,6 @@
 # MoveWire security self-assessment
 
-Scope: student/sponsor account application, external AI calls and simulated USD-to-GBP tuition execution. This is a developer assessment, not an independent audit or legal compliance certification.
+Scope: student/sponsor account application, external AI calls, planning edits and simulated payments in supported USD, GBP and CNY corridors. This is a developer assessment, not an independent audit or legal compliance certification.
 
 ## Permission tiers
 
@@ -12,14 +12,16 @@ Scope: student/sponsor account application, external AI calls and simulated USD-
 | 3    | Approve a proposal                     | Owner-only public mutation; exact proposal ID; expiry/state checks                 |
 | 4    | Execute approved sandbox payment       | Owner-bound approval; atomic balance/ledger update; idempotent receipt             |
 
-The model can access tiers 1–2 only. It has no function definition or execution dispatch for tiers 3–4. A prompt cannot grant a capability that the executor does not expose.
+The model can access account-bound reads, planning edits and payment preparation only. It has no function definition or execution dispatch for tiers 3–4. A prompt cannot grant a capability that the executor does not expose.
+
+Planning edits are a separate tier-2 capability: profile/destination, tuition/deadline/reserve, Move Planner, budget items, checklist, alerts and country-account labels. These change planning records, not wallet cash or bank accounts. Active proposals block changes to payment terms; resetting and fresh owner approval are required. Explicit confirmed-funding edits return a pending owner-confirmation card with a 30-minute expiry and a stale-record check. Country changes may rebase declared planning amounts. The agent can change the reserve before preparation when requested; the approved proposal snapshots it.
 
 ## Controls and evidence
 
 - Convex Auth email/password identity; ownership checks before account reads/writes.
 - Immutable account role during normal login.
 - Student invitations use 48-bit random codes, expire in 24 hours and are single-use.
-- Sponsor dashboards return only linked names, commitments, permission labels and permitted requests. Personal balances and spending are excluded.
+- Sponsor dashboards return linked names, commitments, permission labels, permitted requests and separately authorized financial overview/tuition projections. Personal balances and spending are excluded.
 - Sponsor permission values are allowlisted. Changes create audit events; revocation applies on the next reactive query.
 - Explicit, revocable AI consent; secret API key kept server-side.
 - AI receives minimized financial context, recent chat and bounded tool outputs rather than full wallet/identity records. User chat may itself contain personal data.

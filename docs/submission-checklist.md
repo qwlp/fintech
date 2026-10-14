@@ -1,17 +1,17 @@
 # Submission readiness
 
-These files support the supplied International Track rules. They are not confirmation of registration or eligibility.
+See [the page-by-page requirements audit](competition-requirements.md) for all supplied rules, eligibility, deadline and remaining contestant obligations. These files support the supplied International Track rules. They are not confirmation of registration or eligibility.
 
-| Required item                                   | Repository material                                        | Remaining action                                          |
-| ----------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
-| Technical documentation                         | `architecture.md`                                          | Review against final implementation                       |
-| Presentation ≤10 minutes                        | `presentation.html`, `presentation.pdf`                    | Rehearse and personalize team details                     |
-| Optional video ≤5 minutes                       | `demo-script.md`                                           | Record actual application                                 |
-| Code, README, deployment instructions and tests | Repository and README                                      | Provide accessible repository URL                         |
-| Security self-assessment                        | `security-self-assessment.md`                              | Review known risks and deployment details                 |
-| Sandbox operation logs and demo video           | Local execution JSON, control/model evaluations; UI export | Record authenticated demo video and attach current export |
+| Required item                                   | Repository material                                                  | Remaining action                                      |
+| ----------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------- |
+| Technical documentation                         | `architecture.md`                                                    | Review against final implementation                   |
+| Presentation ≤10 minutes                        | `presentation.html`, `presentation.pdf`                              | Rehearse and personalize team details                 |
+| Optional video ≤5 minutes                       | `demo-script.md`                                                     | Record actual application                             |
+| Code, README, deployment instructions and tests | Repository and README                                                | Provide accessible repository URL                     |
+| Security self-assessment                        | `security-self-assessment.md`                                        | Review known risks and deployment details             |
+| Sandbox operation logs and demo video           | Local execution JSON, authenticated live-AI export and recorded WebM | Review recorded demo/export; optionally add narration |
 
-Local-test JSON is genuine application test output but is not external-provider execution evidence. Include the recorded development-session journey for a stronger submission.
+Local-test JSON is genuine application test output but is not external-provider execution evidence. The recorded development-session journey and live AI preparation are in `evidence/development-session.json` and `evidence/sandbox-demo.webm`; `evidence/demo-manifest.json` documents their provenance. Review the recording for the final submission.
 
 ## Product roadmap by scoring impact
 

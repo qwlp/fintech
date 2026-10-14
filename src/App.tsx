@@ -674,7 +674,7 @@ function App({ onSignOut, startTour = false }: { onSignOut: () => void; startTou
                 ) : (
                   <Assistant
                     key={activeChat ?? "legacy"}
-                    tour={<AgentTour accountId={account?._id} autoOpen={!tourOpen} />}
+                    tour={(privacyOpen) => <AgentTour accountId={account?._id} autoOpen={!tourOpen && !privacyOpen} />}
                     messages={(database?.messages ?? []).filter(
                       (message) => message.chatId === activeChat,
                     )}

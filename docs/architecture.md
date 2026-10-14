@@ -14,7 +14,7 @@ flowchart LR
   SponsorUI --> Auth
   Auth --> DB[(Account-isolated records)]
   Auth --> Chat[AI action: consent and request limits]
-  Chat --> Model[OpenRouter model]
+  Chat --> Model[Configured OpenAI-compatible model]
   Model --> Tools[Allowlisted tools]
   Tools --> Calc[Deterministic calculations]
   Tools --> Draft[Prepare immutable proposal]
@@ -36,9 +36,13 @@ The model has no approval or execution tool. All tool calls are bound to the aut
 
 The last tool requires a direct prepare/draft payment request in the current turn and rejects quoted, negated and common hypothetical/instruction-discussion phrasing. This conservative English-language heuristic is an additional preparation guard, not a general prompt-injection detector. Preparation cannot move funds. Tools validate arguments and recheck ownership and AI consent. Each model response can request at most three calls, with three tool rounds and a final text round. Each model request has a 45-second timeout. Requests are spaced by at least ten seconds per account and capped at 100 per UTC day. When a tool has already returned but the later model explanation fails, the action saves the tool evidence with an explicit fallback message. Consent is checked again before saving the exchange.
 
+## Planning-edit tools
+
+`shared/agent-tools.ts` defines the additional schema-validated workspace tools; `convex/agentTools.ts` dispatches them with ownership and consent checks. They read current records and apply partial updates to profile, tuition, deadline/reserve, Move Planner, budgets/funding, routes, checklist, alerts and country-account labels. `update_study_plan` groups requested edits in one mutation so failures roll back all changes. Funding amounts are declared planning values, not wallet credits. Explicit confirmed-funding changes remain pending until the owner confirms; cards expire after 30 minutes and stale changes are rejected. Recipient confirmation is a separate owner action.
+
 ## Financial algorithms
 
-Payment amounts are stored as integer minor units in proposals and ledger entries. For the sandbox USD-to-GBP quote:
+Payment amounts are stored as integer minor units in proposals and ledger entries. For a sandbox source-to-target currency quote (legacy variable names use GBP/USD):
 
 ```
 recipientMinor = round(recipientGBP * 100)
@@ -47,9 +51,9 @@ feeMinor = round(feeUSD * 100)
 totalMinor = sourceMinor + feeMinor
 ```
 
-Rounding the source amount up avoids underfunding the target. Values must be finite, positive where appropriate and within safe integer precision. The sandbox intentionally supports this single execution corridor; other country comparisons are planning estimates only.
+Rounding the source amount up avoids underfunding the target. Values must be finite, positive where appropriate and within safe integer precision. Sandbox execution supports configured USD, GBP and CNY source/target currencies. Provider fees are illustrative; daily reference rates, when fetched, are comparison inputs rather than binding provider quotes.
 
-Available source funds must cover total cost. The projected GBP valuation of all wallets after the debit must preserve the configured living-cost reserve (default £1,000). The executor repeats these checks at execution because balances can change after preparation. Wallet valuations are scenario data, not live FX prices.
+Available source funds must cover total cost. The projected study-currency valuation of all wallets after the debit must preserve the configured living-cost reserve (default £1,000). The executor repeats these checks at execution because balances can change after preparation. Wallet valuations are scenario data, not live FX prices.
 
 For rent simulation, matching recurring cost items are treated as annual plan totals and divided by 12. The tool returns this assumption explicitly. Burn equals hypothetical rent plus other monthly costs; runway equals liquid GBP valuation divided by burn. Zero burn returns no finite runway. The FX stress test reduces only non-GBP wallet valuations by the requested percentage; it is not a forecast.
 
@@ -61,11 +65,11 @@ Arrival uses the maximum declared delivery business days plus an owner-selected 
 
 For blocked funding, the illustrative additional USD estimate is the larger of the source-cash gap and the USD required to close the GBP reserve shortfall, rounded up to source cents using the existing USD wallet valuation. It is not a request sent to a sponsor, and promised funding is excluded. Actual funds and a fresh quote must be checked again.
 
-The total `remainingGBP` already includes the protected reserve. The reserve must not be added a second time. The saved deadline, buffer and reserve cannot be changed while a proposal is active. Owners may reset before changing the plan or refreshing known sandbox fixtures; the AI has no tool to lower the reserve or alter planning terms.
+The total `remainingGBP` already includes the protected reserve. The reserve must not be added a second time. The saved deadline, buffer and reserve cannot be changed while a proposal is active. Owners may reset before changing the plan or refreshing known sandbox fixtures. The AI can save explicitly requested planning terms before preparation; it cannot change an active proposal or approve/execute a payment.
 
 ## Payment protocol
 
-1. Owner loads sandbox scenario and confirms sample recipient suffix.
+1. Payments initializes a fictional sandbox scenario. Owner opens route details, selects an eligible route and reviews the payment, then confirms the example university. Confirmation is an owner acknowledgment, not bank-account validation.
 2. Prepare snapshots recipient, provider, rate, fee, target amount, source total, reserve, deadline, buffer and delivery window. Proposal expiry never exceeds the source quote expiry.
 3. Approve requires the latest proposal ID, an authenticated student owner, prepared state and an unexpired quote.
 4. Execute requires that same proposal ID and its recorded owner approval.

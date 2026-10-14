@@ -1,6 +1,6 @@
 # Five-minute demonstration
 
-Use a dedicated student account with fictional data. Confirm sandbox labels remain visible. Load the scenario before recording; save the tuition deadline and reserve, choose an eligible route, confirm the fixture recipient, and verify the AI service is configured. Refresh quotes immediately before demonstrating preparation.
+Use a dedicated student account with fictional data. Confirm sandbox labels remain visible. Open Payments to initialize the fictional scenario before recording; save the tuition deadline and reserve, choose an eligible route, open route Details, select and review an eligible route, confirm the example university, and verify the AI service is configured. Refresh quotes immediately before demonstrating preparation.
 
 | Time      | Demonstration                                                    | Evidence                                                              |
 | --------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -21,4 +21,4 @@ Then: “What would a 10% drop in my home currencies do to my available funds?�
 
 Then: “Prepare my tuition payment using my selected route.”
 
-The user approves in Payments. Never narrate the AI as approving or moving money by itself. Label local-test evidence separately from authenticated development-session evidence. A model-service failure may occur after successful preparation: check Payments before retrying and show the recoverable state honestly.
+The user approves in Payments. Receipts and JSON export are under Profile → Security & activity → Payment history. Never narrate the AI as approving or moving money by itself. Label local-test evidence separately from authenticated development-session evidence. A model-service failure may occur after successful preparation: check Payments before retrying and show the recoverable state honestly.

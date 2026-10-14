@@ -18,6 +18,11 @@ export async function paymentTransition(
   expectedQuote?: string,
 ) {
   const account = await requireAccount(ctx, accountId);
+  if (next === "completed" && expectedProposalId) {
+    const previous = await ctx.db.get(expectedProposalId);
+    if (previous?.accountId === accountId && previous.status === "completed")
+      return previous;
+  }
   const study = studyCurrency(account.countryTo);
   const configs = await ctx.db
     .query("appConfig")
@@ -32,24 +37,11 @@ export async function paymentTransition(
   )
     throw new Error("Study currency changed. Prepare a new payment");
   if (account.role !== "Student") throw new Error("Student account required");
-  if (next === "completed" && expectedProposalId) {
-    const previous = await ctx.db.get(expectedProposalId);
-    if (previous?.accountId === accountId && previous.status === "completed")
-      return previous;
-  }
-  const proposals = await ctx.db
+  const proposal = await ctx.db
     .query("paymentProposals")
     .withIndex("by_account", (q) => q.eq("accountId", accountId))
     .order("desc")
-    .collect();
-  const proposal = proposals.sort((a, b) => b.createdAt - a.createdAt)[0];
-  // Retrying execution of the same proposal returns its original receipt.
-  if (
-    next === "completed" &&
-    proposal?.status === "completed" &&
-    expectedProposalId === proposal._id
-  )
-    return proposal;
+    .first();
   if (next !== "prepared" && (!proposal || expectedProposalId !== proposal._id))
     throw new Error("Review the current payment proposal before continuing");
   if (next === "prepared") {
@@ -95,10 +87,7 @@ export async function paymentTransition(
       route.fee < 0
     )
       throw new Error("Payment details unavailable");
-    if (
-      !banking?.recipient ||
-      banking.recipientVerified !== true
-    )
+    if (!banking?.recipient || banking.recipientVerified !== true)
       throw new Error("Verify the sandbox university recipient first");
     const limit =
       security?.paymentLimit == null
