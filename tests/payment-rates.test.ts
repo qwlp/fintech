@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../convex/schema";
 import { api } from "../convex/_generated/api";
+import { providerPricing } from "../shared/payment-comparison";
 import { tuitionQuote } from "../convex/tuitionDecision";
 const modules = import.meta.glob("../convex/**/*.ts");
 afterEach(() => {
@@ -56,17 +57,31 @@ it("uses one saved daily reference for the screenshot pair and every route's tot
   await owner.mutation(api.accounts.refreshSandboxQuotes, { accountId });
   const refreshed = await owner.query(api.accounts.bootstrap, {});
   expect(
-    refreshed.paymentRoutes.every((route) => route.fxRate === 1.3241),
+    refreshed.paymentRoutes.every(
+      (route) =>
+        route.fxRate ===
+        providerPricing(route.provider, "GBP", "USD", 50000, 1.3241).fxRate,
+    ),
   ).toBe(true);
 
   for (const route of state.paymentRoutes) {
-    expect(route.fxRate).toBe(1.3241);
+    const pricing = providerPricing(
+      route.provider,
+      "GBP",
+      "USD",
+      50000,
+      1.3241,
+    );
+    expect(route.fxRate).toBe(pricing.fxRate);
+    expect(route.fee).toBe(pricing.fee);
     expect(route.sourceCurrency).toBe("GBP");
     expect(route.targetCurrency).toBe("USD");
     const quote = tuitionQuote(50000, route);
-    expect(quote.sourceMinor).toBe(3776150);
-    expect(quote.totalMinor).toBe(3776150 + Math.round(route.fee * 100));
-    expect(route.sourceAmount).toBe(37761.5);
+    expect(quote.sourceMinor).toBe(Math.round(pricing.sourceAmount * 100));
+    expect(quote.totalMinor).toBe(
+      quote.sourceMinor + Math.round(route.fee * 100),
+    );
+    expect(route.sourceAmount).toBe(pricing.sourceAmount);
   }
 });
 it("refreshes the daily reference, cards and source amounts together", async () => {
@@ -83,7 +98,12 @@ it("refreshes the daily reference, cards and source amounts together", async () 
   expect(state.config.banking.marketRates).toEqual(observations);
   expect(
     state.paymentRoutes.every(
-      (route) => route.fxRate === 1.25 && route.sourceAmount === 40000,
+      (route) =>
+        route.fxRate ===
+          providerPricing(route.provider, "GBP", "USD", 50000, 1.25).fxRate &&
+        route.sourceAmount ===
+          providerPricing(route.provider, "GBP", "USD", 50000, 1.25)
+            .sourceAmount,
     ),
   ).toBe(true);
 });
@@ -166,7 +186,90 @@ it("falls back to published ECB cross rates and keeps their source attribution",
   expect(state.config.banking.marketRates.at(-1).rate).toBe(1.5);
   expect(
     state.paymentRoutes.every(
-      (route) => route.fxRate === 1.5 && route.sourceAmount === 33333.34,
+      (route) =>
+        route.fxRate ===
+          providerPricing(route.provider, "GBP", "USD", 50000, 1.5).fxRate &&
+        route.sourceAmount ===
+          providerPricing(route.provider, "GBP", "USD", 50000, 1.5)
+            .sourceAmount,
     ),
   ).toBe(true);
+});
+
+it("prices USD to GBP with a transparent fintech fee and embedded provider spreads", () => {
+  const fintech = providerPricing("Wise", "USD", "GBP", 50000, 0.75496);
+  expect(fintech).toEqual({
+    fxRate: 0.75496,
+    fee: 231.8,
+    sourceAmount: 66228.68,
+  });
+  expect(tuitionQuote(50000, fintech).totalMinor).toBe(6646048);
+  const platform = providerPricing(
+    "Education Platforms",
+    "USD",
+    "GBP",
+    50000,
+    0.75496,
+  );
+  expect(platform.fxRate).toBe(0.7436356);
+  expect(platform.fee).toBe(0);
+  expect(tuitionQuote(50000, platform).totalMinor).toBe(6723724);
+  const bank = providerPricing(
+    "SWIFT bank transfer",
+    "USD",
+    "GBP",
+    50000,
+    0.75496,
+  );
+  expect(bank.fxRate).toBe(0.736086);
+  expect(bank.fee).toBe(40);
+  const chinese = providerPricing("Bank & Card", "CNY", "GBP", 50000, 0.1);
+  expect(chinese.fxRate).toBe(0.0997);
+  expect(chinese.fee).toBe(250);
+  expect(providerPricing("Bank & Card", "GBP", "USD", 50000, 1.3).fee).toBe(
+    30.96,
+  );
+  expect(providerPricing("Wise", "USD", "GBP", 10000, 0.75496).fee).toBe(46.36);
+});
+
+it("applies Chinese sending-bank prices and recalculates percentage fees when the amount changes", async () => {
+  const { owner, accountId } = await fixture();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify([
+            {
+              date: new Date().toISOString().slice(0, 10),
+              base: "CNY",
+              quote: "GBP",
+              rate: 0.1,
+            },
+          ]),
+        ),
+    ),
+  );
+  for (const amount of [50000, 10000]) {
+    await owner.action(api.paymentRates.compare, {
+      sourceCurrency: "CNY",
+      targetCurrency: "GBP",
+      amount,
+    });
+    await owner.mutation(api.accounts.refreshSandboxQuotes, { accountId });
+    const state = await owner.query(api.accounts.bootstrap, {});
+    for (const route of state.paymentRoutes) {
+      const expected = providerPricing(
+        route.provider,
+        "CNY",
+        "GBP",
+        amount,
+        0.1,
+      );
+      expect(route).toMatchObject(expected);
+      expect(tuitionQuote(amount, route).totalMinor).toBe(
+        Math.round((expected.sourceAmount + expected.fee) * 100),
+      );
+    }
+  }
 });

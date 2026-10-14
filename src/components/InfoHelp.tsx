@@ -11,7 +11,7 @@ const explanations: Record<string, string> = {
     "How much study currency one unit of the source currency buys. Sandbox quotes are estimates, not live provider rates.",
   "Provider quote":
     "A provider's rate and fee, valid until the displayed expiry. Expired quotes need an explicit refresh and fresh approval.",
-  Fees: "The provider fee is included in your total source-currency cost. This sandbox does not model additional card or SWIFT charges.",
+  Fees: "The upfront provider or SWIFT fee is included in your total. Education platforms embed a 1.5% FX spread; banks embed 2.5%, or 0.3% when sending CNY. Fintech uses the reference rate with a 0.35% conversion fee.",
   Availability:
     "A route must cover tuition, preserve your living funds and meet your deadline before it can be selected.",
   "Arrival estimate":

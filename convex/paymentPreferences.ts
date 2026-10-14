@@ -5,8 +5,8 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAccount } from "./ownership";
-import { comparisonRoute } from "../shared/payment-comparison";
-import { convertMoney, studyCurrency } from "../shared/currency";
+import { providerPricing } from "../shared/payment-comparison";
+import { convertMoney, currencyRate, studyCurrency } from "../shared/currency";
 import { getUniversity, countries } from "../shared/study";
 import { applyComparisonRates, rateObservation } from "./paymentRates";
 const currency = v.union(v.literal("USD"), v.literal("GBP"), v.literal("CNY"));
@@ -64,16 +64,17 @@ async function persistPreferences(ctx: MutationCtx, args: Preferences) {
     .withIndex("by_account", (q) => q.eq("accountId", account._id))
     .take(50);
   for (const route of routes) {
-    const converted = comparisonRoute(
-      route,
-      args.sourceCurrency,
-      args.targetCurrency,
-    );
     await ctx.db.patch(route._id, {
       sourceCurrency: args.sourceCurrency,
       targetCurrency: args.targetCurrency,
-      fee: converted.fee,
-      fxRate: converted.fxRate,
+      ...providerPricing(
+        route.provider,
+        args.sourceCurrency,
+        args.targetCurrency,
+        args.amount,
+        currencyRate(args.sourceCurrency, args.targetCurrency),
+      ),
+      quoteExpiresAt: 0,
     });
   }
   const changed =

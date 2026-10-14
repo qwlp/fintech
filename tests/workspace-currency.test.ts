@@ -1,14 +1,10 @@
+import { providerPricing } from "../shared/payment-comparison";
 import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../convex/schema";
 import { api } from "../convex/_generated/api";
 import { countries, universities } from "../shared/study";
-import {
-  convertMoney,
-  currencyRate,
-  walletValue,
-  sandboxRouteGBPPerUSD,
-} from "../shared/currency";
+import { convertMoney, currencyRate, walletValue } from "../shared/currency";
 import { assessTuition, quoteFingerprint } from "../convex/tuitionDecision";
 const modules = import.meta.glob("../convex/**/*.ts");
 async function fixture(country: string) {
@@ -105,9 +101,13 @@ describe("workspace currency accounting", () => {
         targetCurrency: currency,
       });
       expect(route.fxRate).toBeCloseTo(
-        currency === "USD"
-          ? 1
-          : sandboxRouteGBPPerUSD[route.key] * currencyRate("GBP", currency),
+        providerPricing(
+          route.provider,
+          "USD",
+          currency,
+          state.config.banking.paymentAmount,
+          currencyRate("USD", currency),
+        ).fxRate,
       );
       if (currency === "USD")
         expect(state.paymentRoutes.every((r) => r.fxRate === 1)).toBe(true);
@@ -309,7 +309,15 @@ it("refreshes known legacy demo routes in the study currency without refreshing 
     expect(route.sourceCurrency).toBe("USD");
     expect(route.quoteExpiresAt).toBeGreaterThan(Date.now());
     expect(route.maxBusinessDays).toBeGreaterThan(0);
-    expect(route.fxRate).toBeGreaterThan(7);
+    expect(route.fxRate).toBe(
+      providerPricing(
+        route.provider,
+        "USD",
+        "CNY",
+        2000,
+        currencyRate("USD", "CNY"),
+      ).fxRate,
+    );
   }
   expect(routes.find((r) => r.key === "unknown-provider")?.quoteExpiresAt).toBe(
     0,

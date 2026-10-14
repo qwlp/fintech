@@ -588,7 +588,7 @@ describe("sandbox payment authorization and accounting", () => {
       arguments: {},
       requestText: "Compare",
     })) as any;
-    expect(routes.routes[0].totalUSD).toBe(2592.38);
+    expect(routes.routes[0].totalUSD).toBe(2593.02);
     await expect(
       owner.mutation(internal.accounts.runAgentTool, {
         accountId,

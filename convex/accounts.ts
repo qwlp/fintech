@@ -1,3 +1,4 @@
+import { providerPricing } from "../shared/payment-comparison";
 import { calculateMove, validateMoveSettings } from "../shared/move-planner";
 import { getCourse, courseTuition } from "../shared/courses";
 import type { MutationCtx } from "./_generated/server";
@@ -1587,11 +1588,15 @@ export const initializePaymentSandbox = mutation({
         ...route,
         sourceCurrency: "USD",
         targetCurrency: currency,
-        fxRate:
-          currency === "USD" ? 1 : route.fxRate * currencyRate("GBP", currency),
+        ...providerPricing(
+          route.provider,
+          "USD",
+          currency,
+          convertMoney(2000, "GBP", currency),
+          currencyRate("USD", currency),
+        ),
         quotedAt: Date.now(),
         quoteExpiresAt: Date.now() + 10 * 60 * 1000,
-        sourceAmount: Math.ceil(200000 / route.fxRate) / 100,
       });
     await ctx.db.patch(accountId, {
       selectedRoute: routes.find((route) => route.recommended)!.key,
@@ -1740,7 +1745,10 @@ export const refreshSandboxQuotes = mutation({
     const target = banking?.currency ?? studyCurrency(account.countryTo);
     const referenceRate = (source: string) => {
       const latest = banking?.marketRates?.at(-1);
-      return latest?.base === source && latest?.quote === target && Number.isFinite(latest.rate) && latest.rate > 0
+      return latest?.base === source &&
+        latest?.quote === target &&
+        Number.isFinite(latest.rate) &&
+        latest.rate > 0
         ? latest.rate
         : null;
     };
@@ -1752,24 +1760,17 @@ export const refreshSandboxQuotes = mutation({
       )
     ) {
       const sourceCurrency = routes[0].sourceCurrency ?? "USD";
-      const fxRate =
-        sourceCurrency === target
-          ? 1
-          : referenceRate(sourceCurrency) ?? (sandboxRouteGBPPerUSD["sandbox-platform"] /
-              currencyRate("USD", "GBP")) *
-            currencyRate(sourceCurrency, target);
       await ctx.db.insert("paymentRoutes", {
         accountId,
         key: "sandbox-platform",
         provider: "Education Platforms",
-        sourceAmount:
-          Math.ceil(
-            ((banking?.paymentAmount ?? convertMoney(2000, "GBP", target)) /
-              fxRate) *
-              100,
-          ) / 100,
-        fee: 15,
-        fxRate,
+        ...providerPricing(
+          "Education Platforms",
+          sourceCurrency,
+          target,
+          banking?.paymentAmount ?? convertMoney(2000, "GBP", target),
+          referenceRate(sourceCurrency) ?? currencyRate(sourceCurrency, target),
+        ),
         delivery: "2–3 business days",
         maxBusinessDays: 3,
         recommended: false,
@@ -1784,16 +1785,14 @@ export const refreshSandboxQuotes = mutation({
       // Only known fixtures can be refreshed; never invent current observations for other records.
       if (windows[route.key] === undefined) continue;
       await ctx.db.patch(route._id, {
-        fxRate:
-          (route.sourceCurrency ?? "USD") === target
-            ? 1
-            : referenceRate(route.sourceCurrency ?? "USD") ?? (sandboxRouteGBPPerUSD[
-                routeProviderName(route.provider) === "Education Platforms"
-                  ? "sandbox-platform"
-                  : route.key
-              ] /
-                currencyRate("USD", "GBP")) *
-              currencyRate(route.sourceCurrency ?? "USD", target),
+        ...providerPricing(
+          route.provider,
+          route.sourceCurrency ?? "USD",
+          target,
+          banking?.paymentAmount ?? convertMoney(2000, "GBP", target),
+          referenceRate(route.sourceCurrency ?? "USD") ??
+            currencyRate(route.sourceCurrency ?? "USD", target),
+        ),
         quotedAt: Date.now(),
         quoteExpiresAt: Date.now() + 600000,
         maxBusinessDays:

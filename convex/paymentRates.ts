@@ -10,7 +10,7 @@ import { internal } from "./_generated/api";
 import { requireAccount } from "./ownership";
 import { getCountry } from "../shared/study";
 import { studyCurrency } from "../shared/currency";
-import { tuitionQuote } from "./tuitionDecision";
+import { providerPricing } from "../shared/payment-comparison";
 
 export const rateObservation = v.object({
   date: v.string(),
@@ -186,18 +186,17 @@ export async function applyComparisonRates(
     throw new Error("Payment currencies changed. Compare again.");
   const now = Date.now();
   for (const route of routes) {
-    const sourceAmount =
-      banking.value.paymentAmount > 0
-        ? tuitionQuote(banking.value.paymentAmount, {
-            fee: route.fee,
-            fxRate: latest.rate,
-          }).sourceMinor / 100
-        : 0;
+    const pricing = providerPricing(
+      route.provider,
+      source,
+      target,
+      banking.value.paymentAmount ?? 0,
+      latest.rate,
+    );
     await ctx.db.patch(route._id, {
       sourceCurrency: source,
       targetCurrency: target,
-      fxRate: latest.rate,
-      sourceAmount,
+      ...pricing,
       quotedAt: now,
       quoteExpiresAt: now + 600000,
     });

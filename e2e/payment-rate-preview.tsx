@@ -1,3 +1,4 @@
+import { providerPricing } from "../shared/payment-comparison";
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import TuitionDecision from "../src/features/payments/TuitionDecision";
@@ -56,7 +57,7 @@ function Preview() {
               ...route,
               sourceCurrency: "GBP",
               targetCurrency: "USD",
-              fxRate: rate,
+              ...providerPricing(route.provider, "GBP", "USD", 50000, rate),
               quotedAt: now,
               quoteExpiresAt: now + 600000,
             }))}

@@ -19,14 +19,20 @@ for (const width of [390, 1280]) {
     await expect(page.locator(".mid-market-rate-copy > strong")).toHaveText(
       "1 GBP = 1.3241 USD",
     );
-    for (const route of await page.locator(".tuition-route").all()) {
-      await expect(route.locator(".payment-comparison-fees > span")).toHaveText(
-        "1 GBP = 1.3241 USD",
-      );
-    }
+    const rates = page.locator(".payment-comparison-fees > span");
+    await expect(rates).toHaveText([
+      "1 GBP = 1.3241 USD",
+      "1 GBP = 1.3042385 USD",
+      "1 GBP = 1.2909975 USD",
+    ]);
+    await expect(page.locator(".payment-comparison-fees > strong")).toHaveText([
+      "Fee £132.17",
+      "Fee £0.00",
+      "Fee £30.96",
+    ]);
     await expect(
       page.locator(".payment-comparison-total > strong").first(),
-    ).toHaveText("£37,770.00");
+    ).toHaveText("£37,893.67");
     await expect(page.getByText(/Insufficient available/)).toHaveCount(0);
     await expect(page.locator(".mid-market-rate-chart")).toHaveAttribute(
       "data-direction",
@@ -38,7 +44,7 @@ for (const width of [390, 1280]) {
     );
     await expect(
       page.locator(".payment-comparison-total > strong").first(),
-    ).toHaveText("£37,045.54");
+    ).toHaveText("£37,166.67");
     await expect(page.locator(".mid-market-rate-chart")).toHaveAttribute(
       "data-direction",
       "up",
