@@ -66,6 +66,21 @@ for (const width of [320, 393, 824, 1440]) {
     for (let step = 0; step < titles.length; step++) {
       const card = page.locator(".guide-card");
       await expect(card.getByRole("heading")).toHaveText(titles[step]);
+      if (step === 0 && width <= 800) {
+        await expect
+          .poll(async () => {
+            const greeting = await page
+              .locator(".consumer-welcome")
+              .boundingBox();
+            const funding = await page
+              .locator(".funding-overview")
+              .boundingBox();
+            return greeting && funding
+              ? funding.y - greeting.y - greeting.height
+              : Infinity;
+          })
+          .toBeLessThanOrEqual(20);
+      }
       await expect(
         page.locator(".guide-focus"),
         `Highlight for ${titles[step]}`,
@@ -82,6 +97,28 @@ for (const width of [320, 393, 824, 1440]) {
         await card.evaluate((el) => el.scrollWidth <= el.clientWidth),
       ).toBe(true);
       if (step === 1) {
+        await expect
+          .poll(async () => {
+            const target = await page
+              .locator(".move-plan-settings")
+              .boundingBox();
+            const highlight = await page.locator(".guide-focus").boundingBox();
+            if (!target || !highlight) return false;
+            const left = Math.max(8, target.x - 5);
+            const top = Math.max(8, target.y - 5);
+            const right = Math.min(width - 8, target.x + target.width + 5);
+            const bottom = Math.min(
+              852 - (width <= 800 ? 88 : 8),
+              target.y + target.height + 5,
+            );
+            return (
+              Math.abs(highlight.x - left) < 1 &&
+              Math.abs(highlight.y - top) < 1 &&
+              Math.abs(highlight.width - (right - left)) < 1 &&
+              Math.abs(highlight.height - (bottom - top)) < 1
+            );
+          })
+          .toBe(true);
         await card.getByRole("button", { name: "Previous step" }).click();
         await expect(card.getByRole("heading")).toHaveText(titles[0]);
         await card.getByRole("button", { name: "Next", exact: true }).click();

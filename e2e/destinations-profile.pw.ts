@@ -11,6 +11,16 @@ for (const width of [1440, 390]) {
       }),
     );
     await page.goto("/destination-profile-preview");
+    if (width < 768) {
+      const row = page.locator('[data-field="university"]');
+      await expect(row).toContainText("University of Manchester");
+      await expect(page.locator(".profile-field-icon").first()).toBeHidden();
+      const bounds = await row.boundingBox();
+      expect(bounds!.height).toBeLessThan(100);
+      const study = await page.locator(".profile-study").boundingBox();
+      const funding = await page.locator(".profile-funding").boundingBox();
+      expect(Math.abs(study!.width - funding!.width)).toBeLessThan(1);
+    }
     await page
       .getByRole("button", { name: "Edit study details", exact: true })
       .click();
@@ -39,6 +49,9 @@ for (const width of [1440, 390]) {
     await page
       .getByRole("checkbox", { name: "University of Edinburgh" })
       .check();
+    await page
+      .getByRole("button", { name: "🇺🇸 United States", exact: true })
+      .click();
     await page.getByRole("checkbox", { name: "UCLA", exact: true }).check();
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await expect(page.locator(".university-shortlist-items li")).toHaveCount(3);

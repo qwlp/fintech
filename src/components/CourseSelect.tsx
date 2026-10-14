@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, GraduationCap, ExternalLink } from "lucide-react";
+import { ArrowUpRight, ExternalLink } from "lucide-react";
 import {
   coursesForUniversity,
   getCourse,
@@ -22,12 +22,14 @@ export default function CourseSelect({
   onChange,
   disabled = false,
   allowManual = true,
+  onUniversityRequired,
 }: {
   university: string;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
   allowManual?: boolean;
+  onUniversityRequired?: () => void;
 }) {
   const selected = getCourse(university, value);
   const [level, setLevel] = useState<DegreeLevel>(
@@ -39,14 +41,30 @@ export default function CourseSelect({
     setManual(!!value && !selected);
   }, [university, value, selected]);
   const courses = coursesForUniversity(university, level);
+  if (!university) {
+    return (
+      <div className="course-university-prompt">
+        <div>
+          <strong>Choose your university first</strong>
+          <p>Then select your degree level and course.</p>
+        </div>
+        {onUniversityRequired && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onUniversityRequired}
+          >
+            Choose university <ArrowUpRight size={16} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="course-selection">
       <div className="course-selection-fields">
         <label className="course-selection-field">
-          <span>
-            <GraduationCap size={15} aria-hidden="true" />
-            Degree level
-          </span>
+          <span>Degree level</span>
           <Select
             value={level}
             disabled={disabled || !university}
@@ -66,10 +84,7 @@ export default function CourseSelect({
           </Select>
         </label>
         <label className="course-selection-field">
-          <span>
-            <BookOpen size={15} aria-hidden="true" />
-            Course
-          </span>
+          <span>Course</span>
           <Select
             value={manual ? "manual" : (selected?.id ?? "")}
             disabled={disabled || !university}

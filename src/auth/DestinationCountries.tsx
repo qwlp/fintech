@@ -9,11 +9,13 @@ export default function DestinationCountries({
   primary,
   onChange,
   disabled = false,
+  concise = false,
 }: {
   value: string[];
   primary: string;
   onChange: (countries: string[], primary: string) => void;
   disabled?: boolean;
+  concise?: boolean;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -33,8 +35,9 @@ export default function DestinationCountries({
     <div className="setup-field destination-countries">
       <span id={`${id}-label`}>Destination countries</span>
       <p className="destination-help" id={`${id}-help`}>
-        Add the countries you’re considering. Your primary destination sets your
-        university, budget currency, and payment routes.
+        {concise
+          ? "Your primary destination sets your study currency."
+          : "Add the countries you’re considering. Your primary destination sets your university, budget currency, and payment routes."}
       </p>
       <Popover.Root
         open={open}

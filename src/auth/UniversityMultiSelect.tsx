@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type Ref } from "react";
 import { Popover } from "radix-ui";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import UniversityLabel from "../components/UniversityLabel";
@@ -10,15 +10,29 @@ export default function UniversityMultiSelect({
   value,
   onChange,
   disabled = false,
+  guidance,
+  triggerRef,
+  primary,
 }: {
   countries: string[];
   value: string[];
   onChange: (value: string[]) => void;
   disabled?: boolean;
+  guidance?: string;
+  triggerRef?: Ref<HTMLButtonElement>;
+  primary?: string;
 }) {
   const id = useId();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [activeCountry, setActiveCountry] = useState("");
+  const visibleCountries = countries.filter(
+    (country) =>
+      country ===
+      (countries.includes(activeCountry)
+        ? activeCountry
+        : (primary ?? countries[0])),
+  );
   const toggle = (name: string) =>
     onChange(
       value.includes(name)
@@ -28,22 +42,21 @@ export default function UniversityMultiSelect({
   return (
     <div className="setup-field university-shortlist">
       <span id={`${id}-label`}>Universities · optional</span>
-      <p className="setup-directory-note">
-        Shortlist universities in your selected destinations. You can choose
-        more than one.
-      </p>
       <Popover.Root
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
           setQuery("");
+          if (next) setActiveCountry(primary ?? countries[0] ?? "");
         }}
       >
         <Popover.Trigger asChild>
           <button
+            ref={triggerRef}
             type="button"
-            className="setup-country-trigger"
+            className={`setup-country-trigger${guidance ? " setup-university-highlight" : ""}`}
             aria-labelledby={`${id}-label`}
+            aria-describedby={guidance ? `${id}-guidance` : undefined}
             disabled={disabled || !countries.length}
           >
             <span>
@@ -61,6 +74,27 @@ export default function UniversityMultiSelect({
             sideOffset={8}
             collisionPadding={16}
           >
+            {countries.length > 1 && (
+              <div
+                className="university-country-tabs"
+                role="group"
+                aria-label="University destination"
+              >
+                {countries.map((country) => (
+                  <button
+                    key={country}
+                    type="button"
+                    aria-pressed={visibleCountries.includes(country)}
+                    onClick={() => {
+                      setActiveCountry(country);
+                      setQuery("");
+                    }}
+                  >
+                    {getCountry(country)?.flag} {country}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="setup-country-search">
               <Search size={16} />
               <input
@@ -76,7 +110,7 @@ export default function UniversityMultiSelect({
               role="group"
               aria-labelledby={`${id}-label`}
             >
-              {countries.map((country) => {
+              {visibleCountries.map((country) => {
                 const matches = (
                   universities[getCountry(country)?.name ?? ""] ?? []
                 ).filter((name) =>
@@ -84,9 +118,6 @@ export default function UniversityMultiSelect({
                 );
                 return matches.length ? (
                   <div key={country}>
-                    <p className="university-country-heading">
-                      {getCountry(country)?.flag} {country}
-                    </p>
                     {matches.map((name) => (
                       <label className="university-choice" key={name}>
                         <input
@@ -104,7 +135,7 @@ export default function UniversityMultiSelect({
                   </div>
                 ) : null;
               })}
-              {!countries.some((country) =>
+              {!visibleCountries.some((country) =>
                 (universities[getCountry(country)?.name ?? ""] ?? []).some(
                   (name) =>
                     name.toLowerCase().includes(query.trim().toLowerCase()),
@@ -120,6 +151,15 @@ export default function UniversityMultiSelect({
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
+      {guidance && (
+        <p
+          id={`${id}-guidance`}
+          className="setup-university-guidance"
+          role="status"
+        >
+          {guidance}
+        </p>
+      )}
       {!!value.length && (
         <ul className="university-shortlist-items">
           {value.map((name) => (

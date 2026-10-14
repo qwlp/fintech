@@ -3,7 +3,7 @@ import ProfilePhoto from "../components/ProfilePhoto";
 import { AlertDialog } from "radix-ui";
 import AccountMenu from "../components/AccountMenu";
 import UniversityLabel from "../components/UniversityLabel";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -105,6 +105,8 @@ export function Profile({
   );
   const [error, setError] = useState("");
   const editingStudy = editing && editSection !== "funding";
+  const universityTrigger = useRef<HTMLButtonElement>(null);
+  const [universityRequired, setUniversityRequired] = useState(false);
   const editingFunding = editing && editSection !== "study";
   const [saving, setSaving] = useState(false);
   const [confirmingFunding, setConfirmingFunding] = useState(false);
@@ -425,10 +427,11 @@ export function Profile({
                     )}
                     {!(
                       editingStudy &&
-                      ["home", "study", "university"].includes(key)
+                      ["home", "study", "university", "course"].includes(key)
                     ) && <label htmlFor={`profile-${key}`}>{label}</label>}
                     {editingStudy && key === "study" ? (
                       <DestinationCountries
+                        concise
                         value={destinations}
                         primary={profile.study}
                         disabled={saving}
@@ -459,6 +462,13 @@ export function Profile({
                       />
                     ) : editingStudy && key === "university" ? (
                       <UniversityMultiSelect
+                        triggerRef={universityTrigger}
+                        guidance={
+                          universityRequired && !profile.university
+                            ? `Choose a university in ${profile.study} first.`
+                            : undefined
+                        }
+                        primary={profile.study}
                         countries={destinations}
                         value={universityChoices}
                         onChange={(choices) => {
@@ -474,6 +484,16 @@ export function Profile({
                       />
                     ) : editingStudy && key === "course" ? (
                       <CourseSelect
+                        onUniversityRequired={() => {
+                          setUniversityRequired(true);
+                          universityTrigger.current?.scrollIntoView({
+                            block: "nearest",
+                            behavior: "smooth",
+                          });
+                          universityTrigger.current?.focus({
+                            preventScroll: true,
+                          });
+                        }}
                         university={profile.university}
                         value={profile.course}
                         onChange={(value) => update("course", value)}

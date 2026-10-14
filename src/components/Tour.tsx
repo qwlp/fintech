@@ -148,14 +148,15 @@ export function Tour({
     }
     let found: Element | null = null;
     let frame = 0;
-    const resize = new ResizeObserver(() => schedule());
     const update = () => {
+      // Transforms during page transitions move the target without resizing it.
+      // Keep measuring while the tour is open, including late-mounted targets.
+      frame = requestAnimationFrame(update);
       const element = document.querySelector(current.target);
       if (!element) return setRect(null);
       if (element !== found) {
         found = element;
         element.scrollIntoView({ behavior: "instant", block: "center" });
-        resize.observe(element);
       }
       const next = element.getBoundingClientRect();
       setRect((previous) =>
@@ -168,27 +169,9 @@ export function Tour({
           : next,
       );
     };
-    const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(update);
-    };
-    const observer = new MutationObserver(schedule);
-    observer.observe(document.getElementById("root") ?? document.body, {
-      childList: true,
-      subtree: true,
-    });
-    window.addEventListener("scroll", schedule, {
-      passive: true,
-      capture: true,
-    });
-    window.addEventListener("resize", schedule);
-    schedule();
+    frame = requestAnimationFrame(update);
     return () => {
       cancelAnimationFrame(frame);
-      observer.disconnect();
-      resize.disconnect();
-      window.removeEventListener("scroll", schedule, true);
-      window.removeEventListener("resize", schedule);
     };
   }, [step, page, current.target]);
 
@@ -267,20 +250,22 @@ export function Tour({
     return { ...candidates[0], right: "auto", bottom: "auto", width };
   })();
   const focusTop = rect ? Math.max(8, rect.top - 5) : 0;
+  const focusLeft = rect ? Math.max(8, rect.left - 5) : 0;
+  const focusRight = rect ? Math.min(innerWidth - 8, rect.right + 5) : 0;
   const focusBottom = rect
     ? Math.min(innerHeight - (innerWidth <= 800 ? 88 : 8), rect.bottom + 5)
     : 0;
 
   return createPortal(
     <div className="guide-layer">
-      {rect && focusBottom > focusTop && (
+      {rect && focusBottom > focusTop && focusRight > focusLeft && (
         <div
           className="guide-focus"
           aria-hidden="true"
           style={{
-            left: Math.max(8, rect.left - 5),
+            left: focusLeft,
             top: focusTop,
-            width: Math.min(innerWidth - 16, rect.width + 10),
+            width: focusRight - focusLeft,
             height: focusBottom - focusTop,
           }}
         />

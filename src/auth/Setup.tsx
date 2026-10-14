@@ -31,6 +31,13 @@ import SetupCountrySelect from "./SetupCountrySelect";
 import { DatePicker } from "../components/ui/date-picker";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import "../styles/setup.css";
 
 export default function Setup({
@@ -57,6 +64,8 @@ export default function Setup({
     ? ["About you", "Ready"]
     : ["Your move", "Your studies", "Your funding"];
   const [step, setStep] = useState(0);
+  const universityTrigger = useRef<HTMLButtonElement>(null);
+  const [universityRequired, setUniversityRequired] = useState(false);
   const [linkingAccount, setLinkingAccount] = useState(false);
   const [addedAccounts, setAddedAccounts] = useState<
     { country: string; label: string }[]
@@ -342,6 +351,13 @@ export default function Setup({
                   {!sponsor && step === 1 && (
                     <>
                       <UniversityMultiSelect
+                        primary={values.countryTo}
+                        triggerRef={universityTrigger}
+                        guidance={
+                          universityRequired && !values.university
+                            ? `Choose a university in ${values.countryTo} first.`
+                            : undefined
+                        }
                         countries={destinations}
                         value={universityChoices}
                         onChange={(choices) => {
@@ -356,11 +372,20 @@ export default function Setup({
                         disabled={busy}
                       />
                       <p className="setup-directory-note">
-                        Primary destination: {values.countryTo}. Study currency:{" "}
-                        {getCountry(values.countryTo)?.currency}. Your budgets
-                        and payments use this currency.
+                        {values.countryTo} ·{" "}
+                        {getCountry(values.countryTo)?.currency}
                       </p>
                       <CourseSelect
+                        onUniversityRequired={() => {
+                          setUniversityRequired(true);
+                          universityTrigger.current?.scrollIntoView({
+                            block: "nearest",
+                            behavior: "smooth",
+                          });
+                          universityTrigger.current?.focus({
+                            preventScroll: true,
+                          });
+                        }}
                         university={values.university}
                         value={values.course}
                         onChange={(value) => update("course", value)}
@@ -386,19 +411,34 @@ export default function Setup({
                         "number",
                         true,
                       )}
-                      <label className="setup-field">
-                        Sponsor support
-                        <select
+                      <div className="setup-field">
+                        <span id="setup-sponsor-label">Sponsor support</span>
+                        <Select
                           value={values.sponsorSupport}
-                          onChange={(e) =>
-                            update("sponsorSupport", e.target.value)
+                          onValueChange={(value) =>
+                            update("sponsorSupport", value)
                           }
+                          disabled={busy}
                         >
-                          {["Not sure yet", "Yes", "No"].map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                      </label>
+                          <SelectTrigger
+                            className="setup-country-trigger"
+                            aria-labelledby="setup-sponsor-label"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent
+                            className="ui-select-content setup-sponsor-menu"
+                            position="popper"
+                            collisionPadding={16}
+                          >
+                            {["Not sure yet", "Yes", "No"].map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </>
                   )}
                   {!sponsor && step === 2 && (

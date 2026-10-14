@@ -101,7 +101,8 @@ for (const width of [1440, 390]) {
     ).toContainText("1 university selected");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Confirmed funding (GBP)").fill("12000");
-    await page.getByLabel("Sponsor support").selectOption("Yes");
+    await page.getByRole("combobox", { name: "Sponsor support" }).click();
+    await page.getByRole("option", { name: "Yes", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Start with what you have." }),
     ).toBeVisible();
@@ -187,7 +188,7 @@ test("country search, destination reset and rejection of unlisted universities",
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(
-    page.getByText("Study currency: USD.", { exact: false }),
+    page.getByText("United States · USD", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Universities · optional" }).click();
   await page
@@ -212,6 +213,19 @@ test("country search, destination reset and rejection of unlisted universities",
     page.getByRole("button", { name: "Universities · optional" }),
   ).toContainText("1 university selected");
   await page.getByRole("button", { name: "Universities · optional" }).click();
+  await expect(
+    page.getByRole("button", { name: "🇨🇳 China", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("button", { name: "🇺🇸 United States", exact: true })
+    .click();
+  await expect(
+    page.getByRole("checkbox", { name: "Columbia University" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: "Tsinghua University", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "🇨🇳 China", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Search universities" })
     .fill("My German University");
@@ -305,7 +319,7 @@ for (const width of [1440, 390]) {
     ).toBe(true);
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
-      page.getByText("Primary destination: United Kingdom.", { exact: false }),
+      page.getByText("United Kingdom · GBP", { exact: true }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page

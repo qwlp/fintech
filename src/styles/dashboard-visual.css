@@ -344,8 +344,16 @@
   }
 }
 @media (max-width: 800px) {
-  .visual-dashboard {
-    gap: 26px;
+  .consumer-dashboard.visual-dashboard {
+    gap: 16px;
+  }
+  .consumer-dashboard.visual-dashboard .consumer-welcome {
+    min-height: 0;
+    margin: 0;
+    padding-bottom: 0;
+  }
+  .consumer-dashboard.visual-dashboard .funding-overview {
+    padding-top: 0;
   }
   .overview-top,
   .budget-funding-grid {

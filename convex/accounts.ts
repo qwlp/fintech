@@ -2052,10 +2052,12 @@ export const syncPaymentReminder = mutation({
 
 // Normalize legacy illustrative fixtures without altering active payment proposals.
 export const repairPaymentRouteCategories = internalMutation({
-  args: {},
+  args: { accountId: v.optional(v.id("accounts")) },
   returns: v.number(),
-  handler: async (ctx) => {
-    const accounts = await ctx.db.query("accounts").take(1000);
+  handler: async (ctx, { accountId }) => {
+    const account = accountId ? await ctx.db.get(accountId) : null;
+    if (accountId && !account) throw new Error("Account not found");
+    const accounts = account ? [account] : await ctx.db.query("accounts").take(1000);
     let repaired = 0;
     for (const account of accounts) {
       if (account.paymentStatus !== "not_started") continue;

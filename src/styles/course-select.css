@@ -3,6 +3,53 @@
   gap: 10px;
   min-width: 0;
 }
+.course-university-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface-soft);
+}
+.course-university-prompt strong {
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+.course-university-prompt p {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.course-university-prompt button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--color-primary-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+.course-university-prompt button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.course-selection .course-selection-field [role="combobox"] {
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 400;
+  box-shadow: none;
+}
 .course-selection-fields {
   display: grid;
   grid-template-columns: minmax(140px, 0.7fr) minmax(0, 1.5fr);
@@ -28,6 +75,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.course-prerequisite-trigger {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.course-prerequisite-trigger:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 .course-tuition-note {
   display: grid;
