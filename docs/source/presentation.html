@@ -89,7 +89,7 @@
     <section>
       <small>MoveWire · 01 / 10</small>
       <h1>MoveWire</h1>
-      <h2>An AI financial participant for international students</h2>
+      <h2>An AI finance assistant for international students</h2>
       <p>Topic C · Tuition, living funds and private sponsor coordination</p>
       <footer>
         Team: add contestant names and university affiliations before
@@ -105,8 +105,8 @@
         and family support.
       </p>
       <footer>
-        Research hypothesis: a guided, auditable task reduces uncertainty.
-        User-study results are not yet claimed.
+        We aim to make tuition decisions easier to understand. A student study
+        has not yet been completed.
       </footer>
     </section>
     <section>
@@ -114,8 +114,8 @@
       <h1>One task, end to end</h1>
       <h2>“Help me prepare my tuition payment.”</h2>
       <p>
-        Compare fresh routes → check deadline and reserve → prepare → owner
-        approves → sandbox execution.
+        Compare fresh routes → check deadline and reserve → prepare → student
+        approves → simulated payment.
       </p>
       <footer>
         The demo uses illustrative USD-to-GBP quotes and fictional account
@@ -125,15 +125,15 @@
     <section>
       <small>MoveWire · 04 / 10</small>
       <h1>The AI does useful work</h1>
-      <h2>Bounded financial tools and planning edits.</h2>
+      <h2>Useful tools with clear limits.</h2>
       <p>
-        Compare tuition routes · Simulate rent changes · Stress-test FX ·
+        Compare tuition routes · Simulate rent changes · Test currency changes ·
         Prepare a payment proposal. Save requested planning edits; confirm
         declared funding changes.
       </p>
       <footer>
-        The model has no approval or execution capability. Each tool is bound to
-        the authenticated student.
+        The model has no approval or execution capability. Each tool uses the
+        logged-in student’s records.
       </footer>
     </section>
     <section>
@@ -141,9 +141,9 @@
       <h1>Protect time and living costs</h1>
       <h2>The cheapest route must also meet the student’s plan.</h2>
       <p>
-        A shared decision engine checks quote freshness, buffered arrival and
-        available cash. Deadline and reserve checks run at preparation and
-        execution.
+        The app checks quote expiry, delivery time with a safety buffer, and
+        available cash. It checks the deadline and living reserve before
+        preparation and again before sending.
       </p>
       <footer>
         Blocked routes explain the funding top-up. UTC weekdays exclude holidays
@@ -155,7 +155,7 @@
       <h1>Approval means exact terms</h1>
       <h2>One proposal. One recipient. One quote.</h2>
       <p>
-        Owner approval covers provider, recipient, rate, fee, amount, expiry,
+        Student approval covers provider, recipient, rate, fee, amount, expiry,
         deadline and reserve. Provider changes require reset and fresh approval.
       </p>
       <footer>
@@ -168,8 +168,8 @@
       <h1>Execution you can inspect</h1>
       <h2>A receipt backed by a financial ledger.</h2>
       <p>
-        Atomic wallet debit + ledger entry + UUID receipt + audit. A retry
-        returns the original receipt without another debit.
+        The wallet debit, ledger entry, receipt, and audit record are saved
+        together. Sending again returns the same receipt without another debit.
       </p>
       <footer>
         Chat shows recorded calculations. Evidence exports include proposals,
@@ -182,12 +182,12 @@
       <h1>Privacy and security</h1>
       <h2>Students control sponsor access and AI processing.</h2>
       <p>
-        Purpose-limited sponsor views · Revocable AI consent · Server-only API
-        secret · Allowlisted tools · Account ownership checks · Daily AI limits.
+        Students choose sponsor access · AI consent can be withdrawn · API keys
+        stay on the server · Only approved tools run · Account and daily limits.
       </p>
       <footer>
-        Known limits: no MFA, no real payee/KYC verification, fallible model
-        prose and no independent security audit.
+        Known limits: no MFA, no real payee/KYC verification, AI explanations
+        can be wrong and no independent security audit.
       </footer>
     </section>
     <section>
@@ -195,9 +195,9 @@
       <h1>Validation</h1>
       <h2>Show the tests and the actual journey.</h2>
       <p>
-        208 local regression checks · Responsive browser checks · Authenticated
-        live AI preparation, owner approval, sandbox execution and receipt.
-        Evidence includes deadlines, authorization and recorded calculations.
+        211 local tests · Responsive browser checks · Authenticated live AI
+        preparation, owner approval, sandbox execution and receipt. Evidence
+        includes deadlines, authorization and recorded calculations.
       </p>
       <footer>
         Exact results are in docs/validation.md. Local tests mock the model; the
@@ -208,15 +208,14 @@
     <section>
       <small>MoveWire · 10 / 10</small>
       <h1>Next milestones</h1>
-      <h2>From a defensible sandbox to verified integrations.</h2>
+      <h2>Test with students, then connect real services.</h2>
       <p>
         Student usability study · Provider sandbox integration · University
-        rules and holiday calendars · Broader multilingual and adversarial
-        evaluations.
+        rules and holiday calendars · More language and misuse tests.
       </p>
       <footer>
-        The submission demonstrates a bounded financial task, with human control
-        and auditable execution.
+        The demo shows a complete simulated payment with student approval and
+        records that can be checked.
       </footer>
     </section>
   </body>

@@ -22,7 +22,10 @@ const aiConfig = aiConfiguration(process.env);
 let previousRuns: unknown[] = [];
 try {
   const previous = JSON.parse(
-    await readFile("docs/evidence/live-agent-evaluation.json", "utf8"),
+    await readFile(
+      "test-results/evaluations/live-agent-evaluation.json",
+      "utf8",
+    ),
   );
   previousRuns = [
     ...(previous.previousRuns ?? []),
@@ -234,12 +237,12 @@ const report = {
   total: results.length,
   scenarios: results,
 };
-await mkdir("docs/evidence", { recursive: true });
+await mkdir("test-results/evaluations", { recursive: true });
 await writeFile(
-  "docs/evidence/live-agent-evaluation.json",
+  "test-results/evaluations/live-agent-evaluation.json",
   JSON.stringify(report, null, 2) + "\n",
 );
 console.log(
-  `${report.passed}/${report.total} scenarios passed. Report: docs/evidence/live-agent-evaluation.json`,
+  `${report.passed}/${report.total} scenarios passed. Report: test-results/evaluations/live-agent-evaluation.json`,
 );
 process.exit(report.passed === report.total ? 0 : 1);

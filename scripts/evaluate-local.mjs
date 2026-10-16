@@ -37,12 +37,12 @@ const report = {
     .length,
   scenarios: cases,
 };
-await mkdir("docs/evidence", { recursive: true });
+await mkdir("test-results/evaluations", { recursive: true });
 await writeFile(
-  "docs/evidence/local-evaluation.json",
+  "test-results/evaluations/local-evaluation.json",
   JSON.stringify(report, null, 2) + "\n",
 );
 console.log(
-  `Local checks: ${report.passed} passed, ${report.failed} failed, ${report.skipped} skipped. Report: docs/evidence/local-evaluation.json`,
+  `Local checks: ${report.passed} passed, ${report.failed} failed, ${report.skipped} skipped. Report: test-results/evaluations/local-evaluation.json`,
 );
 process.exit(exit);

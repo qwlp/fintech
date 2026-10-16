@@ -1,10 +1,17 @@
 import { spawnSync } from "node:child_process";
 import { exportJWK, exportPKCS8, generateKeyPair } from "jose";
+const envFileIndex = process.argv.indexOf("--env-file");
+const envFile = envFileIndex >= 0 ? process.argv[envFileIndex + 1] : undefined;
+if (envFileIndex >= 0 && !envFile) throw new Error("Missing --env-file path");
 const run = (args, input) => {
-  const result = spawnSync("bunx", ["convex", ...args], {
-    encoding: "utf8",
-    input,
-  });
+  const result = spawnSync(
+    "bunx",
+    ["convex", ...args, ...(envFile ? ["--env-file", envFile] : [])],
+    {
+      encoding: "utf8",
+      input,
+    },
+  );
   if (result.status !== 0)
     throw new Error(result.stderr || "Convex command failed");
   return result.stdout;
@@ -26,5 +33,5 @@ if (names.includes("JWT_PRIVATE_KEY") || names.includes("JWKS")) {
   });
   run(["env", "set", "JWT_PRIVATE_KEY"], privateKey);
   run(["env", "set", "JWKS"], jwks);
-  console.log("Auth signing keys configured on the development deployment.");
+  console.log("Auth signing keys configured on the selected deployment.");
 }

@@ -8,3 +8,9 @@ dist
 
 test-results/
 playwright-report/
+submission/
+
+# Generated TypeScript build files
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts

@@ -216,15 +216,16 @@ for (const route of ["#home", "#login", "#register"]) {
     await expect(
       demo.getByRole("tab", { name: "Sponsors", exact: true }),
     ).toHaveAttribute("aria-selected", "true", { timeout: 25000 });
+    // A tab may be observed near the end of its slot; allow a full autoplay cycle.
     await expect(
       demo.getByRole("button", { name: "Contribution added" }),
-    ).toBeDisabled({ timeout: 5000 });
+    ).toBeDisabled({ timeout: 25000 });
     await expect(
       demo.getByRole("tab", { name: "Payments", exact: true }),
     ).toHaveAttribute("aria-selected", "true", { timeout: 25000 });
     await expect(
       demo.getByRole("button", { name: "Sample payment prepared" }),
-    ).toBeDisabled({ timeout: 5000 });
+    ).toBeDisabled({ timeout: 25000 });
     await demo.getByRole("tab", { name: "Study budget", exact: true }).click();
     const slider = demo.getByRole("slider", {
       name: "Sample monthly living costs",

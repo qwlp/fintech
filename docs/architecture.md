@@ -1,89 +1,80 @@
-# MoveWire technical documentation
+# How MoveWire works
 
-## Purpose
+MoveWire helps international students plan study costs, compare tuition routes, coordinate with sponsors, and complete a simulated payment. The interface uses React and TypeScript. Convex stores data, handles login, runs AI tools, and checks payments.
 
-Topic C: help an international student compare tuition-payment routes, assess affordability while retaining living funds, coordinate sponsors privately and complete an approved payment in a verifiable sandbox.
-
-## System architecture
+## Main flow
 
 ```mermaid
 flowchart LR
-  Student[Authenticated student] --> UI[React workspace]
-  Sponsor[Authenticated sponsor] --> SponsorUI[Purpose-limited sponsor dashboard]
-  UI --> Auth[Convex ownership checks]
-  SponsorUI --> Auth
-  Auth --> DB[(Account-isolated records)]
-  Auth --> Chat[AI action: consent and request limits]
-  Chat --> Model[Configured OpenAI-compatible model]
-  Model --> Tools[Allowlisted tools]
-  Tools --> Calc[Deterministic calculations]
-  Tools --> Draft[Prepare immutable proposal]
-  UI --> Approval[Owner approves proposal ID]
-  Approval --> Execute[Atomic sandbox executor]
-  Execute --> Ledger[(Wallet, ledger, receipt and audit)]
+  Student[Student] --> App[React app]
+  Sponsor[Sponsor] --> App
+  App --> Backend[Convex: login and permissions]
+  Backend --> Data[(Private account records)]
+  Backend --> Model[Configured AI model]
+  Model --> Tools[Allowed tools and calculations]
+  Tools --> Proposal[Payment proposal]
+  Student --> Review[Review and approve in Payments]
+  Review --> Send[Convex payment checks]
+  Send --> Records[(Simulated debit, receipt, and audit log)]
 ```
 
-The model has no approval or execution tool. All tool calls are bound to the authenticated account by the server; the model cannot supply another account ID. Sponsor queries project only permitted data instead of returning a student's account object.
+The server links every request to the logged-in account. The AI cannot choose another account ID. Sponsors receive only the summaries the student permits. The model can prepare a proposal; only the student can approve and send it.
 
-## Agent tools
+## AI tools
 
-| Tool                      | Capability                                                                                                         | Writes                         |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
-| `compare_payment_routes`  | Rank fresh routes by cost subject to deadline, buffer, available cash and reserve; explain blockers and USD top-up | Audit event                    |
-| `simulate_budget`         | Replace hypothetical monthly rent and calculate burn and runway                                                    | Audit event                    |
-| `stress_test_fx`          | Revalue non-GBP wallets under a specified adverse percentage                                                       | Audit event                    |
-| `prepare_tuition_payment` | Prepare the selected tuition route for owner review                                                                | Proposal, account state, audit |
+| Tool                      | Result                                                                                         |
+| ------------------------- | ---------------------------------------------------------------------------------------------- |
+| `compare_payment_routes`  | Compare fresh quotes against cost, deadline, wallet funds, and living reserve                  |
+| `simulate_budget`         | Estimate monthly costs and how long available funds would last                                 |
+| `stress_test_fx`          | Show a hypothetical currency loss                                                              |
+| `prepare_tuition_payment` | Save a fixed payment proposal for student review                                               |
+| Planning tools            | Update requested profile, tuition, planner, budget, checklist, alert, and account-label fields |
 
-The last tool requires a direct prepare/draft payment request in the current turn and rejects quoted, negated and common hypothetical/instruction-discussion phrasing. This conservative English-language heuristic is an additional preparation guard, not a general prompt-injection detector. Preparation cannot move funds. Tools validate arguments and recheck ownership and AI consent. Each model response can request at most three calls, with three tool rounds and a final text round. Each model request has a 45-second timeout. Requests are spaced by at least ten seconds per account and capped at 100 per UTC day. When a tool has already returned but the later model explanation fails, the action saves the tool evidence with an explicit fallback message. Consent is checked again before saving the exchange.
+Tool definitions are in `shared/agent-tools.ts`; server checks and dispatch are in `convex/agentTools.ts`. Tools read current values before applying partial edits. Grouped study-plan edits succeed or fail together. Declared funding changes do not credit a wallet. Changes to confirmed funding require a student confirmation card; it expires after 30 minutes and is rejected if the underlying records changed.
 
-## Planning-edit tools
+AI requires consent. Each account is limited to one request per ten seconds and 100 per UTC day. A model response can request up to three tools; a conversation request allows three tool rounds and a final explanation. Each provider request has a 45-second timeout. If a tool succeeds but the explanation fails, its results and any proposal remain available. Consent is checked again before saving the exchange.
 
-`shared/agent-tools.ts` defines the additional schema-validated workspace tools; `convex/agentTools.ts` dispatches them with ownership and consent checks. They read current records and apply partial updates to profile, tuition, deadline/reserve, Move Planner, budgets/funding, routes, checklist, alerts and country-account labels. `update_study_plan` groups requested edits in one mutation so failures roll back all changes. Funding amounts are declared planning values, not wallet credits. Explicit confirmed-funding changes remain pending until the owner confirms; cards expire after 30 minutes and stale changes are rejected. Recipient confirmation is a separate owner action.
+Preparing a payment requires a direct request. A conservative English-language check rejects tested quoted, negative, and hypothetical requests. This is an extra guard, not a complete prompt-injection detector.
 
-## Financial algorithms
+## Payment calculation
 
-Payment amounts are stored as integer minor units in proposals and ledger entries. For a sandbox source-to-target currency quote (legacy variable names use GBP/USD):
+Amounts in proposals and ledger records use integer minor units: 100 cents = one dollar. For currencies supported by the sandbox:
 
+```text
+recipientMinor = round(recipientAmount × 100)
+sourceMinor = ceil(recipientMinor / targetCurrencyPerSourceCurrency)
+feeMinor = round(sourceCurrencyFee × 100)
+totalDebitMinor = sourceMinor + feeMinor
 ```
-recipientMinor = round(recipientGBP * 100)
-sourceMinor = ceil(recipientMinor / rateGBPPerUSD)
-feeMinor = round(feeUSD * 100)
-totalMinor = sourceMinor + feeMinor
-```
 
-Rounding the source amount up avoids underfunding the target. Values must be finite, positive where appropriate and within safe integer precision. Sandbox execution supports configured USD, GBP and CNY source/target currencies. Provider fees are illustrative; daily reference rates, when fetched, are comparison inputs rather than binding provider quotes.
+Rounding the source amount up avoids underpaying the recipient. Inputs must be finite, valid, and within safe integer limits. Some older code names use GBP and USD; sandbox execution supports USD, GBP, and CNY.
 
-Available source funds must cover total cost. The projected study-currency valuation of all wallets after the debit must preserve the configured living-cost reserve (default £1,000). The executor repeats these checks at execution because balances can change after preparation. Wallet valuations are scenario data, not live FX prices.
+The source wallet must cover the debit. The study-currency value of all wallets after payment must also cover the saved living reserve (default £1,000). Remaining funds already include that reserve; it must not be counted twice. Sponsor promises are excluded from available wallet cash.
 
-For rent simulation, matching recurring cost items are treated as annual plan totals and divided by 12. The tool returns this assumption explicitly. Burn equals hypothetical rent plus other monthly costs; runway equals liquid GBP valuation divided by burn. Zero burn returns no finite runway. The FX stress test reduces only non-GBP wallet valuations by the requested percentage; it is not a forecast.
+Provider fees are examples. Fetched daily reference rates are comparison inputs, not binding provider quotes. Wallet valuations are scenario data.
 
-## Deadline and funding decisions
+## Route and deadline checks
 
-`convex/tuitionDecision.ts` is shared by the UI, server comparison tool and payment enforcement. It recommends the cheapest route with a valid fresh quote, sufficient available USD, preserved living funds, and buffered estimated arrival no later than the saved tuition deadline. Missing dates or delivery windows block eligibility rather than being inferred. Quote freshness is independent of affordability.
+`convex/tuitionDecision.ts` shares the decision rules between the interface and backend. The recommended route is the cheapest one that has a fresh quote, enough funds, a preserved reserve, and estimated arrival within the saved deadline.
 
-Arrival uses the maximum declared delivery business days plus an owner-selected buffer of 0–5 days. Dates are interpreted in UTC and business days are Monday–Friday. This deliberately excludes bank holidays, cutoffs and university processing; the UI and tool disclose that arrival is an estimate, not a settlement guarantee.
+Estimated arrival uses the route's maximum delivery days plus a student-selected buffer of 0–5 business days. Dates use UTC; business days are Monday–Friday. Bank holidays, cutoffs, and university processing are excluded. Missing dates or delivery windows block a route.
 
-For blocked funding, the illustrative additional USD estimate is the larger of the source-cash gap and the USD required to close the GBP reserve shortfall, rounded up to source cents using the existing USD wallet valuation. It is not a request sent to a sponsor, and promised funding is excluded. Actual funds and a fresh quote must be checked again.
+For a funding gap, the tool estimates the extra USD needed to cover both the source-cash shortfall and the living reserve. It takes the larger requirement and rounds up. This estimate does not send a sponsor request or add cash.
 
-The total `remainingGBP` already includes the protected reserve. The reserve must not be added a second time. The saved deadline, buffer and reserve cannot be changed while a proposal is active. Owners may reset before changing the plan or refreshing known sandbox fixtures. The AI can save explicitly requested planning terms before preparation; it cannot change an active proposal or approve/execute a payment.
+## Payment steps
 
-## Payment protocol
+1. **Review:** choose a route and confirm the example university. This is an acknowledgment, not bank verification.
+2. **Prepare:** save fixed terms: recipient, provider, rate, fee, amounts, reserve, deadline, buffer, and delivery window. The proposal cannot outlive its quote.
+3. **Approve:** the student approves that exact, unexpired proposal ID.
+4. **Send:** the server checks ownership, approval, funds, reserve, expiry, and buffered arrival again.
+5. **Record:** one database transaction debits the wallet, adds the ledger entry, saves a UUID receipt, and marks completion. Failure saves none of these changes.
 
-1. Payments initializes a fictional sandbox scenario. Owner opens route details, selects an eligible route and reviews the payment, then confirms the example university. Confirmation is an owner acknowledgment, not bank-account validation.
-2. Prepare snapshots recipient, provider, rate, fee, target amount, source total, reserve, deadline, buffer and delivery window. Proposal expiry never exceeds the source quote expiry.
-3. Approve requires the latest proposal ID, an authenticated student owner, prepared state and an unexpired quote.
-4. Execute requires that same proposal ID and its recorded owner approval.
-5. Execution rechecks balances, reserve and buffered arrival against the immutable snapshot, including UTC date rollover. A single Convex mutation updates the source wallet, appends a ledger entry, records a UUID receipt and marks completion. Mutation failure commits none of those changes.
-6. Re-executing that completed proposal returns the existing receipt even after newer proposals exist. Provider changes are blocked while a proposal is active. Reset cancels outstanding proposals; historical completed records remain.
+Sending a completed proposal again returns its existing receipt. Resetting cancels outstanding proposals but does not undo completed payments or refill wallets. Payment-term edits and quote refresh require resetting an active proposal and obtaining fresh approval.
 
-Configuration changes do not alter the approved snapshot. The frontend displays snapshot terms while a proposal is active.
+## Other calculations and evidence
 
-## Recorded calculation evidence
+Rent simulation treats matching plan costs as annual totals and divides by 12. Monthly burn is rent plus other monthly costs; runway is liquid GBP value divided by burn. Zero burn has no finite runway. Currency stress tests reduce non-GBP wallet valuations by the requested percentage; they are scenarios, not forecasts.
 
-Successful tools append owner-isolated `toolExecutions`. The latest 50 are included in bootstrap and the owner evidence export. Sponsor queries do not expose this table. Each completed chat exchange also stores its own tool results, including tool errors, so the financial calculation can be inspected next to generated prose. Raw current live-evaluation responses and failed prior run summaries are retained separately from authenticated financial records.
+Successful tools save account-private calculation records. The latest 50 appear in account data and evidence exports. Chat also keeps each exchange's tool results, including errors, beside the generated explanation. Sponsors cannot read these records.
 
-## Evidence and limitations
-
-`tests/payment-engine.test.ts` exercises the real Convex handlers in a local transactional test environment. Exported evidence contains the prepared/approved/completed proposal, ledger and actor-timestamp audit events. This proves application-level sandbox behavior; it does not demonstrate an external provider settlement. Live browser tests independently exercise the configured development backend.
-
-Financial recommendations in model prose remain fallible. Backend controls protect fund transitions, not the truth of every sentence. No real banking, KYC/AML verification, sanctions screening, credit reporting or verified settlement is claimed.
+[Validation](validation.md) distinguishes local tests from the recorded live-model journey. No external bank settlement is claimed. See the [security assessment](security-self-assessment.md) for permissions and remaining risks.

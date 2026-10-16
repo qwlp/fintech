@@ -75,7 +75,12 @@ function Preview() {
         }),
   );
 }
-ReactDOM.createRoot(document.getElementById("root")).render(
+const container = document.getElementById("root")! as HTMLElement & {
+  previewRoot?: ReturnType<typeof ReactDOM.createRoot>;
+};
+// Vite may evaluate this preview entry again; keep a single React root.
+container.previewRoot ??= ReactDOM.createRoot(container);
+container.previewRoot.render(
   React.createElement(
     "div",
     { className: "app-clean" },

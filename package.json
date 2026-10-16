@@ -19,7 +19,11 @@
     "test:e2e": "playwright test",
     "test:eval": "bun scripts/evaluate-local.mjs",
     "eval:live": "bun scripts/evaluate-agent-live.ts",
-    "deck:build": "bun scripts/build-presentation.mjs"
+    "deck:build": "bun scripts/build-presentation.mjs",
+    "deploy:local": "bun scripts/deploy-local.mjs",
+    "submission:check": "bun scripts/check-submission.mjs",
+    "verify": "bun run test && bun run build && bunx tsc --noEmit -p convex/tsconfig.json && bun run submission:check",
+    "submission:pack": "bun scripts/package-submission.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",

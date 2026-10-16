@@ -1,4 +1,4 @@
-/** Approved directory from Countries and Universities.md. Shared by every selector and server validation. */
+/** Supported country and university directory. Shared by every selector and server validation. */
 export const countries = [
   { name: "China", code: "CN", flag: "🇨🇳", currency: "CNY" },
   { name: "United Kingdom", code: "UK", flag: "🇬🇧", currency: "GBP" },

@@ -276,11 +276,18 @@ for (const width of [390, 1440]) {
     });
     await expect(paymentHelp).toBeVisible();
     await expect(page.locator(".page-view > .page-help-tools")).toHaveCount(0);
-    const headingBox = await paymentHeading.boundingBox();
-    const helpBox = await paymentHelp.boundingBox();
-    expect(helpBox!.y).toBeGreaterThanOrEqual(headingBox!.y);
-    expect(helpBox!.y + helpBox!.height).toBeLessThanOrEqual(
-      headingBox!.y + headingBox!.height + 1,
+    // Read both rectangles in one frame while the page transition is animating.
+    const { headingBox, helpBox } = await paymentHeading.evaluate((element) => {
+      const heading = element.getBoundingClientRect();
+      const help = element.querySelector("button")!.getBoundingClientRect();
+      return {
+        headingBox: { y: heading.y, height: heading.height },
+        helpBox: { y: help.y, height: help.height },
+      };
+    });
+    expect(helpBox.y).toBeGreaterThanOrEqual(headingBox.y);
+    expect(helpBox.y + helpBox.height).toBeLessThanOrEqual(
+      headingBox.y + headingBox.height + 1,
     );
     await page.screenshot({ path: `/tmp/payment-help-${width}.png` });
   });

@@ -1,34 +1,80 @@
-# Validation record
+# Tests and evidence
 
-Reviewed against the supplied International Track appendix on **14 October 2026**. See `competition-requirements.md` for the requirements matrix and contestant obligations.
+## Final preparation checks — 16 October 2026
 
-## Current verification
+Run the standard checks with:
 
-- `bun run test:eval`: **208 passed, zero failed**. Regenerated local evaluation and transactional payment evidence.
-- `bun run build`: passed. Existing Vite warnings for bundles over 500 KB remain.
-- `bunx tsc --noEmit -p convex/tsconfig.json`: passed.
-- Backend synchronized successfully with `bunx convex dev --once` to **dev:optimistic-mockingbird-578**.
-- Authenticated manual sandbox journey: passed on the development backend.
-- `RUN_FINANCE_SMOKE=1 RUN_AGENT_SMOKE=1 RECORD_DEMO=1 bunx playwright test e2e/finance-agent.pw.ts`: **passed** with the configured live model. A fictional student enabled AI processing, asked the model to prepare tuition, explicitly approved, executed, and exported the receipt and ledger. The current recording/export come from this successful run.
-- `bun run test:e2e`: 122 passed, two opt-in tests skipped, one marketing-autoplay timing failure. After making motion preferences explicit, waiting for the visible preview and allowing a full autoplay cycle, `bunx playwright test e2e/accounts.pw.ts --grep "preview autoplays"` passed all three affected cases. **All 123 non-opt-in browser cases passed across the full run and focused rerun.** The opt-in financial case was separately enabled and passed with the live AI model; the separate account session-restoration smoke remains unrun.
-- Scoped Prettier checks and `git diff --check`: passed. The existing formatting of `src/App.tsx` was preserved around its single changed tour property.
+```sh
+bun run verify
+```
 
-## Evidence and fixes
+This runs unit/backend tests, builds the app, checks backend TypeScript, and checks required submission files, local documentation links, and recorded-demo hashes. It does not deploy, create accounts, or call a live AI service.
 
-`docs/evidence/local-evaluation.json` covers deterministic planning, route/deadline/expiry checks, protected reserves, funding confirmation, account ownership, sponsor isolation, bounded AI dispatch, consent, timeout fallback and idempotent payment execution. Model responses in these local tests are mocked.
+Final preparation checks passed:
 
-`docs/evidence/sandbox-execution.json` exercises actual handlers with convex-test transactions. It is local application evidence.
+- **211 tests** across 25 files, including four deployment-script tests. Generated `submission/` copies are excluded from the test runner.
+- Frontend and backend TypeScript checks and production build.
+- Required submission files, local Markdown links, and recorded-demo hashes.
+- Frozen Bun dependency install.
+- Fresh extracted submission: dependency install, all 211 tests, build, backend type check, and submission checks passed.
+- Ten-slide presentation rebuild and 12-page visual guide compilation; the guide embeds Noto Sans throughout.
+- Changed-file formatting, documentation links, evidence hashes, and Git whitespace checks.
+- Tracked/new text files scanned for common private-key and API-token patterns; no matches found.
 
-`docs/evidence/development-session.json` and `docs/evidence/sandbox-demo.webm` record the authenticated development journey with a live `prepare_tuition_payment` tool result, owner approval, one atomic wallet debit and a matching UUID receipt. `docs/evidence/demo-manifest.json` identifies the command, environment, consistency checks and file hashes. Data is fictional; no real money moved or external provider settlement occurred. Daily market references informed comparison arithmetic; provider fees remain illustrative.
+The build still reports existing JavaScript bundles larger than 500 KB. This is a size warning; the build passes. Repository-wide `format:check` reports 49 existing files, including generated skill files and unchanged application code. Formatting checks pass for this submission's changed files.
 
-The audit restored the missing route-details → owner-review transition, added feedback when a changed comparison needs saving, sequenced first-visit AI privacy and introduction dialogs, and allowed completed receipts to be retrieved after study-currency changes without another debit. Tests were updated for listed-university selectors, current route categories, mobile navigation and current labels. Browser preview roots survive Vite entry reevaluation.
+Docker is not installed in the preparation environment, so a full container deployment has not been verified here. Deployment-script tests check setup, target restrictions, checks without changes, and isolation of AI settings. Test the full Docker setup and selected model on the presentation computer.
 
-## Historical model evaluation
+## What the evidence means
 
-`docs/evidence/live-agent-evaluation.json` retains the earlier six-scenario live-model evaluation and prior timeout summaries. It was not rerun in this audit. Those synthetic prompts use local read-only tools and simple factual text checks; they are separate from the current authenticated payment journey. Neither six scenarios nor one authenticated trial establishes an overall task-success rate.
+| File                                | What it shows                                                                                                 | Limit                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `evidence/sandbox-execution.json`   | Actual Convex handlers running in a local test database; proposal, approval, debit, ledger, and receipt       | Not an external payment-provider receipt                |
+| `evidence/development-session.json` | Authenticated development-account journey with live AI preparation, student approval, and simulated execution | One fictional account and one live-model trial          |
+| `evidence/sandbox-demo.webm`        | Browser recording of that successful journey                                                                  | About 36 seconds; no narration                          |
+| `evidence/demo-manifest.json`       | Recording command, consistency checks, and file hashes                                                        | Identifies the recorded files, not an independent audit |
 
-## Practical limits
+The recorded journey used a fictional student on the development backend on 14 October. Its checks confirm that owner approval preceded execution, only one ledger debit occurred, the balance change matched the debit, and the receipt matched the proposal. No real money moved.
 
-The browser recording is an automated walkthrough without narration. A student usability study, independent security review, provider settlement, real recipient verification, KYC/AML/sanctions validation, bank-holiday calendars, recovery/MFA and operational monitoring are not established by these checks. See `security-self-assessment.md`.
+Evidence files are retained from their recorded runs. Running ordinary tests does not rewrite their dates or results.
 
-Tests created dedicated fictional accounts on the development backend. Source is committed to the repository; publishing the frontend and competition submission are separate contestant actions. Team eligibility, registration, rights clearance and a presentation rehearsed within ten minutes remain to be confirmed. Judges determine the score.
+## Reproduce local evidence
+
+```sh
+bun run test:eval
+```
+
+This runs the local suite with mocked model responses and writes `test-results/evaluations/local-evaluation.json` and refreshes `docs/evidence/sandbox-execution.json`. Optional evaluation reports stay outside the submission docs. It does not replace the live demo.
+
+## Browser and live checks
+
+```sh
+bunx playwright install chromium
+bun run test:e2e
+```
+
+The browser suite uses isolated previews. Live account tests are opt-in.
+
+On 16 October, the full run returned **117 passed, six failed, and two skipped**. The failures exposed a short autoplay wait, duplicate React roots in chat/sponsor preview fixtures, and a layout measurement taken across two animation frames. These were repaired. Focused reruns passed: autoplay (three), chat (three), setup funding (two), and sponsor navigation/tours (seven).
+
+**All 123 non-opt-in browser cases passed across the full run and the focused reruns.** The entire suite was not repeated after those fixture fixes. The two live-account tests were not enabled in this final review; the earlier authenticated recording remains separate evidence.
+
+To record a new authenticated live-model journey on the configured **development** backend:
+
+```sh
+RUN_FINANCE_SMOKE=1 RUN_AGENT_SMOKE=1 RECORD_DEMO=1 bunx playwright test e2e/finance-agent.pw.ts
+```
+
+This creates a fictional account, contacts the configured model, and performs a simulated payment. Check the deployment target before running it. On success it replaces the development-session export and demo video. Update and review the recording manifest if either file changes; the submission checker rejects stale hashes.
+
+For a separate six-scenario live-model evaluation:
+
+```sh
+RUN_AGENT_EVAL=1 bun run eval:live
+```
+
+The report is written to ignored `test-results/evaluations/live-agent-evaluation.json`. This sends synthetic prompts and local read-only tool results to the configured AI service. It creates no payment proposals. For a local model accessed directly from the host, use a host-reachable `AI_BASE_URL`, such as `http://127.0.0.1:11434/v1`, rather than Docker's `host.docker.internal` address.
+
+## What remains unproven
+
+These checks do not establish student usability, independent security assurance, real recipient verification, provider settlement, legal compliance, model reliability across tasks, or access from a China network. Team registration, eligibility, rights clearance, and final upload also remain contestant responsibilities.

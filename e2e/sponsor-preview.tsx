@@ -126,4 +126,9 @@ function Preview() {
     />
   );
 }
-createRoot(document.getElementById("root")!).render(<Preview />);
+const container = document.getElementById("root")! as HTMLElement & {
+  previewRoot?: ReturnType<typeof createRoot>;
+};
+// Reuse the root if Vite evaluates this preview entry again.
+container.previewRoot ??= createRoot(container);
+container.previewRoot.render(<Preview />);
