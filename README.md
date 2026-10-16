@@ -6,6 +6,16 @@ MoveWire helps international students plan study costs, compare tuition payment 
 
 Competition: **Topic C — Cross-border & Student Finance Assistant**. [GitHub repository](https://github.com/qwlp/fintech).
 
+## Screenshots
+
+Demo screens with fictional data. No real money moves.
+
+| Dashboard                                                                                      | Move Planner                                                                                              |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| ![Student dashboard showing funding and planned costs](docs/source/guide-assets/dashboard.png) | ![Move Planner showing arrival settings and study costs](docs/source/guide-assets/planner-settings.png)   |
+| **Payments**                                                                                   | **AI Agent**                                                                                              |
+| ![Tuition payment route comparison](docs/source/guide-assets/05-compare.png)                   | ![AI assistant preparing a tuition proposal for student review](docs/source/guide-assets/agent-tools.png) |
+
 ## Start here
 
 - **Judges:** [submission checklist](docs/submission-checklist.md), [slides](docs/presentation.pdf), and [recorded demo](docs/evidence/sandbox-demo.webm).
